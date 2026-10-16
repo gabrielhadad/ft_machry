@@ -10,6 +10,8 @@ def app(tmp_path):
 
 @pytest.fixture
 def client(app):
-    result = app.test_cli_runner().invoke(args=["init-db"])
+    # test_cli_runner não empurra app context como o comando `flask` faz.
+    with app.app_context():
+        result = app.test_cli_runner().invoke(args=["init-db"])
     assert result.exit_code == 0, result.output
     return app.test_client()

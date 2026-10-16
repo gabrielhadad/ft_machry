@@ -57,7 +57,8 @@ def test_inexistente(client):
 
 
 def test_seeds(app):
-    result = app.test_cli_runner().invoke(args=["init-db", "--seed"])
+    with app.app_context():
+        result = app.test_cli_runner().invoke(args=["init-db", "--seed"])
     assert result.exit_code == 0, result.output
     client = app.test_client()
     assert len(client.get(URL).get_json()) == 10
