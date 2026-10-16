@@ -63,3 +63,9 @@ def test_seeds(app):
     client = app.test_client()
     assert len(client.get(URL).get_json()) == 10
     assert client.get(f"{URL}/10").get_json()["nome"] == "Bolo de Nozes - Médio"
+
+
+def test_docs(client):
+    r = client.get("/openapi.yaml")
+    assert r.status_code == 200 and b"/api/produtos" in r.data
+    assert b"swagger-ui" in client.get("/docs").data
