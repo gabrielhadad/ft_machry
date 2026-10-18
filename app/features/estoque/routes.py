@@ -1,19 +1,18 @@
 from flask import Blueprint
 
-from ...db import get_db
+from .repository import EstoqueRepository
+from .services import EstoqueService
 
 bp = Blueprint("estoque", __name__, url_prefix="/api/estoque")
+
+_service = EstoqueService(repository=EstoqueRepository())
 
 
 @bp.get("/inventario")
 def inventario():
-    rows = get_db().execute("SELECT * FROM vw_inventario").fetchall()
-    return [dict(r) for r in rows]
+    return _service.listar_inventario()
 
 
 @bp.get("/movimentacoes")
 def movimentacoes():
-    rows = get_db().execute(
-        "SELECT * FROM movimentacao_estoque ORDER BY criado_em DESC LIMIT 100"
-    ).fetchall()
-    return [dict(r) for r in rows]
+    return _service.listar_movimentacoes()

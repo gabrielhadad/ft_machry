@@ -3,9 +3,12 @@ import sqlite3
 
 import click
 from flask import Flask, current_app, g
+from flask_sqlalchemy import SQLAlchemy
 
-SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "db", "schema.sql")
-SEEDS_PATH = os.path.join(os.path.dirname(__file__), "..", "db", "seeds.sql")
+SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
+SEEDS_PATH = os.path.join(os.path.dirname(__file__), "seeds.sql")
+
+db = SQLAlchemy()
 
 
 def get_db() -> sqlite3.Connection:
@@ -27,7 +30,12 @@ def close_db(_exc=None):
 @click.command("init-db")
 @click.option("--seed", is_flag=True, help="Também carrega os dados de exemplo.")
 def init_db_command(seed: bool):
-    """Cria o banco a partir de db/schema.sql (e opcionalmente db/seeds.sql)."""
+    """Cria o banco a partir de schema.sql (e opcionalmente seeds.sql)."""
+    path = current_app.config["DATABASE_PATH"]
+    if os.path.exists(path):
+        click.echo("Banco já criado")
+        return
+
     conn = get_db()
     with open(SCHEMA_PATH, encoding="utf-8") as f:
         conn.executescript(f.read())
@@ -38,6 +46,15 @@ def init_db_command(seed: bool):
     click.echo("Banco inicializado." + (" (com seeds)" if seed else ""))
 
 
+
 def init_app(app: Flask):
+    if "DATABASE_PATH" in app.config:
+        os.makedirs(os.path.dirname(os.path.abspath(app.config["DATABASE_PATH"])) or ".", exist_ok=True)
+        if "SQLALCHEMY_DATABASE_URI" not in app.config:
+            db_path = os.path.abspath(app.config["DATABASE_PATH"]).replace("\\", "/")
+            app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+    db.init_app(app)
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
+
+

@@ -1,6 +1,6 @@
 from flask import Blueprint
 
-from ...db import get_db
+from db.database_config import get_db
 
 bp = Blueprint("produtos", __name__, url_prefix="/api/produtos")
 
