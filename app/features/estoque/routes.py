@@ -3,16 +3,18 @@ from flask import Blueprint
 from .repository import EstoqueRepository
 from .services import EstoqueService
 
-bp = Blueprint("estoque", __name__, url_prefix="/api/estoque")
+bp = Blueprint("estoque", __name__)
 
-_service = EstoqueService(repository=EstoqueRepository())
+
+def get_service() -> EstoqueService:
+    return EstoqueService(repository=EstoqueRepository())
 
 
 @bp.get("/inventario")
 def inventario():
-    return _service.listar_inventario()
+    return get_service().listar_inventario()
 
 
 @bp.get("/movimentacoes")
 def movimentacoes():
-    return _service.listar_movimentacoes()
+    return get_service().listar_movimentacoes()

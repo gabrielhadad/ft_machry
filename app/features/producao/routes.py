@@ -2,7 +2,8 @@ from flask import Blueprint
 
 from db.database_config import get_db
 
-bp = Blueprint("producao", __name__, url_prefix="/api/producao")
+bp = Blueprint("producao", __name__)
+
 
 
 @bp.get("/solicitacoes")

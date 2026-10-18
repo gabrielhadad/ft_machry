@@ -1,23 +1,23 @@
-from sqlalchemy import select
-
-from .models import ItemInventario, MovimentacaoEstoque
 from db.database_config import db
+from .models import ItemInventario, MovimentacaoEstoque
 
 
 class EstoqueRepository:
-    def fetch_inventario(self) -> list[dict]:
+    def buscar_inventario(self) -> list[dict]:
         """Retorna todos os itens da view de inventário."""
-        stmt = select(ItemInventario)
-        rows = db.session.execute(stmt).scalars().all()
-        return [r.to_dict() for r in rows]
+        consulta = db.select(ItemInventario)
 
-    def fetch_movimentacoes(self, limit: int = 100) -> list[dict]:
+        registros = db.session.execute(consulta).scalars().all()
+        return [r.to_dict() for r in registros]
+
+    def buscar_movimentacoes(self, limite: int = 100) -> list[dict]:
         """Retorna as movimentações de estoque mais recentes."""
-        stmt = (
-            select(MovimentacaoEstoque)
+        consulta = (
+            db.select(MovimentacaoEstoque)
             .order_by(MovimentacaoEstoque.criado_em.desc())
-            .limit(limit)
+            .limit(limite)
         )
-        rows = db.session.execute(stmt).scalars().all()
-        return [r.to_dict() for r in rows]
+
+        registros = db.session.execute(consulta).scalars().all()
+        return [r.to_dict() for r in registros]
 
