@@ -1,0 +1,12 @@
+services:
+  api:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_PATH: /app/data/app.db
+      FLASK_DEBUG: "1"
+    volumes:
+      - ./data:/app/data
+      - ./app:/app/app
+      - ./db:/app/db
