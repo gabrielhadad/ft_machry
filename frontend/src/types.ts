@@ -69,6 +69,27 @@ export interface ItemInventario {
   localizacao: string
 }
 
+export interface Localizacao {
+  id: number
+  nome: string
+  tipo: Conservacao
+  parent_id: number | null
+  foto_url: string | null
+}
+
+export interface Lote {
+  id: number
+  produto_id: number
+  produto: string
+  localizacao_id: number
+  localizacao: string
+  quantidade: number
+  data_producao: string | null
+  data_validade: string | null
+  custo_unitario: number | null
+  criado_em: string
+}
+
 export interface SolicitacaoProducao {
   id: number
   ficha_tecnica_id: number

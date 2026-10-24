@@ -8,6 +8,7 @@ Sistema de operação para restaurante, com API Flask, frontend React com Vite e
 - Fichas técnicas com rendimento, fases ordenadas e componentes.
 - Validações de domínio recuperadas do projeto anterior.
 - Lotes, localizações, movimentações e sugestão de saída por FEFO.
+- Estoque geral de insumos, produtos intermediários e produtos finais, com entradas, saídas e ajustes pela interface.
 - Consulta das solicitações de produção.
 - Interface responsiva para produtos e fichas técnicas.
 - Login por sessão com perfis de proprietária, gestor e cozinha.
