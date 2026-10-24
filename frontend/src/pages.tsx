@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { EmptyState, Metric, PageHeading } from './components'
-import type { FichaTecnica, ItemInventario, Produto, SolicitacaoProducao, View } from './types'
+import type { FichaTecnica, ItemInventario, Produto, SolicitacaoProducao } from './types'
 
 const number = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 })
 const date = new Intl.DateTimeFormat('pt-BR')
@@ -29,13 +29,3 @@ export function ProductionPage({ solicitacoes, fichas }: { solicitacoes: Solicit
   const productBySheet = new Map(fichas.map((ficha) => [ficha.id, ficha.produto]))
   return <><PageHeading eyebrow="COZINHA" title="Produção" description="Solicitações abertas e concluídas, ligadas às fichas técnicas cadastradas." /><section className="metrics"><Metric label="SOLICITAÇÕES" value={solicitacoes.length} detail="total registrado" /><Metric label="EM ANDAMENTO" value={solicitacoes.filter((item) => !['CONCLUIDA', 'CANCELADA'].includes(item.status)).length} detail="aguardando conclusão" /><Metric label="CONCLUÍDAS" value={solicitacoes.filter((item) => item.status === 'CONCLUIDA').length} detail="produções finalizadas" /></section><section className="panel"><div className="table-wrap"><table><thead><tr><th>Solicitação</th><th>Produto</th><th>Status</th><th>Criada em</th><th>Concluída em</th></tr></thead><tbody>{solicitacoes.map((item) => <tr key={item.id}><td>#{item.id}</td><td><strong>{productBySheet.get(item.ficha_tecnica_id) || `Ficha #${item.ficha_tecnica_id}`}</strong></td><td><span className="badge">{item.status}</span></td><td>{date.format(new Date(item.criado_em))}</td><td>{item.concluido_em ? date.format(new Date(item.concluido_em)) : '—'}</td></tr>)}</tbody></table></div>{!solicitacoes.length && <EmptyState title="Nenhuma produção solicitada" text="As solicitações criadas pela API aparecerão aqui." />}</section></>
 }
-
-const plannedCopy: Record<Exclude<View, 'inicio' | 'produtos' | 'fichas' | 'estoque' | 'producao'>, { eyebrow: string; title: string; description: string; cards: string[] }> = {
-  pedidos: { eyebrow: 'ATENDIMENTO', title: 'Pedidos', description: 'Acompanhamento dos pedidos da entrada até a entrega.', cards: ['Fila de preparo', 'Status por pedido', 'Histórico de atendimento'] },
-  compras: { eyebrow: 'ABASTECIMENTO', title: 'Compras', description: 'Planejamento de reposição e entrada de mercadorias.', cards: ['Necessidade de compra', 'Fornecedores', 'Recebimentos'] },
-  vendas: { eyebrow: 'RESULTADOS', title: 'Vendas', description: 'Visão dos itens vendidos e do desempenho do cardápio.', cards: ['Resumo diário', 'Produtos mais vendidos', 'Canais de venda'] },
-  financeiro: { eyebrow: 'GESTÃO', title: 'Financeiro', description: 'Custos, receitas e margem da operação.', cards: ['Fluxo de caixa', 'Custos por ficha', 'Margem de contribuição'] },
-  relatorios: { eyebrow: 'ANÁLISE', title: 'Relatórios', description: 'Indicadores consolidados para apoiar decisões do restaurante.', cards: ['Estoque e perdas', 'Produção', 'Vendas e rentabilidade'] },
-  equipe: { eyebrow: 'PESSOAS', title: 'Equipe', description: 'Usuários, funções e responsabilidades na operação.', cards: ['Colaboradores', 'Perfis de acesso', 'Atividades'] },
-}
-export function PlannedPage({ view }: { view: keyof typeof plannedCopy }) { const page = plannedCopy[view]; return <><PageHeading eyebrow={page.eyebrow} title={page.title} description={page.description} /><section className="planned-hero panel"><span className="badge">MÓDULO PLANEJADO</span><h2>Estrutura preparada para a próxima etapa</h2><p>Esta área recupera a organização visual do sistema legado. Os dados serão conectados quando os respectivos endpoints forem implementados na API Flask.</p><div className="planned-grid">{page.cards.map((card, index) => <article key={card}><span>0{index + 1}</span><strong>{card}</strong><small>Aguardando integração com a API</small></article>)}</div></section></> }

@@ -75,12 +75,6 @@ export type View =
   | 'fichas'
   | 'estoque'
   | 'producao'
-  | 'pedidos'
-  | 'compras'
-  | 'vendas'
-  | 'financeiro'
-  | 'relatorios'
-  | 'equipe'
 
 export interface AppState {
   produtos: Produto[]

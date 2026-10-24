@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api } from './api'
 import { Shell } from './components'
 import { ProductModal, SheetModal } from './forms'
-import { DashboardPage, PlannedPage, ProductionPage, ProductsPage, SheetsPage, StockPage } from './pages'
+import { DashboardPage, ProductionPage, ProductsPage, SheetsPage, StockPage } from './pages'
 import type { FaseCatalogo, FichaTecnica, ItemInventario, Produto, SolicitacaoProducao, View } from './types'
 
 export function App() {
@@ -41,7 +41,7 @@ export function App() {
   else if (view === 'fichas') page = <SheetsPage fichas={fichas} onNew={() => setSheetModal('new')} onEdit={setSheetModal} />
   else if (view === 'estoque') page = <StockPage inventario={inventario} />
   else if (view === 'producao') page = <ProductionPage solicitacoes={solicitacoes} fichas={fichas} />
-  else page = <PlannedPage view={view} />
+  else page = <ProductionPage solicitacoes={solicitacoes} fichas={fichas} />
 
   return <><Shell view={view} menuOpen={menuOpen} apiOnline={!loadError} onNavigate={navigate} onMenuToggle={() => setMenuOpen((open) => !open)}>{page}</Shell>
     {productModal && <ProductModal produto={productModal === 'new' ? null : productModal} onClose={() => setProductModal(null)} onSaved={() => void mutationDone('Produto salvo com sucesso.')} onDeleted={() => void mutationDone('Produto excluído.')} />}

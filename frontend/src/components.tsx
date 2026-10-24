@@ -5,13 +5,8 @@ const primaryNavigation: Array<[View, string, string]> = [
   ['inicio', '⌂', 'Visão geral'], ['produtos', '◫', 'Produtos'], ['fichas', '≡', 'Fichas técnicas'],
   ['estoque', '▦', 'Estoque'], ['producao', '◉', 'Produção'],
 ]
-const legacyNavigation: Array<[View, string, string]> = [
-  ['pedidos', '◇', 'Pedidos'], ['compras', '↓', 'Compras'], ['vendas', '↑', 'Vendas'],
-  ['financeiro', '$', 'Financeiro'], ['relatorios', '▤', 'Relatórios'], ['equipe', '♙', 'Equipe'],
-]
 const titles: Record<View, string> = {
   inicio: 'Visão geral', produtos: 'Produtos', fichas: 'Fichas técnicas', estoque: 'Estoque', producao: 'Produção',
-  pedidos: 'Pedidos', compras: 'Compras', vendas: 'Vendas', financeiro: 'Financeiro', relatorios: 'Relatórios', equipe: 'Equipe',
 }
 
 export function Shell({ view, menuOpen, apiOnline, onNavigate, onMenuToggle, children }: {
@@ -22,7 +17,6 @@ export function Shell({ view, menuOpen, apiOnline, onNavigate, onMenuToggle, chi
     <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
       <div className="brand"><div className="brand-mark">M</div><div><strong>Machry</strong><small>GESTÃO DE COZINHA</small></div></div>
       <p className="nav-caption">OPERAÇÃO</p><nav>{primaryNavigation.map((item) => navButton(item))}</nav>
-      <p className="nav-caption secondary-caption">GESTÃO</p><nav>{legacyNavigation.map((item) => navButton(item, true))}</nav>
       <div className={`api-state ${apiOnline ? '' : 'offline'}`}><i /><div><strong>{apiOnline ? 'API conectada' : 'API indisponível'}</strong><small>Flask · banco integrado</small></div></div>
     </aside>
     <main><header><button className="menu" onClick={onMenuToggle} aria-label="Abrir menu" type="button">☰</button><div><small>ÁREA ATUAL</small><strong>{titles[view]}</strong></div><span className="environment">Ambiente local</span></header><div className="content">{children}</div></main>
