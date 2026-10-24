@@ -38,8 +38,9 @@ if not exist "%DATABASE_PATH%" (
 )
 echo [4/4] Iniciando servidor...
 echo.
-echo Painel:  http://127.0.0.1:5000/painel
+echo API:     http://127.0.0.1:5000
 echo Swagger: http://127.0.0.1:5000/docs
+echo Frontend: execute "pnpm dev" dentro da pasta frontend
 echo Parar: Ctrl+C
 echo.
 ".venv\Scripts\python.exe" -m flask --app app run --host 127.0.0.1 --port 5000

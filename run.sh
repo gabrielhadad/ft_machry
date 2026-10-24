@@ -25,5 +25,6 @@ if [[ ! -f "$DATABASE_PATH" ]]; then
 else
   echo "[3/4] Banco existente preservado: $DATABASE_PATH"
 fi
-echo '[4/4] Iniciando http://127.0.0.1:5000/painel (Ctrl+C para parar)'
+echo '[4/4] Iniciando API em http://127.0.0.1:5000 (Ctrl+C para parar)'
+echo 'Frontend: execute "pnpm dev" dentro da pasta frontend'
 exec .venv/bin/python -m flask --app app run --host 127.0.0.1 --port 5000

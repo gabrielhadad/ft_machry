@@ -1,6 +1,6 @@
 # Machry
 
-Sistema de operação para restaurante, com API Flask, frontend Vite em TypeScript e persistência SQLAlchemy. O ambiente padrão usa SQLite em volume local. A mesma camada de persistência aceita PostgreSQL quando a infraestrutura for migrada.
+Sistema de operação para restaurante, com API Flask, frontend React com Vite e TypeScript e persistência SQLAlchemy. O ambiente padrão usa SQLite em volume local. A mesma camada de persistência aceita PostgreSQL quando a infraestrutura for migrada.
 
 ## Funcionalidades atuais
 
@@ -54,7 +54,7 @@ flask --app app init-db --seed
 flask --app app run
 ```
 
-### Frontend Vite e TypeScript
+### Frontend React, Vite e TypeScript
 
 Requer Node.js 22+ e pnpm.
 

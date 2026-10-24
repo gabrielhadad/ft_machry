@@ -69,7 +69,18 @@ export interface SolicitacaoProducao {
   concluido_em: string | null
 }
 
-export type View = 'inicio' | 'produtos' | 'fichas' | 'estoque' | 'producao'
+export type View =
+  | 'inicio'
+  | 'produtos'
+  | 'fichas'
+  | 'estoque'
+  | 'producao'
+  | 'pedidos'
+  | 'compras'
+  | 'vendas'
+  | 'financeiro'
+  | 'relatorios'
+  | 'equipe'
 
 export interface AppState {
   produtos: Produto[]
