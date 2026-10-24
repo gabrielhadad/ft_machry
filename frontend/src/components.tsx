@@ -19,7 +19,7 @@ export function Shell({ view, menuOpen, apiOnline, usuario, onNavigate, onMenuTo
   }
   const visibleNavigation = primaryNavigation.filter(([target]) => allowedViews[usuario.papel].includes(target))
   const roleLabel = { OWNER: 'Proprietária', ADMIN: 'Gestor', USER: 'Cozinha' }[usuario.papel]
-  const navButton = ([target, icon, label]: [View, string, string], planned = false) => <button className={`nav ${view === target ? 'active' : ''} ${planned ? 'planned' : ''}`} key={target} onClick={() => onNavigate(target)} type="button"><span aria-hidden="true">{icon}</span>{label}{planned && <small>em breve</small>}</button>
+  const navButton = ([target, icon, label]: [View, string, string]) => <button className={`nav ${view === target ? 'active' : ''}`} key={target} onClick={() => onNavigate(target)} type="button"><span aria-hidden="true">{icon}</span>{label}</button>
   return <div className="layout">
     <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
       <div className="brand"><div className="brand-mark">M</div><div><strong>Machry</strong><small>GESTÃO DE COZINHA</small></div></div>

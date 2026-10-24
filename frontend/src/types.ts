@@ -105,14 +105,3 @@ export type View =
   | 'fichas'
   | 'estoque'
   | 'producao'
-
-export interface AppState {
-  produtos: Produto[]
-  fichas: FichaTecnica[]
-  fases: FaseCatalogo[]
-  inventario: ItemInventario[]
-  solicitacoes: SolicitacaoProducao[]
-  view: View
-  fichaEditando: number | null
-  produtoEditando: number | null
-}

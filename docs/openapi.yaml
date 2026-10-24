@@ -1,8 +1,61 @@
 openapi: 3.0.3
 info:
   title: ft_machry API
-  version: "1.1"
+  version: "2.0"
+security:
+  - cookieAuth: []
 paths:
+  /api/auth/login:
+    post:
+      summary: Inicia uma sessão
+      tags: [autenticacao]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string}
+                password: {type: string, format: password}
+      responses:
+        "200":
+          description: Usuário autenticado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Usuario"}
+        "401": {description: Usuário ou senha inválidos}
+  /api/auth/logout:
+    post:
+      summary: Encerra a sessão atual
+      tags: [autenticacao]
+      responses:
+        "204": {description: Sessão encerrada}
+  /api/auth/me:
+    get:
+      summary: Retorna o usuário da sessão
+      tags: [autenticacao]
+      responses:
+        "200":
+          description: Usuário autenticado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Usuario"}
+        "401": {description: Autenticação necessária}
+  /api/auth/usuarios:
+    get:
+      summary: Lista usuários; exclusivo da proprietária
+      tags: [autenticacao]
+      responses:
+        "200": {description: Lista de usuários}
+    post:
+      summary: Cria usuário; exclusivo da proprietária
+      tags: [autenticacao]
+      responses:
+        "201": {description: Usuário criado}
+
   /api/produtos:
     get:
       summary: Lista produtos ativos (ordenados por nome)
@@ -337,6 +390,24 @@ paths:
               schema:
                 type: array
                 items: {$ref: "#/components/schemas/SolicitacaoProducao"}
+    post:
+      summary: Adiciona uma ficha técnica à fila de produção
+      tags: [producao]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ficha_tecnica_id]
+              properties:
+                ficha_tecnica_id: {type: integer, minimum: 1}
+      responses:
+        "201":
+          description: Solicitação criada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SolicitacaoProducao"}
 
   /api/producao/solicitacoes/{id}:
     parameters:
@@ -352,8 +423,43 @@ paths:
               schema: {$ref: "#/components/schemas/SolicitacaoDetalhe"}
         "404": {$ref: "#/components/responses/NaoEncontrado"}
 
+  /api/producao/solicitacoes/{id}/status:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+    put:
+      summary: Atualiza o estado de uma solicitação
+      tags: [producao]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [ABERTA, EM_SEPARACAO, EM_PRODUCAO, CONCLUIDA, CANCELADA]}
+      responses:
+        "200":
+          description: Solicitação atualizada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SolicitacaoProducao"}
+
 components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
   schemas:
+    Usuario:
+      type: object
+      properties:
+        id: {type: integer}
+        nome: {type: string}
+        username: {type: string}
+        papel: {type: string, enum: [OWNER, ADMIN, USER]}
+        ativo: {type: integer, enum: [0, 1]}
     ProdutoCampos:
       type: object
       properties:
