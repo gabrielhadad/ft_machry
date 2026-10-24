@@ -36,7 +36,7 @@ O banco fica em `./data`, montado no container.
 Com o app rodando:
 
 - Swagger UI: http://localhost:5000/docs
-- Spec OpenAPI: `docs/openapi.yaml`
+- Spec OpenAPI: http://localhost:5000/openapi.yaml (arquivo em `docs/openapi.yaml`)
 
 O Swagger UI é carregado via CDN, então o navegador precisa de internet.
 

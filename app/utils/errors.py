@@ -4,10 +4,9 @@ Cada feature chama `registrar_tratadores_erro(bp)` uma vez (no seu
 `__init__.py`) para converter exceções de validação/negócio em respostas HTTP,
 em vez de repetir try/except em cada view.
 """
-import sqlite3
-
 from flask import Blueprint
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 
 
 class RegistroNaoEncontrado(Exception):
@@ -34,6 +33,6 @@ def registrar_tratadores_erro(bp: Blueprint) -> None:
         return _resposta(str(exc), 404)
 
     @bp.errorhandler(ValueError)
-    @bp.errorhandler(sqlite3.IntegrityError)
+    @bp.errorhandler(IntegrityError)
     def _tratar_valor_invalido(exc):
         return _resposta(str(exc))
