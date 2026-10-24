@@ -1,54 +1,40 @@
 import os
-import sqlite3
 
 import click
-from flask import Flask, current_app, g
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import event, inspect
+from sqlalchemy import URL, event, inspect, text
 
-SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
-SEEDS_PATH = os.path.join(os.path.dirname(__file__), "seeds.sql")
 
 db = SQLAlchemy()
 
 
-def get_db() -> sqlite3.Connection:
-    if "db" not in g:
-        path = current_app.config["DATABASE_PATH"]
-        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        g.db = sqlite3.connect(path)
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA foreign_keys = ON")
-    return g.db
+def _montar_database_uri(config: dict):
+    if config.get("DATABASE_URL"):
+        return config["DATABASE_URL"]
+
+    conexao = str(config.get("DB_CONNECTION", "sqlite")).lower()
+    if conexao in {"postgres", "postgresql"}:
+        return URL.create(
+            "postgresql+psycopg2",
+            username=config["DB_USERNAME"],
+            password=config["DB_PASSWORD"],
+            host=config["DB_HOST"],
+            port=int(config["DB_PORT"]),
+            database=config["DB_DATABASE"],
+        )
+    if conexao != "sqlite":
+        raise ValueError("DB_CONNECTION deve ser sqlite, postgres ou postgresql")
+
+    caminho = os.path.abspath(config["DATABASE_PATH"]).replace("\\", "/")
+    os.makedirs(os.path.dirname(caminho) or ".", exist_ok=True)
+    return f"sqlite:///{caminho}"
 
 
-def close_db(_exc=None):
-    conn = g.pop("db", None)
-    if conn is not None:
-        conn.close()
-
-
-def _montar_database_uri(config: dict) -> str:
-    DB_CONNECTION = config.get("DB_CONNECTION", "sqlite")
-
-    if DB_CONNECTION == "postgres":
-        DB_HOST = config["DB_HOST"]
-        DB_PORT = config["DB_PORT"]
-        DB_DATABASE = config["DB_DATABASE"]
-        DB_USERNAME = config["DB_USERNAME"]
-        DB_PASSWORD = config["DB_PASSWORD"]
-        DATABASE_URL = f"postgresql+psycopg2://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_DATABASE}"
-        return DATABASE_URL
-
-    DATABASE_PATH = os.path.abspath(config["DATABASE_PATH"]).replace("\\", "/")
-    os.makedirs(os.path.dirname(DATABASE_PATH) or ".", exist_ok=True)
-    DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
-    return DATABASE_URL
-
-
-def _registrar_begin_immediate(engine) -> None:
+def _configurar_sqlite(engine) -> None:
     @event.listens_for(engine, "connect")
-    def _desligar_begin_implicito(conexao_dbapi, _):
+    def _configurar_conexao(conexao_dbapi, _):
+        conexao_dbapi.execute("PRAGMA foreign_keys = ON")
         conexao_dbapi.isolation_level = None
 
     @event.listens_for(engine, "begin")
@@ -60,6 +46,50 @@ def _tabelas_existem(engine) -> bool:
     return inspect(engine).has_table("usuario")
 
 
+VIEWS = {
+    "vw_inventario": """
+        SELECT p.id AS produto_id, p.nome AS produto, p.tipo AS tipo_produto,
+               p.unidade_medida, l.id AS lote_id, l.quantidade,
+               l.data_validade, loc.nome AS localizacao
+          FROM lote l
+          JOIN produto p ON p.id = l.produto_id
+          JOIN localizacao loc ON loc.id = l.localizacao_id
+         WHERE l.quantidade > 0
+    """,
+    "vw_fifo": """
+        SELECT l.* FROM lote l WHERE l.quantidade > 0
+         ORDER BY l.produto_id, l.data_validade ASC, l.criado_em ASC
+    """,
+    "vw_sp_componente": """
+        SELECT c.id AS sp_componente_id, c.solicitacao_producao_id,
+               c.produto_id, p.nome AS componente, p.unidade_medida,
+               sf.ordem AS fase_ordem, fp.nome AS fase,
+               c.quantidade_prevista,
+               COALESCE(SUM(m.quantidade), 0) AS quantidade_realizada,
+               SUM(m.quantidade * l.custo_unitario) AS custo_realizado
+          FROM sp_componente c
+          JOIN produto p ON p.id = c.produto_id
+          LEFT JOIN sp_fase sf ON sf.id = c.sp_fase_id
+          LEFT JOIN fase_producao fp ON fp.id = sf.fase_id
+          LEFT JOIN movimentacao_estoque m
+                 ON m.sp_componente_id = c.id AND m.tipo = 'CONSUMO_PRODUCAO'
+          LEFT JOIN lote l ON l.id = m.lote_id
+         GROUP BY c.id, c.solicitacao_producao_id, c.produto_id, p.nome,
+                  p.unidade_medida, sf.ordem, fp.nome, c.quantidade_prevista
+    """,
+    "vw_sp_producao": """
+        SELECT m.solicitacao_producao_id, m.lote_id, m.quantidade, m.criado_em
+          FROM movimentacao_estoque m WHERE m.tipo = 'PRODUCAO'
+    """,
+}
+
+
+def _criar_views() -> None:
+    for nome, consulta in VIEWS.items():
+        db.session.execute(text(f"CREATE VIEW {nome} AS {consulta}"))
+    db.session.commit()
+
+
 @click.command("init-db")
 @click.option("--seed", is_flag=True, help="Também carrega os dados de exemplo.")
 def init_db_command(seed: bool):
@@ -67,28 +97,23 @@ def init_db_command(seed: bool):
         click.echo("Banco já criado")
         return
 
-    caminhos = [SCHEMA_PATH] + ([SEEDS_PATH] if seed else [])
+    db.create_all()
+    _criar_views()
+    if seed:
+        from db.seed import carregar_seeds
 
-    conexao = db.engine.raw_connection()
-    try:
-        for caminho in caminhos:
-            with open(caminho, encoding="utf-8") as f:
-                conexao.executescript(f.read())
-        conexao.commit()
-    finally:
-        conexao.close()
+        carregar_seeds()
     click.echo("Banco inicializado." + (" (com seeds)" if seed else ""))
 
 
 def init_app(app: Flask):
     if "SQLALCHEMY_DATABASE_URI" not in app.config:
         app.config["SQLALCHEMY_DATABASE_URI"] = _montar_database_uri(app.config)
+    app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
 
     db.init_app(app)
+    with app.app_context():
+        if db.engine.dialect.name == "sqlite":
+            _configurar_sqlite(db.engine)
 
-    if app.config.get("DB_CONNECTION", "sqlite") == "sqlite":
-        with app.app_context():
-            _registrar_begin_immediate(db.engine)
-
-    app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)

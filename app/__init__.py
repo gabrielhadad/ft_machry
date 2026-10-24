@@ -3,7 +3,7 @@ import os
 from flask import Flask, render_template, send_from_directory
 
 from app.utils.config import config as app_config
-from app.features import estoque, producao, produtos
+from app.features import estoque, fichas_tecnicas, producao, produtos
 from db.database_config import init_app as init_db
 
 ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,6 +25,9 @@ def create_app(config: dict | None = None) -> Flask:
     init_db(app)
 
     app.register_blueprint(produtos.bp, url_prefix=f"{prefixo_api}/produtos")
+    app.register_blueprint(
+        fichas_tecnicas.bp, url_prefix=f"{prefixo_api}/fichas-tecnicas"
+    )
     app.register_blueprint(estoque.bp, url_prefix=f"{prefixo_api}/estoque")
     app.register_blueprint(producao.bp, url_prefix=f"{prefixo_api}/producao")
 

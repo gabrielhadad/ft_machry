@@ -1,11 +1,15 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
 class Config(BaseSettings):
-    # Por padrão inicia com sqlite, mas pode ser alterado para Postgre no .env (DB_CONNECTION=postgresql)
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
+    # DATABASE_URL tem prioridade. Sem ela, os campos abaixo montam a conexão.
+    DATABASE_URL: str | None = None
     DB_CONNECTION: str = "sqlite"
 
     DATABASE_PATH: str = "data/app.db"
@@ -15,10 +19,5 @@ class Config(BaseSettings):
     DB_DATABASE: str = "ft_machry"
     DB_USERNAME: str = "postgres"
     DB_PASSWORD: str = ""
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-
 
 config = Config()
