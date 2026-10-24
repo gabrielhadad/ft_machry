@@ -1,3 +1,4 @@
+from flask import Flask, send_from_directory, render_template
 import os
 
 from flask import Flask, send_from_directory
@@ -22,7 +23,14 @@ def create_app(config: dict | None = None) -> Flask:
     app.register_blueprint(estoque.bp, url_prefix=f"{prefixo_api}/estoque")
     app.register_blueprint(producao.bp, url_prefix=f"{prefixo_api}/producao")
 
-    
+    app.register_blueprint(produtos.bp)
+    app.register_blueprint(estoque.bp)
+    app.register_blueprint(producao.bp)
+
+    @app.get("/painel")
+    def painel():
+        return render_template("painel.html")
+
     @app.get("/health")
     def health():
         return {"status": "ok"}
