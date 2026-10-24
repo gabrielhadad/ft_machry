@@ -1,10 +1,6 @@
 """Rotas HTTP de estoque.
 
-Controller puro: parsing de requisição (parsing.py) e serialização (schemas.py)
-na entrada/saída, chamando o service para regras de negócio. Erros de
-validação/negócio são convertidos em respostas HTTP pelos handlers em
-errors.py — ver docstring de repository.py para a decisão de manter sqlite3
-cru em vez do ORM.
+Controller puro: delega a leitura para o service e serializa com schemas.py
 """
 from flask import Blueprint
 

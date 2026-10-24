@@ -35,22 +35,22 @@ class EstoqueService:
         self, dados: schemas.MovimentacaoCreate
     ) -> models.MovimentacaoEstoque:
         with self.repository.transacao():
-            origem = self._obter_lote_ou_falhar(dados.lote_id)
+            origem = self._obter_lote_ou_falhar(dados.lote_id, para_atualizacao=True)
             self._validar_usuario_ativo(dados.usuario_id)
             self._validar_saldo_suficiente(origem, dados)
+            destino = None
             if dados.lote_destino_id is not None:
-                self._validar_lote_destino(origem, dados)
-            novo_id = self.repository.inserir_movimentacao(
+                destino = self._validar_lote_destino(origem, dados)
+            return self.repository.inserir_movimentacao(
                 tipo=dados.tipo,
-                lote_id=dados.lote_id,
-                lote_destino_id=dados.lote_destino_id,
+                lote_origem=origem,
+                lote_destino=destino,
                 quantidade=dados.quantidade,
                 quantidade_destino=dados.quantidade_destino,
                 motivo=dados.motivo,
                 usuario_id=dados.usuario_id,
                 observacao=dados.observacao,
             )
-            return models.MovimentacaoEstoque.from_row(self.repository.obter_movimentacao(novo_id))
 
     def sugestao_saida(self, produto_id: int, quantidade: float) -> models.SugestaoSaida:
         if self.repository.obter_produto_ativo(produto_id) is None:
@@ -75,8 +75,8 @@ class EstoqueService:
             quantidade_faltante=max(0, faltante),
         )
 
-    def _obter_lote_ou_falhar(self, lote_id: int):
-        lote = self.repository.obter_lote(lote_id)
+    def _obter_lote_ou_falhar(self, lote_id: int, para_atualizacao: bool = False):
+        lote = self.repository.obter_lote(lote_id, para_atualizacao=para_atualizacao)
         if lote is None:
             raise ValueError(f"lote {lote_id} não encontrado")
         return lote
@@ -86,37 +86,37 @@ class EstoqueService:
             raise ValueError("usuário não encontrado ou inativo")
 
     def _validar_saldo_suficiente(self, origem, dados: schemas.MovimentacaoCreate) -> None:
-        if dados.tipo in TIPOS_QUE_EXIGEM_SAIDA and origem["quantidade"] < dados.quantidade:
+        if dados.tipo in TIPOS_QUE_EXIGEM_SAIDA and origem.quantidade < dados.quantidade:
             raise ValueError("saldo insuficiente")
 
-    def _validar_lote_destino(self, origem, dados: schemas.MovimentacaoCreate) -> None:
-        destino = self._obter_lote_ou_falhar(dados.lote_destino_id)
-        local_destino = self.repository.obter_localizacao(destino["localizacao_id"])
-        produto_destino = self.repository.obter_produto(destino["produto_id"])
+    def _validar_lote_destino(self, origem, dados: schemas.MovimentacaoCreate):
+        destino = self._obter_lote_ou_falhar(dados.lote_destino_id, para_atualizacao=True)
+        local_destino = self.repository.obter_localizacao(destino.localizacao_id)
+        produto_destino = self.repository.obter_produto(destino.produto_id)
         if (
             not local_destino
             or not produto_destino
-            or produto_destino["conservacao"] != local_destino["tipo"]
+            or produto_destino.conservacao != local_destino.tipo
         ):
             raise ValueError("lote destino com conservação incompatível")
-        if dados.tipo == "TRANSFERENCIA" and origem["produto_id"] != destino["produto_id"]:
+        if dados.tipo == "TRANSFERENCIA" and origem.produto_id != destino.produto_id:
             raise ValueError("transferência requer mesmo produto")
         if dados.tipo == "TRANSFORMACAO" and not self.repository.transformacao_cadastrada(
-            origem["produto_id"], destino["produto_id"]
+            origem.produto_id, destino.produto_id
         ):
             raise ValueError("transformação não cadastrada entre os produtos")
+        return destino
 
     def listar_localizacoes(self) -> list[models.Localizacao]:
-        return [models.Localizacao.from_row(r) for r in self.repository.listar_localizacoes()]
+        return self.repository.listar_localizacoes()
 
     def criar_localizacao(self, dados: schemas.LocalizacaoCreate) -> models.Localizacao:
         with self.repository.transacao():
             if dados.parent_id is not None:
                 self._validar_localizacao_existe(dados.parent_id)
-            novo_id = self.repository.inserir_localizacao(
+            return self.repository.inserir_localizacao(
                 nome=dados.nome, tipo=dados.tipo, parent_id=dados.parent_id, foto_url=dados.foto_url
             )
-            return models.Localizacao.from_row(self.repository.obter_localizacao(novo_id))
 
     def atualizar_localizacao(
         self, loc_id: int, dados: schemas.LocalizacaoUpdate
@@ -134,7 +134,7 @@ class EstoqueService:
                     "alteração de tipo incompatível com produtos dos lotes existentes"
                 )
             self.repository.atualizar_localizacao(loc_id, campos)
-            return models.Localizacao.from_row(self.repository.obter_localizacao(loc_id))
+            return self.repository.obter_localizacao(loc_id)
 
     def remover_localizacao(self, loc_id: int) -> None:
         with self.repository.transacao():
@@ -161,7 +161,7 @@ class EstoqueService:
             if atual in visitados:
                 raise ValueError("hierarquia de localização circular")
             visitados.add(atual)
-            atual = self.repository.obter_localizacao(atual)["parent_id"]
+            atual = self.repository.obter_localizacao(atual).parent_id
 
     def listar_lotes(
         self, produto_id: Optional[int] = None, localizacao_id: Optional[int] = None
@@ -170,8 +170,7 @@ class EstoqueService:
         return [models.LoteListado.from_row(r) for r in linhas]
 
     def obter_lote(self, lote_id: int) -> Optional[models.Lote]:
-        linha = self.repository.obter_lote(lote_id)
-        return models.Lote.from_row(linha) if linha is not None else None
+        return self.repository.obter_lote(lote_id)
 
     def criar_lote(self, dados: schemas.LoteCreate) -> models.Lote:
         with self.repository.transacao():
@@ -182,28 +181,27 @@ class EstoqueService:
                 produto, dados.data_validade, "produto exige data_validade"
             )
             self._validar_conservacao_compativel(produto, localizacao)
-            novo_id = self.repository.inserir_lote(
+            return self.repository.inserir_lote(
                 produto_id=dados.produto_id,
                 localizacao_id=dados.localizacao_id,
                 data_producao=dados.data_producao.isoformat() if dados.data_producao else None,
                 data_validade=dados.data_validade.isoformat() if dados.data_validade else None,
                 custo_unitario=dados.custo_unitario,
             )
-            return models.Lote.from_row(self.repository.obter_lote(novo_id))
 
     def atualizar_lote(self, lote_id: int, dados: schemas.LoteUpdate) -> models.Lote:
         campos = dados.model_dump(exclude_unset=True, mode="json")
 
         with self.repository.transacao():
             lote = self._obter_lote_ou_404(lote_id)
-            validade = campos.get("data_validade", lote["data_validade"])
-            producao = campos.get("data_producao", lote["data_producao"])
-            produto = self.repository.obter_produto(lote["produto_id"])
+            validade = campos.get("data_validade", lote.data_validade)
+            producao = campos.get("data_producao", lote.data_producao)
+            produto = self.repository.obter_produto(lote.produto_id)
             self._validar_validade_obrigatoria(produto, validade, "validade obrigatória")
             if producao and validade and producao > validade:
                 raise ValueError("validade anterior à produção")
             self.repository.atualizar_lote(lote_id, campos)
-            return models.Lote.from_row(self.repository.obter_lote(lote_id))
+            return self.repository.obter_lote(lote_id)
 
     def _buscar_produto_e_localizacao(self, produto_id: int, localizacao_id: int):
         produto = self.repository.obter_produto_ativo(produto_id)
@@ -213,11 +211,11 @@ class EstoqueService:
         return produto, localizacao
 
     def _validar_validade_obrigatoria(self, produto, data_validade, mensagem: str) -> None:
-        if produto["validade_obrigatoria"] and not data_validade:
+        if produto.validade_obrigatoria and not data_validade:
             raise ValueError(mensagem)
 
     def _validar_conservacao_compativel(self, produto, localizacao) -> None:
-        if produto["conservacao"] != localizacao["tipo"]:
+        if produto.conservacao != localizacao.tipo:
             raise ValueError("conservação do produto incompatível com localização")
 
     def _obter_lote_ou_404(self, lote_id: int):

@@ -1,85 +1,77 @@
 from __future__ import annotations
 
-import sqlite3
 from dataclasses import dataclass
 from typing import Optional
 
-
-"""Entidades de domínio do estoque"""
-
-@dataclass
-class Localizacao:
-    id: int
-    nome: str
-    tipo: str
-    parent_id: Optional[int]
-    foto_url: Optional[str]
-
-    @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "Localizacao":
-        return cls(
-            id=row["id"],
-            nome=row["nome"],
-            tipo=row["tipo"],
-            parent_id=row["parent_id"],
-            foto_url=row["foto_url"],
-        )
+from db.database_config import db
 
 
-@dataclass
-class Lote:
-    id: int
-    produto_id: int
-    localizacao_id: int
-    quantidade: float
-    data_producao: Optional[str]
-    data_validade: Optional[str]
-    custo_unitario: Optional[float]
-    criado_em: str
+class Localizacao(db.Model):
+    __tablename__ = "localizacao"
 
-    @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "Lote":
-        return cls(
-            id=row["id"],
-            produto_id=row["produto_id"],
-            localizacao_id=row["localizacao_id"],
-            quantidade=row["quantidade"],
-            data_producao=row["data_producao"],
-            data_validade=row["data_validade"],
-            custo_unitario=row["custo_unitario"],
-            criado_em=row["criado_em"],
-        )
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.Text, nullable=False)
+    tipo = db.Column(db.Text, nullable=False)
+    parent_id = db.Column(db.Integer)
+    foto_url = db.Column(db.Text)
 
 
-@dataclass
-class LoteListado(Lote):
-    produto: str = ""
-    localizacao: str = ""
+class Lote(db.Model):
+    __tablename__ = "lote"
+
+    id = db.Column(db.Integer, primary_key=True)
+    produto_id = db.Column(db.Integer, nullable=False)
+    localizacao_id = db.Column(db.Integer, nullable=False)
+    quantidade = db.Column(db.Numeric(asdecimal=False), nullable=False)
+    data_producao = db.Column(db.String)
+    data_validade = db.Column(db.String)
+    custo_unitario = db.Column(db.Numeric(asdecimal=False))
+    criado_em = db.Column(db.String, nullable=False, server_default=db.text("(datetime('now'))"))
+
+
+class MovimentacaoEstoque(db.Model):
+    __tablename__ = "movimentacao_estoque"
+
+    id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.Text, nullable=False)
+    lote_id = db.Column(db.Integer, nullable=False)
+    lote_destino_id = db.Column(db.Integer)
+    quantidade = db.Column(db.Numeric(asdecimal=False), nullable=False)
+    quantidade_destino = db.Column(db.Numeric(asdecimal=False))
+    motivo = db.Column(db.Text)
+    usuario_id = db.Column(db.Integer, nullable=False)
+    solicitacao_producao_id = db.Column(db.Integer)
+    sp_componente_id = db.Column(db.Integer)
+    observacao = db.Column(db.Text)
+    criado_em = db.Column(db.String, nullable=False, server_default=db.text("(datetime('now'))"))
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "LoteListado":
-        dados = Lote.from_row(row)
-        return cls(produto=row["produto"], localizacao=row["localizacao"], **dados.__dict__)
-
-
-@dataclass
-class MovimentacaoEstoque:
-    id: int
-    tipo: str
-    lote_id: int
-    lote_destino_id: Optional[int]
-    quantidade: float
-    quantidade_destino: Optional[float]
-    motivo: Optional[str]
-    usuario_id: int
-    solicitacao_producao_id: Optional[int]
-    sp_componente_id: Optional[int]
-    observacao: Optional[str]
-    criado_em: str
-
-    @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "MovimentacaoEstoque":
+    def from_row(cls, row) -> "MovimentacaoEstoque":
         return cls(**{chave: row[chave] for chave in row.keys()})
+
+
+class Produto(db.Model):
+    __tablename__ = "produto"
+
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.Text, nullable=False)
+    conservacao = db.Column(db.Text, nullable=False)
+    validade_obrigatoria = db.Column(db.Integer, nullable=False)
+    ativo = db.Column(db.Integer, nullable=False)
+
+
+class Usuario(db.Model):
+    __tablename__ = "usuario"
+
+    id = db.Column(db.Integer, primary_key=True)
+    ativo = db.Column(db.Integer, nullable=False)
+
+
+class ProdutoTransformacao(db.Model):
+    __tablename__ = "produto_transformacao"
+
+    produto_origem_id = db.Column(db.Integer, primary_key=True)
+    produto_destino_id = db.Column(db.Integer, primary_key=True)
 
 
 @dataclass
@@ -94,7 +86,25 @@ class ItemInventario:
     localizacao: str
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "ItemInventario":
+    def from_row(cls, row) -> "ItemInventario":
+        return cls(**{chave: row[chave] for chave in row.keys()})
+
+
+@dataclass
+class LoteListado:
+    id: int
+    produto_id: int
+    localizacao_id: int
+    quantidade: float
+    data_producao: Optional[str]
+    data_validade: Optional[str]
+    custo_unitario: Optional[float]
+    criado_em: str
+    produto: str
+    localizacao: str
+
+    @classmethod
+    def from_row(cls, row) -> "LoteListado":
         return cls(**{chave: row[chave] for chave in row.keys()})
 
 

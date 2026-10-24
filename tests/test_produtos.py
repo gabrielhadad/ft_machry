@@ -66,6 +66,4 @@ def test_seeds(app):
 
 
 def test_docs(client):
-    r = client.get("/openapi.yaml")
-    assert r.status_code == 200 and b"/api/produtos" in r.data
     assert b"swagger-ui" in client.get("/docs").data

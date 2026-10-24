@@ -10,3 +10,4 @@ services:
       - ./data:/app/data
       - ./app:/app/app
       - ./db:/app/db
+      - ./frontend:/app/frontend
