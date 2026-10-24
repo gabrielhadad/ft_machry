@@ -1,6 +1,6 @@
 # ft_machry
 
-API Flask + SQLite para estoque e produção de cozinha (produtos, lotes, fichas técnicas, solicitações de produção).
+API Flask para estoque e produção de cozinha (produtos, lotes, fichas técnicas, solicitações de produção). Roda com SQLite (padrão, local) ou Postgres.
 
 ## Rodar localmente
 
@@ -15,7 +15,11 @@ flask --app app init-db --seed   # cria data/app.db a partir de db/schema.sql (+
 flask --app app run              # http://localhost:5000
 ```
 
-`init-db` sem `--seed` cria o banco vazio. O caminho do banco vem de `DATABASE_PATH` (padrão `data/app.db`).
+`init-db` sem `--seed` cria o banco vazio. O caminho do banco (SQLite) vem de `DATABASE_PATH`
+(padrão `data/app.db`). Para rodar com Postgres em vez de SQLite, configure `DB_CONNECTION=postgres`
+e as variáveis `DB_HOST`/`DB_PORT`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD` — ver `.env.example`.
+
+Painel web: http://localhost:5000/painel
 
 ## Rodar com Docker
 
@@ -32,11 +36,11 @@ O banco fica em `./data`, montado no container.
 Com o app rodando:
 
 - Swagger UI: http://localhost:5000/docs
-- Spec OpenAPI: http://localhost:5000/openapi.yaml (arquivo em `app/openapi.yaml`)
+- Spec OpenAPI: `docs/openapi.yaml`
 
 O Swagger UI é carregado via CDN, então o navegador precisa de internet.
 
-Hoje a spec cobre a API de produtos (`/api/produtos`).
+A spec cobre produtos (`/api/produtos`), estoque (`/api/estoque`) e produção (`/api/producao`).
 
 ## Testes
 

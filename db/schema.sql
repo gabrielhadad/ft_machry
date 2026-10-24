@@ -76,24 +76,6 @@ CREATE TABLE ficha_tecnica_componente (
     UNIQUE (ficha_tecnica_id, produto_id)
 );
 
-CREATE TRIGGER trg_ftc_fase_coerente_ins
-BEFORE INSERT ON ficha_tecnica_componente
-WHEN NEW.ficha_tecnica_fase_id IS NOT NULL
-BEGIN
-    SELECT CASE WHEN (SELECT ficha_tecnica_id FROM ficha_tecnica_fase
-                       WHERE id = NEW.ficha_tecnica_fase_id) <> NEW.ficha_tecnica_id
-    THEN RAISE(ABORT, 'fase de outra ficha tecnica') END;
-END;
-
-CREATE TRIGGER trg_ftc_fase_coerente_upd
-BEFORE UPDATE OF ficha_tecnica_fase_id, ficha_tecnica_id ON ficha_tecnica_componente
-WHEN NEW.ficha_tecnica_fase_id IS NOT NULL
-BEGIN
-    SELECT CASE WHEN (SELECT ficha_tecnica_id FROM ficha_tecnica_fase
-                       WHERE id = NEW.ficha_tecnica_fase_id) <> NEW.ficha_tecnica_id
-    THEN RAISE(ABORT, 'fase de outra ficha tecnica') END;
-END;
-
 CREATE TABLE lote (
     id             INTEGER PRIMARY KEY,
     produto_id     INTEGER NOT NULL REFERENCES produto(id),
@@ -137,24 +119,6 @@ CREATE TABLE sp_componente (
     UNIQUE (solicitacao_producao_id, produto_id)
 );
 
-CREATE TRIGGER trg_spc_fase_coerente_ins
-BEFORE INSERT ON sp_componente
-WHEN NEW.sp_fase_id IS NOT NULL
-BEGIN
-    SELECT CASE WHEN (SELECT solicitacao_producao_id FROM sp_fase
-                       WHERE id = NEW.sp_fase_id) <> NEW.solicitacao_producao_id
-    THEN RAISE(ABORT, 'fase de outra solicitacao de producao') END;
-END;
-
-CREATE TRIGGER trg_spc_fase_coerente_upd
-BEFORE UPDATE OF sp_fase_id, solicitacao_producao_id ON sp_componente
-WHEN NEW.sp_fase_id IS NOT NULL
-BEGIN
-    SELECT CASE WHEN (SELECT solicitacao_producao_id FROM sp_fase
-                       WHERE id = NEW.sp_fase_id) <> NEW.solicitacao_producao_id
-    THEN RAISE(ABORT, 'fase de outra solicitacao de producao') END;
-END;
-
 CREATE TABLE movimentacao_estoque (
     id                      INTEGER PRIMARY KEY,
     tipo                    TEXT    NOT NULL
@@ -183,54 +147,6 @@ CREATE TABLE movimentacao_estoque (
 CREATE INDEX idx_mov_lote ON movimentacao_estoque (lote_id, criado_em);
 CREATE INDEX idx_mov_sp   ON movimentacao_estoque (solicitacao_producao_id);
 CREATE INDEX idx_mov_sp_componente ON movimentacao_estoque (sp_componente_id);
-
-CREATE TRIGGER trg_mov_valida
-BEFORE INSERT ON movimentacao_estoque
-WHEN NEW.lote_destino_id IS NOT NULL
-BEGIN
-    SELECT CASE
-        WHEN NEW.tipo = 'TRANSFERENCIA'
-         AND (SELECT produto_id FROM lote WHERE id = NEW.lote_id)
-          <> (SELECT produto_id FROM lote WHERE id = NEW.lote_destino_id)
-        THEN RAISE(ABORT, 'transferencia exige lotes do mesmo produto')
-
-        WHEN NEW.tipo = 'TRANSFORMACAO'
-         AND NOT EXISTS (
-             SELECT 1 FROM produto_transformacao pt
-              WHERE pt.produto_origem_id  = (SELECT produto_id FROM lote WHERE id = NEW.lote_id)
-                AND pt.produto_destino_id = (SELECT produto_id FROM lote WHERE id = NEW.lote_destino_id))
-        THEN RAISE(ABORT, 'transformacao nao cadastrada em produto_transformacao')
-    END;
-END;
-
-CREATE TRIGGER trg_mov_imutavel_update
-BEFORE UPDATE ON movimentacao_estoque
-BEGIN
-    SELECT RAISE(ABORT, 'movimentacao_estoque e append-only: eventos nao podem ser alterados');
-END;
-
-CREATE TRIGGER trg_mov_imutavel_delete
-BEFORE DELETE ON movimentacao_estoque
-BEGIN
-    SELECT RAISE(ABORT, 'movimentacao_estoque e append-only: eventos nao podem ser apagados');
-END;
-
-CREATE TRIGGER trg_mov_aplica
-AFTER INSERT ON movimentacao_estoque
-BEGIN
-    UPDATE lote SET quantidade = quantidade + NEW.quantidade
-     WHERE id = NEW.lote_id
-       AND NEW.tipo IN ('ENTRADA', 'PRODUCAO', 'AJUSTE_ENTRADA');
-
-    UPDATE lote SET quantidade = quantidade - NEW.quantidade
-     WHERE id = NEW.lote_id
-       AND NEW.tipo IN ('SAIDA', 'CONSUMO_PRODUCAO', 'TRANSFERENCIA',
-                        'TRANSFORMACAO', 'AJUSTE_SAIDA');
-
-    UPDATE lote SET quantidade = quantidade + COALESCE(NEW.quantidade_destino, NEW.quantidade)
-     WHERE id = NEW.lote_destino_id
-       AND NEW.tipo IN ('TRANSFERENCIA', 'TRANSFORMACAO');
-END;
 
 CREATE VIEW vw_inventario AS
 SELECT p.id              AS produto_id,

@@ -1,46 +1,28 @@
+"""Rotas HTTP de produção.
+
+Controller puro: delega a leitura para o service e serializa com schemas.py
+
+"""
 from flask import Blueprint
 
-from ...db import get_db
+from . import schemas
+from .repository import ProducaoRepository
+from .services import ProducaoService
 
-bp = Blueprint("producao", __name__, url_prefix="/api/producao")
+bp = Blueprint("producao", __name__)
+
+
+def get_service() -> ProducaoService:
+    return ProducaoService(ProducaoRepository())
 
 
 @bp.get("/solicitacoes")
-def listar():
-    rows = get_db().execute(
-        "SELECT * FROM solicitacao_producao ORDER BY criado_em DESC"
-    ).fetchall()
-    return [dict(r) for r in rows]
+def listar_solicitacoes():
+    itens = get_service().listar_solicitacoes()
+    return [schemas.SolicitacaoProducaoOut.model_validate(i).model_dump() for i in itens]
 
 
 @bp.get("/solicitacoes/<int:sp_id>")
-def detalhar(sp_id):
-    db = get_db()
-    sp = db.execute(
-        "SELECT * FROM solicitacao_producao WHERE id = ?", (sp_id,)
-    ).fetchone()
-    if sp is None:
-        return {"erro": "solicitação não encontrada"}, 404
-
-    componentes = db.execute(
-        "SELECT * FROM vw_sp_componente WHERE solicitacao_producao_id = ?"
-        " ORDER BY fase_ordem, componente",
-        (sp_id,),
-    ).fetchall()
-    fases = db.execute(
-        "SELECT f.ordem, fp.nome AS fase, f.tempo_previsto_min, f.tempo_realizado_min"
-        " FROM sp_fase f JOIN fase_producao fp ON fp.id = f.fase_id"
-        " WHERE f.solicitacao_producao_id = ? ORDER BY f.ordem",
-        (sp_id,),
-    ).fetchall()
-    lotes_produzidos = db.execute(
-        "SELECT * FROM vw_sp_producao WHERE solicitacao_producao_id = ?",
-        (sp_id,),
-    ).fetchall()
-
-    return {
-        "solicitacao": dict(sp),
-        "componentes": [dict(r) for r in componentes],
-        "fases": [dict(r) for r in fases],
-        "lotes_produzidos": [dict(r) for r in lotes_produzidos],
-    }
+def detalhar_solicitacao(sp_id):
+    detalhe = get_service().obter_detalhe(sp_id)
+    return schemas.SolicitacaoDetalheOut.model_validate(detalhe).model_dump()
