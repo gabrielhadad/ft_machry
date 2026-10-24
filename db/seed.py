@@ -13,10 +13,6 @@ from sqlalchemy import text
 
 
 def carregar_seeds() -> None:
-    usuarios = [
-        Usuario(id=1, nome="Admin", papel="ADMIN"),
-        Usuario(id=2, nome="Cozinheiro José", papel="USER"),
-    ]
     fases = [
         FaseProducao(id=1, nome="Bater/Misturar"),
         FaseProducao(id=2, nome="Cozir"),
@@ -51,7 +47,7 @@ def carregar_seeds() -> None:
         Produto(id=9, nome="Chantili", tipo="INTERMEDIARIO", unidade_medida="g", grupo_id=3, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=2),
         Produto(id=10, nome="Bolo de Nozes - Médio", tipo="FINAL", unidade_medida="un", grupo_id=4, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=4),
     ]
-    db.session.add_all(usuarios + fases + grupos + localizacoes)
+    db.session.add_all(fases + grupos + localizacoes)
     db.session.flush()
     db.session.add_all(produtos)
     db.session.flush()

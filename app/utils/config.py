@@ -20,4 +20,16 @@ class Config(BaseSettings):
     DB_USERNAME: str = "postgres"
     DB_PASSWORD: str = ""
 
+    SECRET_KEY: str = "machry-desenvolvimento-troque-em-producao"
+    SESSION_COOKIE_HTTPONLY: bool = True
+    SESSION_COOKIE_SAMESITE: str = "Lax"
+    SESSION_COOKIE_SECURE: bool = False
+
+    OWNER_USERNAME: str = "dona"
+    OWNER_INITIAL_PASSWORD: str = "Dona@123"
+    MANAGER_USERNAME: str = "gestor"
+    MANAGER_INITIAL_PASSWORD: str = "Gestor@123"
+    COOK_USERNAME: str = "cozinha"
+    COOK_INITIAL_PASSWORD: str = "Cozinha@123"
+
 config = Config()

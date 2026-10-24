@@ -11,6 +11,14 @@ services:
       DB_DATABASE: ${DB_DATABASE:-ft_machry}
       DB_USERNAME: ${DB_USERNAME:-machry}
       DB_PASSWORD: ${DB_PASSWORD:-}
+      SECRET_KEY: ${SECRET_KEY:-machry-desenvolvimento-troque-em-producao}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-0}
+      OWNER_USERNAME: ${OWNER_USERNAME:-dona}
+      OWNER_INITIAL_PASSWORD: ${OWNER_INITIAL_PASSWORD:-Dona@123}
+      MANAGER_USERNAME: ${MANAGER_USERNAME:-gestor}
+      MANAGER_INITIAL_PASSWORD: ${MANAGER_INITIAL_PASSWORD:-Gestor@123}
+      COOK_USERNAME: ${COOK_USERNAME:-cozinha}
+      COOK_INITIAL_PASSWORD: ${COOK_INITIAL_PASSWORD:-Cozinha@123}
     volumes:
       - ./data:/app/data
     ports:

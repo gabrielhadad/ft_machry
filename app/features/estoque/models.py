@@ -98,6 +98,8 @@ class Usuario(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.Text, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    senha_hash = db.Column(db.String(255), nullable=False)
     papel = db.Column(db.Text, nullable=False, default="USER", server_default="USER")
     foto_url = db.Column(db.Text)
     ativo = db.Column(db.Integer, nullable=False, default=1, server_default="1")

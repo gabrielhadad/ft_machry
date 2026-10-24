@@ -10,6 +10,7 @@ Sistema de operação para restaurante, com API Flask, frontend React com Vite e
 - Lotes, localizações, movimentações e sugestão de saída por FEFO.
 - Consulta das solicitações de produção.
 - Interface responsiva para produtos e fichas técnicas.
+- Login por sessão com perfis de proprietária, gestor e cozinha.
 - Swagger em `/docs`.
 
 ## Executar na VM com Docker e SQLite
@@ -65,6 +66,18 @@ pnpm dev
 ```
 
 O servidor Vite abre em `http://localhost:5173` e encaminha `/api` para o Flask em `http://localhost:5000`.
+
+### Acessos iniciais de desenvolvimento
+
+Ao executar `flask --app app init-db`, o sistema cria ou atualiza as contas iniciais:
+
+| Perfil | Usuário | Senha inicial |
+|---|---|---|
+| Proprietária | `dona` | `Dona@123` |
+| Gestor | `gestor` | `Gestor@123` |
+| Cozinha | `cozinha` | `Cozinha@123` |
+
+Altere as credenciais e `SECRET_KEY` no arquivo `.env` antes de publicar. As senhas são armazenadas no banco somente como hash.
 
 Para validar a compilação:
 

@@ -1,5 +1,14 @@
 export type TipoProduto = 'INSUMO' | 'INTERMEDIARIO' | 'FINAL'
 export type Conservacao = 'SECO' | 'RESFRIADO' | 'CONGELADO'
+export type PapelUsuario = 'OWNER' | 'ADMIN' | 'USER'
+
+export interface Usuario {
+  id: number
+  nome: string
+  username: string
+  papel: PapelUsuario
+  ativo: number
+}
 
 export interface Produto {
   id: number

@@ -4,6 +4,7 @@ import click
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import URL, event, inspect, text
+from werkzeug.security import generate_password_hash
 
 
 db = SQLAlchemy()
@@ -44,6 +45,50 @@ def _configurar_sqlite(engine) -> None:
 
 def _tabelas_existem(engine) -> bool:
     return inspect(engine).has_table("usuario")
+
+
+def _migrar_autenticacao() -> None:
+    colunas = {coluna["name"] for coluna in inspect(db.engine).get_columns("usuario")}
+    if "username" not in colunas:
+        db.session.execute(text("ALTER TABLE usuario ADD COLUMN username VARCHAR(80)"))
+    if "senha_hash" not in colunas:
+        db.session.execute(text("ALTER TABLE usuario ADD COLUMN senha_hash VARCHAR(255)"))
+    db.session.commit()
+
+
+def _provisionar_usuarios_iniciais() -> None:
+    from app.features.estoque.models import Usuario
+    from flask import current_app
+
+    configuracoes = [
+        ("Proprietária", current_app.config["OWNER_USERNAME"], current_app.config["OWNER_INITIAL_PASSWORD"], "OWNER"),
+        ("Gestor", current_app.config["MANAGER_USERNAME"], current_app.config["MANAGER_INITIAL_PASSWORD"], "ADMIN"),
+        ("Cozinha", current_app.config["COOK_USERNAME"], current_app.config["COOK_INITIAL_PASSWORD"], "USER"),
+    ]
+    usuarios = db.session.execute(db.select(Usuario).order_by(Usuario.id)).scalars().all()
+    por_username = {usuario.username.lower(): usuario for usuario in usuarios if usuario.username}
+    por_papel = {usuario.papel: usuario for usuario in usuarios if usuario.papel}
+
+    for nome, username, password, papel in configuracoes:
+        username = username.strip().lower()
+        usuario = por_username.get(username)
+        if usuario is None and papel == "OWNER":
+            usuario = por_papel.get("OWNER") or por_papel.get("ADMIN")
+        elif usuario is None and papel == "USER":
+            usuario = por_papel.get("USER")
+        if usuario is None:
+            usuario = Usuario(nome=nome, username=username, senha_hash=generate_password_hash(password), papel=papel)
+            db.session.add(usuario)
+        else:
+            usuario.username = usuario.username or username
+            usuario.senha_hash = usuario.senha_hash or generate_password_hash(password)
+            if papel == "OWNER":
+                usuario.papel = "OWNER"
+        por_username[username] = usuario
+    db.session.commit()
+
+    db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_usuario_username ON usuario (username)"))
+    db.session.commit()
 
 
 VIEWS = {
@@ -94,7 +139,9 @@ def _criar_views() -> None:
 @click.option("--seed", is_flag=True, help="Também carrega os dados de exemplo.")
 def init_db_command(seed: bool):
     if _tabelas_existem(db.engine):
-        click.echo("Banco já criado")
+        _migrar_autenticacao()
+        _provisionar_usuarios_iniciais()
+        click.echo("Banco já criado e atualizado")
         return
 
     db.create_all()
@@ -103,6 +150,7 @@ def init_db_command(seed: bool):
         from db.seed import carregar_seeds
 
         carregar_seeds()
+    _provisionar_usuarios_iniciais()
     click.echo("Banco inicializado." + (" (com seeds)" if seed else ""))
 
 
