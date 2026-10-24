@@ -36,6 +36,10 @@ def create_app(config: dict | None = None) -> Flask:
     def health():
         return {"status": "ok"}
 
+    @app.get("/openapi.yaml")
+    def openapi():
+        return send_from_directory(DOCS_PATH, "openapi.yaml")
+
     @app.get("/docs")
     def docs():
         return send_from_directory(DOCS_PATH, "swagger-ui.html")
