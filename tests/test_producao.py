@@ -42,12 +42,9 @@ def test_detalhe_inexistente(client):
     assert client.get('/api/producao/solicitacoes/999').status_code == 404
 
 
-def test_lista_e_detalhe_com_dados(app):
-    with app.app_context():
-        r = app.test_cli_runner().invoke(args=['init-db', '--seed'])
-        assert r.exit_code == 0, r.output
+def test_lista_e_detalhe_com_dados(app, seeded_client):
     _criar_solicitacao_com_fase_e_componente(app)
-    c = app.test_client()
+    c = seeded_client
 
     lista = c.get('/api/producao/solicitacoes')
     assert lista.status_code == 200

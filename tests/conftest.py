@@ -25,3 +25,18 @@ def client(app):
     )
     assert resposta.status_code == 200
     return client
+
+
+@pytest.fixture
+def seeded_client(app):
+    """Cliente autenticado com o catálogo de demonstração carregado."""
+    with app.app_context():
+        result = app.test_cli_runner().invoke(args=["init-db", "--seed"])
+    assert result.exit_code == 0, result.output
+
+    client = app.test_client()
+    resposta = client.post(
+        "/api/auth/login", json={"username": "dona", "password": "Teste@123"}
+    )
+    assert resposta.status_code == 200
+    return client
