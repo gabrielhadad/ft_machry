@@ -32,7 +32,12 @@ export function ProductModal({ produto, onClose, onSaved, onDeleted }: { produto
 
 type DraftPhase = { key: string; fase_id: number; ordem: number; tempo_previsto_min: number }
 type DraftComponent = { key: string; produto_id: number; quantidade: number; fase_ordem: number | null }
-const key = () => crypto.randomUUID()
+let keySequence = 0
+const key = () => {
+  if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID()
+  keySequence += 1
+  return `${Date.now().toString(36)}-${keySequence.toString(36)}-${Math.random().toString(36).slice(2)}`
+}
 
 export function SheetModal({ ficha, produtos, catalogoFases, onClose, onSaved, onDeleted }: { ficha: FichaTecnica | null; produtos: Produto[]; catalogoFases: FaseCatalogo[]; onClose: () => void; onSaved: () => void; onDeleted: () => void }) {
   const productsForSheet = produtos.filter((produto) => produto.tipo !== 'INSUMO')
