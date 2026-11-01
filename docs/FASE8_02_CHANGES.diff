@@ -1,0 +1,2498 @@
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/.github/workflows/ci-cd.yml /mnt/data/Machry_Fase8_02_Migrations/.github/workflows/ci-cd.yml
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/.github/workflows/ci-cd.yml	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/.github/workflows/ci-cd.yml	2026-11-01 03:54:07.177841130 +0000
+@@ -1,74 +1,75 @@
+-name: CI e CD
+-
+-on:
+-  pull_request:
+-  push:
+-    branches: [main, yuri]
+-  workflow_dispatch:
+-
+-concurrency:
+-  group: machry-${{ github.ref }}
+-  cancel-in-progress: true
+-
+-jobs:
+-  api:
+-    name: API Flask
+-    runs-on: ubuntu-latest
+-    steps:
+-      - uses: actions/checkout@v4
+-      - uses: actions/setup-python@v5
+-        with:
+-          python-version: "3.12"
+-          cache: pip
+-      - run: pip install -r requirements-dev.txt
+-      - run: pytest -q
+-
+-  frontend:
+-    name: Frontend Vite
+-    runs-on: ubuntu-latest
+-    defaults:
+-      run:
+-        working-directory: frontend
+-    steps:
+-      - uses: actions/checkout@v4
+-      - uses: pnpm/action-setup@v4
+-        with:
+-          version: 11.25.0
+-      - uses: actions/setup-node@v4
+-        with:
+-          node-version: "22"
+-          cache: pnpm
+-          cache-dependency-path: frontend/pnpm-lock.yaml
+-      - run: pnpm install --frozen-lockfile
+-      - run: pnpm exec tsc --noEmit
+-      - run: pnpm run build
+-
+-  containers:
+-    name: Imagens Docker
+-    runs-on: ubuntu-latest
+-    steps:
+-      - uses: actions/checkout@v4
+-      - run: docker compose build
+-
+-  deploy:
+-    name: Publicar na VM
+-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+-    needs: [api, frontend, containers]
+-    runs-on: ubuntu-latest
+-    environment: production
+-    steps:
+-      - name: Atualizar aplicação pela conexão SSH
+-        uses: appleboy/ssh-action@v1.2.0
+-        with:
+-          host: ${{ secrets.VM_HOST }}
+-          username: ${{ secrets.VM_USER }}
+-          key: ${{ secrets.VM_SSH_KEY }}
+-          port: ${{ secrets.VM_SSH_PORT || 22 }}
+-          script_stop: true
+-          script: |
+-            cd "${{ secrets.VM_APP_PATH }}"
+-            git pull --ff-only origin main
+-            docker compose build
+-            docker compose run --rm api flask --app app init-db
+-            docker compose up -d --remove-orphans
+-            docker image prune -f
++name: CI e CD
++
++on:
++  pull_request:
++  push:
++    branches: [main, yuri]
++  workflow_dispatch:
++
++concurrency:
++  group: machry-${{ github.ref }}
++  cancel-in-progress: true
++
++jobs:
++  api:
++    name: API Flask
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++      - uses: actions/setup-python@v5
++        with:
++          python-version: "3.12"
++          cache: pip
++      - run: pip install -r requirements-dev.txt
++      - run: pytest -q
++
++  frontend:
++    name: Frontend Vite
++    runs-on: ubuntu-latest
++    defaults:
++      run:
++        working-directory: frontend
++    steps:
++      - uses: actions/checkout@v4
++      - uses: pnpm/action-setup@v4
++        with:
++          version: 11.25.0
++      - uses: actions/setup-node@v4
++        with:
++          node-version: "22"
++          cache: pnpm
++          cache-dependency-path: frontend/pnpm-lock.yaml
++      - run: pnpm install --frozen-lockfile
++      - run: pnpm exec tsc --noEmit
++      - run: pnpm run build
++
++  containers:
++    name: Imagens Docker
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++      - run: docker compose build
++
++  deploy:
++    name: Publicar na VM
++    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
++    needs: [api, frontend, containers]
++    runs-on: ubuntu-latest
++    environment: production
++    steps:
++      - name: Atualizar aplicação pela conexão SSH
++        uses: appleboy/ssh-action@v1.2.0
++        with:
++          host: ${{ secrets.VM_HOST }}
++          username: ${{ secrets.VM_USER }}
++          key: ${{ secrets.VM_SSH_KEY }}
++          port: ${{ secrets.VM_SSH_PORT || 22 }}
++          script_stop: true
++          script: |
++            cd "${{ secrets.VM_APP_PATH }}"
++            git pull --ff-only origin main
++            docker compose build
++            docker compose run --rm api flask --app app db upgrade
++            docker compose run --rm api flask --app app init-db
++            docker compose up -d --remove-orphans
++            docker image prune -f
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/.pytest_cache/v/cache/nodeids /mnt/data/Machry_Fase8_02_Migrations/.pytest_cache/v/cache/nodeids
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/.pytest_cache/v/cache/nodeids	2026-11-01 03:50:55.038446456 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/.pytest_cache/v/cache/nodeids	2026-11-01 03:54:36.560959858 +0000
+@@ -16,6 +16,7 @@
+   "tests/test_estoque.py::test_validacoes",
+   "tests/test_fichas_tecnicas.py::test_crud_ficha_tecnica",
+   "tests/test_fichas_tecnicas.py::test_regras_da_ficha",
++  "tests/test_migrations.py::test_baseline_alembic_cria_schema_e_views",
+   "tests/test_producao.py::test_criar_solicitacao_com_ficha_inexistente",
+   "tests/test_producao.py::test_criar_solicitacao_por_endpoint",
+   "tests/test_producao.py::test_detalhe_inexistente",
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/Dockerfile /mnt/data/Machry_Fase8_02_Migrations/Dockerfile
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/Dockerfile	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/Dockerfile	2026-11-01 03:53:23.338193539 +0000
+@@ -1,12 +1,12 @@
+-FROM python:3.12-slim
+-
+-WORKDIR /app
+-
+-COPY requirements.txt .
+-RUN pip install --no-cache-dir -r requirements.txt
+-
+-COPY . .
+-
+-EXPOSE 5000
+-
+-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--access-logfile", "-", "app:create_app()"]
++FROM python:3.12-slim
++
++WORKDIR /app
++
++COPY requirements.txt .
++RUN pip install --no-cache-dir -r requirements.txt
++
++COPY . .
++
++EXPOSE 5000
++
++CMD ["sh", "-c", "flask --app app db upgrade && flask --app app init-db && exec gunicorn --bind 0.0.0.0:5000 --workers 2 --access-logfile - 'app:create_app()'"]
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/README.md /mnt/data/Machry_Fase8_02_Migrations/README.md
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/README.md	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/README.md	2026-11-01 03:53:54.908380167 +0000
+@@ -1,159 +1,169 @@
+-# Machry
+-
+-Sistema de operação para restaurante, com API Flask, frontend React com Vite e TypeScript e persistência SQLAlchemy. O ambiente padrão usa SQLite em volume local. A mesma camada de persistência aceita PostgreSQL quando a infraestrutura for migrada.
+-
+-## Funcionalidades atuais
+-
+-- Catálogo de insumos, produtos intermediários e produtos finais.
+-- Fichas técnicas com rendimento, fases ordenadas e componentes.
+-- Validações de domínio recuperadas do projeto anterior.
+-- Lotes, localizações, movimentações e sugestão de saída por FEFO.
+-- Estoque geral de insumos, produtos intermediários e produtos finais, com entradas, saídas e ajustes pela interface.
+-- Consulta das solicitações de produção.
+-- Interface responsiva para produtos e fichas técnicas.
+-- Login por sessão com perfis de proprietária, gestor e cozinha.
+-- Swagger em `/docs`.
+-
+-## Executar na VM com Docker e SQLite
+-
+-Crie o arquivo de ambiente e inicialize o banco uma única vez:
+-
+-```bash
+-cp .env.example .env
+-docker compose build
+-docker compose run --rm api flask --app app init-db --seed
+-docker compose up -d
+-```
+-
+-Acessos padrão:
+-
+-- Interface: `http://IP_DA_VM:8080`
+-- API: `http://IP_DA_VM:5000`
+-- Swagger: `http://IP_DA_VM:5000/docs`
+-- Saúde da API: `http://IP_DA_VM:5000/health`
+-
+-O SQLite é salvo em `./data/app.db` na VM. Faça backup dessa pasta antes de atualizar ou mover o serviço.
+-
+-Para acompanhar os containers:
+-
+-```bash
+-docker compose ps
+-docker compose logs -f api frontend
+-```
+-
+-## Desenvolvimento local
+-
+-### API Flask
+-
+-Requer Python 3.12+.
+-
+-```bash
+-python -m venv .venv
+-# Windows: .venv\Scripts\activate
+-# Linux/macOS: source .venv/bin/activate
+-pip install -r requirements-dev.txt
+-flask --app app init-db --seed
+-flask --app app run
+-```
+-
+-### Frontend React, Vite e TypeScript
+-
+-Requer Node.js 22+ e pnpm.
+-
+-```bash
+-cd frontend
+-pnpm install
+-pnpm dev
+-```
+-
+-O servidor Vite abre em `http://localhost:5173` e encaminha `/api` para o Flask em `http://localhost:5000`.
+-
+-### Acessos iniciais de desenvolvimento
+-
+-Ao executar `flask --app app init-db`, o sistema cria ou atualiza as contas iniciais:
+-
+-| Perfil | Usuário | Senha inicial |
+-|---|---|---|
+-| Proprietária | `dona` | `Dona@123` |
+-| Gestor | `gestor` | `Gestor@123` |
+-| Cozinha | `cozinha` | `Cozinha@123` |
+-
+-Altere as credenciais e `SECRET_KEY` no arquivo `.env` antes de publicar. As senhas são armazenadas no banco somente como hash.
+-
+-Para validar a compilação:
+-
+-```bash
+-pnpm exec tsc --noEmit
+-pnpm build
+-```
+-
+-## PostgreSQL
+-
+-O container PostgreSQL já está preparado como um profile opcional. Ajuste o `.env`:
+-
+-```dotenv
+-DB_CONNECTION=postgresql
+-DB_HOST=postgres
+-DB_PORT=5432
+-DB_DATABASE=ft_machry
+-DB_USERNAME=machry
+-DB_PASSWORD=uma-senha-forte
+-```
+-
+-Depois inicialize com:
+-
+-```bash
+-docker compose --profile postgres up -d postgres
+-docker compose --profile postgres run --rm api flask --app app init-db --seed
+-docker compose --profile postgres up -d
+-```
+-
+-Também é possível fornecer uma `DATABASE_URL` completa. Essa variável tem prioridade sobre os campos separados.
+-
+-## CI/CD no GitHub
+-
+-O workflow `.github/workflows/ci-cd.yml` executa automaticamente:
+-
+-1. Testes da API em Python 3.12.
+-2. Verificação TypeScript e build Vite.
+-3. Build das imagens Docker.
+-4. Deploy por SSH quando um commit chega à `main`.
+-
+-Cadastre estes secrets no environment `production` do GitHub:
+-
+-- `VM_HOST`: endereço da VM.
+-- `VM_USER`: usuário SSH.
+-- `VM_SSH_KEY`: chave privada usada pelo GitHub Actions.
+-- `VM_SSH_PORT`: porta SSH; use `22` quando não houver alteração.
+-- `VM_APP_PATH`: caminho absoluto do clone na VM.
+-
+-A VM precisa ter Git, Docker e o plugin Docker Compose. O repositório deve estar previamente clonado no caminho indicado, na branch `main`, e o usuário do deploy precisa ter permissão para executar Docker.
+-
+-O deploy usa `git pull --ff-only`, reconstrói os containers, inicializa um banco novo quando necessário e aplica `docker compose up -d`.
+-
+-## API de fichas técnicas
+-
+-Rotas principais:
+-
+-- `GET/POST /api/fichas-tecnicas`
+-- `GET/PUT/DELETE /api/fichas-tecnicas/{id}`
+-- `GET /api/fichas-tecnicas/fases`
+-
+-Regras aplicadas:
+-
+-- Insumos não podem possuir ficha técnica.
+-- Um produto possui no máximo uma ficha.
+-- O produto resultante não pode ser componente de si mesmo.
+-- Componentes e fases precisam existir e estar ativos quando aplicável.
+-- Ordem de fase e componente não podem se repetir.
+-- Componentes só podem apontar para fases da própria ficha.
+-- A atualização de cabeçalho, fases e componentes ocorre na mesma transação.
+-- Fichas com histórico de produção não podem ser excluídas.
+-
+-## Testes
+-
+-```bash
+-pytest -q
+-```
+-
+-Cada teste cria um SQLite temporário. O arquivo `data/app.db` não é alterado.
++# Machry
++
++Sistema de operação para restaurante, com API Flask, frontend React com Vite e TypeScript e persistência SQLAlchemy. O ambiente padrão usa SQLite em volume local. A mesma camada de persistência aceita PostgreSQL quando a infraestrutura for migrada.
++
++## Funcionalidades atuais
++
++- Catálogo de insumos, produtos intermediários e produtos finais.
++- Fichas técnicas com rendimento, fases ordenadas e componentes.
++- Validações de domínio recuperadas do projeto anterior.
++- Lotes, localizações, movimentações e sugestão de saída por FEFO.
++- Estoque geral de insumos, produtos intermediários e produtos finais, com entradas, saídas e ajustes pela interface.
++- Consulta das solicitações de produção.
++- Interface responsiva para produtos e fichas técnicas.
++- Login por sessão com perfis de proprietária, gestor e cozinha.
++- Swagger em `/docs`.
++
++## Executar na VM com Docker e SQLite
++
++Crie o arquivo de ambiente e inicialize o banco uma única vez:
++
++```bash
++cp .env.example .env
++docker compose build
++docker compose run --rm api flask --app app db upgrade
++docker compose run --rm api flask --app app init-db --seed
++docker compose up -d
++```
++
++Acessos padrão:
++
++- Interface: `http://IP_DA_VM:8080`
++- API: `http://IP_DA_VM:5000`
++- Swagger: `http://IP_DA_VM:5000/docs`
++- Saúde da API: `http://IP_DA_VM:5000/health`
++
++O SQLite é salvo em `./data/app.db` na VM. Faça backup dessa pasta antes de atualizar ou mover o serviço.
++
++Para acompanhar os containers:
++
++```bash
++docker compose ps
++docker compose logs -f api frontend
++```
++
++## Desenvolvimento local
++
++### API Flask
++
++Requer Python 3.12+.
++
++```bash
++python -m venv .venv
++# Windows: .venv\Scripts\activate
++# Linux/macOS: source .venv/bin/activate
++pip install -r requirements-dev.txt
++flask --app app db upgrade
++flask --app app init-db --seed
++flask --app app run
++```
++
++### Frontend React, Vite e TypeScript
++
++Requer Node.js 22+ e pnpm.
++
++```bash
++cd frontend
++pnpm install
++pnpm dev
++```
++
++O servidor Vite abre em `http://localhost:5173` e encaminha `/api` para o Flask em `http://localhost:5000`.
++
++### Acessos iniciais de desenvolvimento
++
++Ao executar `flask --app app init-db`, o sistema cria ou atualiza as contas iniciais:
++
++| Perfil | Usuário | Senha inicial |
++|---|---|---|
++| Proprietária | `dona` | `Dona@123` |
++| Gestor | `gestor` | `Gestor@123` |
++| Cozinha | `cozinha` | `Cozinha@123` |
++
++Altere as credenciais e `SECRET_KEY` no arquivo `.env` antes de publicar. As senhas são armazenadas no banco somente como hash.
++
++Para validar a compilação:
++
++```bash
++pnpm exec tsc --noEmit
++pnpm build
++```
++
++
++## Migrations do banco
++
++O schema agora é versionado com Flask-Migrate/Alembic. Para um banco novo, execute `flask --app app db upgrade` antes de `init-db`. Para alterar models, gere uma migration com `flask --app app db migrate -m "descricao"`, revise o arquivo e aplique com `db upgrade`.
++
++Bancos que já existiam antes da Fase 8.2 devem seguir o procedimento de baseline/stamp descrito em [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md); não execute a migration inicial sobre tabelas já existentes sem revisar o schema.
++
++## PostgreSQL
++
++O container PostgreSQL já está preparado como um profile opcional. Ajuste o `.env`:
++
++```dotenv
++DB_CONNECTION=postgresql
++DB_HOST=postgres
++DB_PORT=5432
++DB_DATABASE=ft_machry
++DB_USERNAME=machry
++DB_PASSWORD=uma-senha-forte
++```
++
++Depois inicialize com:
++
++```bash
++docker compose --profile postgres up -d postgres
++docker compose --profile postgres run --rm api flask --app app db upgrade
++docker compose --profile postgres run --rm api flask --app app init-db --seed
++docker compose --profile postgres up -d
++```
++
++Também é possível fornecer uma `DATABASE_URL` completa. Essa variável tem prioridade sobre os campos separados.
++
++## CI/CD no GitHub
++
++O workflow `.github/workflows/ci-cd.yml` executa automaticamente:
++
++1. Testes da API em Python 3.12.
++2. Verificação TypeScript e build Vite.
++3. Build das imagens Docker.
++4. Deploy por SSH quando um commit chega à `main`.
++
++Cadastre estes secrets no environment `production` do GitHub:
++
++- `VM_HOST`: endereço da VM.
++- `VM_USER`: usuário SSH.
++- `VM_SSH_KEY`: chave privada usada pelo GitHub Actions.
++- `VM_SSH_PORT`: porta SSH; use `22` quando não houver alteração.
++- `VM_APP_PATH`: caminho absoluto do clone na VM.
++
++A VM precisa ter Git, Docker e o plugin Docker Compose. O repositório deve estar previamente clonado no caminho indicado, na branch `main`, e o usuário do deploy precisa ter permissão para executar Docker.
++
++O deploy usa `git pull --ff-only`, reconstrói os containers e a API executa `flask db upgrade` antes de iniciar o Gunicorn. Alterações de schema passam a ser aplicadas por migrations versionadas.
++
++## API de fichas técnicas
++
++Rotas principais:
++
++- `GET/POST /api/fichas-tecnicas`
++- `GET/PUT/DELETE /api/fichas-tecnicas/{id}`
++- `GET /api/fichas-tecnicas/fases`
++
++Regras aplicadas:
++
++- Insumos não podem possuir ficha técnica.
++- Um produto possui no máximo uma ficha.
++- O produto resultante não pode ser componente de si mesmo.
++- Componentes e fases precisam existir e estar ativos quando aplicável.
++- Ordem de fase e componente não podem se repetir.
++- Componentes só podem apontar para fases da própria ficha.
++- A atualização de cabeçalho, fases e componentes ocorre na mesma transação.
++- Fichas com histórico de produção não podem ser excluídas.
++
++## Testes
++
++```bash
++pytest -q
++```
++
++Cada teste cria um SQLite temporário. O arquivo `data/app.db` não é alterado.
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/db/database_config.py /mnt/data/Machry_Fase8_02_Migrations/db/database_config.py
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/db/database_config.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/db/database_config.py	2026-11-01 03:53:23.338272046 +0000
+@@ -1,167 +1,173 @@
+-import os
+-
+-import click
+-from flask import Flask
+-from flask_sqlalchemy import SQLAlchemy
+-from sqlalchemy import URL, event, inspect, text
+-from werkzeug.security import generate_password_hash
+-
+-
+-db = SQLAlchemy()
+-
+-
+-def _montar_database_uri(config: dict):
+-    if config.get("DATABASE_URL"):
+-        return config["DATABASE_URL"]
+-
+-    conexao = str(config.get("DB_CONNECTION", "sqlite")).lower()
+-    if conexao in {"postgres", "postgresql"}:
+-        return URL.create(
+-            "postgresql+psycopg2",
+-            username=config["DB_USERNAME"],
+-            password=config["DB_PASSWORD"],
+-            host=config["DB_HOST"],
+-            port=int(config["DB_PORT"]),
+-            database=config["DB_DATABASE"],
+-        )
+-    if conexao != "sqlite":
+-        raise ValueError("DB_CONNECTION deve ser sqlite, postgres ou postgresql")
+-
+-    caminho = os.path.abspath(config["DATABASE_PATH"]).replace("\\", "/")
+-    os.makedirs(os.path.dirname(caminho) or ".", exist_ok=True)
+-    return f"sqlite:///{caminho}"
+-
+-
+-def _configurar_sqlite(engine) -> None:
+-    @event.listens_for(engine, "connect")
+-    def _configurar_conexao(conexao_dbapi, _):
+-        conexao_dbapi.execute("PRAGMA foreign_keys = ON")
+-        conexao_dbapi.isolation_level = None
+-
+-    @event.listens_for(engine, "begin")
+-    def _begin_immediate(conexao):
+-        conexao.exec_driver_sql("BEGIN IMMEDIATE")
+-
+-
+-def _tabelas_existem(engine) -> bool:
+-    return inspect(engine).has_table("usuario")
+-
+-
+-def _migrar_autenticacao() -> None:
+-    colunas = {coluna["name"] for coluna in inspect(db.engine).get_columns("usuario")}
+-    if "username" not in colunas:
+-        db.session.execute(text("ALTER TABLE usuario ADD COLUMN username VARCHAR(80)"))
+-    if "senha_hash" not in colunas:
+-        db.session.execute(text("ALTER TABLE usuario ADD COLUMN senha_hash VARCHAR(255)"))
+-    db.session.commit()
+-
+-
+-def _provisionar_usuarios_iniciais() -> None:
+-    from app.features.estoque.models import Usuario
+-    from flask import current_app
+-
+-    configuracoes = [
+-        ("Proprietária", current_app.config["OWNER_USERNAME"], current_app.config["OWNER_INITIAL_PASSWORD"], "OWNER"),
+-        ("Gestor", current_app.config["MANAGER_USERNAME"], current_app.config["MANAGER_INITIAL_PASSWORD"], "ADMIN"),
+-        ("Cozinha", current_app.config["COOK_USERNAME"], current_app.config["COOK_INITIAL_PASSWORD"], "USER"),
+-    ]
+-    usuarios = db.session.execute(db.select(Usuario).order_by(Usuario.id)).scalars().all()
+-    por_username = {usuario.username.lower(): usuario for usuario in usuarios if usuario.username}
+-    por_papel = {usuario.papel: usuario for usuario in usuarios if usuario.papel}
+-
+-    for nome, username, password, papel in configuracoes:
+-        username = username.strip().lower()
+-        usuario = por_username.get(username)
+-        if usuario is None and papel == "OWNER":
+-            usuario = por_papel.get("OWNER") or por_papel.get("ADMIN")
+-        elif usuario is None and papel == "USER":
+-            usuario = por_papel.get("USER")
+-        if usuario is None:
+-            usuario = Usuario(nome=nome, username=username, senha_hash=generate_password_hash(password), papel=papel)
+-            db.session.add(usuario)
+-        else:
+-            usuario.username = usuario.username or username
+-            usuario.senha_hash = usuario.senha_hash or generate_password_hash(password)
+-            if papel == "OWNER":
+-                usuario.papel = "OWNER"
+-        por_username[username] = usuario
+-    db.session.commit()
+-
+-    db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_usuario_username ON usuario (username)"))
+-    db.session.commit()
+-
+-
+-VIEWS = {
+-    "vw_inventario": """
+-        SELECT p.id AS produto_id, p.nome AS produto, p.tipo AS tipo_produto,
+-               p.unidade_medida, l.id AS lote_id, l.quantidade,
+-               l.data_validade, loc.nome AS localizacao
+-          FROM lote l
+-          JOIN produto p ON p.id = l.produto_id
+-          JOIN localizacao loc ON loc.id = l.localizacao_id
+-         WHERE l.quantidade > 0
+-    """,
+-    "vw_fifo": """
+-        SELECT l.* FROM lote l WHERE l.quantidade > 0
+-         ORDER BY l.produto_id, l.data_validade ASC, l.criado_em ASC
+-    """,
+-    "vw_sp_componente": """
+-        SELECT c.id AS sp_componente_id, c.solicitacao_producao_id,
+-               c.produto_id, p.nome AS componente, p.unidade_medida,
+-               sf.ordem AS fase_ordem, fp.nome AS fase,
+-               c.quantidade_prevista,
+-               COALESCE(SUM(m.quantidade), 0) AS quantidade_realizada,
+-               SUM(m.quantidade * l.custo_unitario) AS custo_realizado
+-          FROM sp_componente c
+-          JOIN produto p ON p.id = c.produto_id
+-          LEFT JOIN sp_fase sf ON sf.id = c.sp_fase_id
+-          LEFT JOIN fase_producao fp ON fp.id = sf.fase_id
+-          LEFT JOIN movimentacao_estoque m
+-                 ON m.sp_componente_id = c.id AND m.tipo = 'CONSUMO_PRODUCAO'
+-          LEFT JOIN lote l ON l.id = m.lote_id
+-         GROUP BY c.id, c.solicitacao_producao_id, c.produto_id, p.nome,
+-                  p.unidade_medida, sf.ordem, fp.nome, c.quantidade_prevista
+-    """,
+-    "vw_sp_producao": """
+-        SELECT m.solicitacao_producao_id, m.lote_id, m.quantidade, m.criado_em
+-          FROM movimentacao_estoque m WHERE m.tipo = 'PRODUCAO'
+-    """,
+-}
+-
+-
+-def _criar_views() -> None:
+-    for nome, consulta in VIEWS.items():
+-        db.session.execute(text(f"CREATE VIEW {nome} AS {consulta}"))
+-    db.session.commit()
+-
+-
+-@click.command("init-db")
+-@click.option("--seed", is_flag=True, help="Também carrega os dados de exemplo.")
+-def init_db_command(seed: bool):
+-    if _tabelas_existem(db.engine):
+-        _migrar_autenticacao()
+-        _provisionar_usuarios_iniciais()
+-        click.echo("Banco já criado e atualizado")
+-        return
+-
+-    db.create_all()
+-    _criar_views()
+-    if seed:
+-        from db.seed import carregar_seeds
+-
+-        carregar_seeds()
+-    _provisionar_usuarios_iniciais()
+-    click.echo("Banco inicializado." + (" (com seeds)" if seed else ""))
+-
+-
+-def init_app(app: Flask):
+-    if "SQLALCHEMY_DATABASE_URI" not in app.config:
+-        app.config["SQLALCHEMY_DATABASE_URI"] = _montar_database_uri(app.config)
+-    app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
+-
+-    db.init_app(app)
+-    with app.app_context():
+-        if db.engine.dialect.name == "sqlite":
+-            _configurar_sqlite(db.engine)
+-
+-    app.cli.add_command(init_db_command)
++import os
++
++import click
++from flask import Flask
++from flask_sqlalchemy import SQLAlchemy
++from flask_migrate import Migrate
++from sqlalchemy import URL, event, inspect, text
++from werkzeug.security import generate_password_hash
++
++
++db = SQLAlchemy()
++migrate = Migrate(compare_type=True)
++
++
++def _montar_database_uri(config: dict):
++    if config.get("DATABASE_URL"):
++        return config["DATABASE_URL"]
++
++    conexao = str(config.get("DB_CONNECTION", "sqlite")).lower()
++    if conexao in {"postgres", "postgresql"}:
++        return URL.create(
++            "postgresql+psycopg2",
++            username=config["DB_USERNAME"],
++            password=config["DB_PASSWORD"],
++            host=config["DB_HOST"],
++            port=int(config["DB_PORT"]),
++            database=config["DB_DATABASE"],
++        )
++    if conexao != "sqlite":
++        raise ValueError("DB_CONNECTION deve ser sqlite, postgres ou postgresql")
++
++    caminho = os.path.abspath(config["DATABASE_PATH"]).replace("\\", "/")
++    os.makedirs(os.path.dirname(caminho) or ".", exist_ok=True)
++    return f"sqlite:///{caminho}"
++
++
++def _configurar_sqlite(engine) -> None:
++    @event.listens_for(engine, "connect")
++    def _configurar_conexao(conexao_dbapi, _):
++        conexao_dbapi.execute("PRAGMA foreign_keys = ON")
++        conexao_dbapi.isolation_level = None
++
++    @event.listens_for(engine, "begin")
++    def _begin_immediate(conexao):
++        conexao.exec_driver_sql("BEGIN IMMEDIATE")
++
++
++def _tabelas_existem(engine) -> bool:
++    return inspect(engine).has_table("usuario")
++
++
++def _provisionar_usuarios_iniciais() -> None:
++    from app.features.estoque.models import Usuario
++    from flask import current_app
++
++    configuracoes = [
++        ("Proprietária", current_app.config["OWNER_USERNAME"], current_app.config["OWNER_INITIAL_PASSWORD"], "OWNER"),
++        ("Gestor", current_app.config["MANAGER_USERNAME"], current_app.config["MANAGER_INITIAL_PASSWORD"], "ADMIN"),
++        ("Cozinha", current_app.config["COOK_USERNAME"], current_app.config["COOK_INITIAL_PASSWORD"], "USER"),
++    ]
++    usuarios = db.session.execute(db.select(Usuario).order_by(Usuario.id)).scalars().all()
++    por_username = {usuario.username.lower(): usuario for usuario in usuarios if usuario.username}
++    por_papel = {usuario.papel: usuario for usuario in usuarios if usuario.papel}
++
++    for nome, username, password, papel in configuracoes:
++        username = username.strip().lower()
++        usuario = por_username.get(username)
++        if usuario is None and papel == "OWNER":
++            usuario = por_papel.get("OWNER") or por_papel.get("ADMIN")
++        elif usuario is None and papel == "USER":
++            usuario = por_papel.get("USER")
++        if usuario is None:
++            usuario = Usuario(nome=nome, username=username, senha_hash=generate_password_hash(password), papel=papel)
++            db.session.add(usuario)
++        else:
++            usuario.username = usuario.username or username
++            usuario.senha_hash = usuario.senha_hash or generate_password_hash(password)
++            if papel == "OWNER":
++                usuario.papel = "OWNER"
++        por_username[username] = usuario
++    db.session.commit()
++
++
++
++VIEWS = {
++    "vw_inventario": """
++        SELECT p.id AS produto_id, p.nome AS produto, p.tipo AS tipo_produto,
++               p.unidade_medida, l.id AS lote_id, l.quantidade,
++               l.data_validade, loc.nome AS localizacao
++          FROM lote l
++          JOIN produto p ON p.id = l.produto_id
++          JOIN localizacao loc ON loc.id = l.localizacao_id
++         WHERE l.quantidade > 0
++    """,
++    "vw_fifo": """
++        SELECT l.* FROM lote l WHERE l.quantidade > 0
++         ORDER BY l.produto_id, l.data_validade ASC, l.criado_em ASC
++    """,
++    "vw_sp_componente": """
++        SELECT c.id AS sp_componente_id, c.solicitacao_producao_id,
++               c.produto_id, p.nome AS componente, p.unidade_medida,
++               sf.ordem AS fase_ordem, fp.nome AS fase,
++               c.quantidade_prevista,
++               COALESCE(SUM(m.quantidade), 0) AS quantidade_realizada,
++               SUM(m.quantidade * l.custo_unitario) AS custo_realizado
++          FROM sp_componente c
++          JOIN produto p ON p.id = c.produto_id
++          LEFT JOIN sp_fase sf ON sf.id = c.sp_fase_id
++          LEFT JOIN fase_producao fp ON fp.id = sf.fase_id
++          LEFT JOIN movimentacao_estoque m
++                 ON m.sp_componente_id = c.id AND m.tipo = 'CONSUMO_PRODUCAO'
++          LEFT JOIN lote l ON l.id = m.lote_id
++         GROUP BY c.id, c.solicitacao_producao_id, c.produto_id, p.nome,
++                  p.unidade_medida, sf.ordem, fp.nome, c.quantidade_prevista
++    """,
++    "vw_sp_producao": """
++        SELECT m.solicitacao_producao_id, m.lote_id, m.quantidade, m.criado_em
++          FROM movimentacao_estoque m WHERE m.tipo = 'PRODUCAO'
++    """,
++}
++
++
++def _criar_views() -> None:
++    for nome, consulta in VIEWS.items():
++        db.session.execute(text(f"CREATE VIEW {nome} AS {consulta}"))
++    db.session.commit()
++
++
++@click.command("init-db")
++@click.option("--seed", is_flag=True, help="Também carrega os dados de exemplo em um banco vazio.")
++def init_db_command(seed: bool):
++    from flask import current_app
++
++    if not _tabelas_existem(db.engine):
++        # create_all fica restrito à suíte unitária. Em runtime o schema é responsabilidade do Alembic.
++        if current_app.config.get("TESTING"):
++            db.create_all()
++            _criar_views()
++        else:
++            raise click.ClickException(
++                "Schema não inicializado. Execute 'flask --app app db upgrade' antes de 'init-db'."
++            )
++
++    seed_aplicado = False
++    if seed:
++        from app.features.produtos.models import Produto
++
++        possui_catalogo = db.session.scalar(db.select(Produto.id).limit(1)) is not None
++        if not possui_catalogo:
++            from db.seed import carregar_seeds
++
++            carregar_seeds()
++            seed_aplicado = True
++
++    _provisionar_usuarios_iniciais()
++    if seed and not seed_aplicado:
++        click.echo("Banco inicializado; seeds ignorados porque o catálogo já possui dados.")
++    else:
++        click.echo("Banco inicializado." + (" (com seeds)" if seed_aplicado else ""))
++
++
++def init_app(app: Flask):
++    if "SQLALCHEMY_DATABASE_URI" not in app.config:
++        app.config["SQLALCHEMY_DATABASE_URI"] = _montar_database_uri(app.config)
++    app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
++
++    db.init_app(app)
++    migrate.init_app(app, db, directory="migrations")
++    with app.app_context():
++        if db.engine.dialect.name == "sqlite":
++            _configurar_sqlite(db.engine)
++
++    app.cli.add_command(init_db_command)
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/docs/FASE8_02.md /mnt/data/Machry_Fase8_02_Migrations/docs/FASE8_02.md
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/docs/FASE8_02.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/docs/FASE8_02.md	2026-11-01 03:53:37.898764704 +0000
+@@ -0,0 +1,17 @@
++# Fase 8.2 — Flask-Migrate / Alembic
++
++## Mudanças
++
++- Flask-Migrate e Alembic adicionados às dependências.
++- `Migrate` integrado ao Application Factory.
++- Criado repositório `migrations/`.
++- Criada baseline `fee791234a46` com todas as tabelas, constraints, índices e as quatro views atuais.
++- `run.bat` e `run.sh` executam `flask db upgrade` antes do bootstrap.
++- Container da API aplica migrations antes de iniciar Gunicorn.
++- `init-db` deixa de criar schema em runtime; `create_all()` fica restrito a `TESTING`.
++- Seeds só são aplicados em catálogo vazio.
++- Adicionado smoke test da migration em SQLite.
++
++## Próxima fase
++
++Fase 8.3 — consolidar domínio antes de evoluir o modelo de produção.
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/docs/FASE8_02_CHANGES.diff /mnt/data/Machry_Fase8_02_Migrations/docs/FASE8_02_CHANGES.diff
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/docs/FASE8_02_CHANGES.diff	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/docs/FASE8_02_CHANGES.diff	2026-11-01 03:54:58.447200961 +0000
+@@ -0,0 +1,889 @@
++diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/.github/workflows/ci-cd.yml /mnt/data/Machry_Fase8_02_Migrations/.github/workflows/ci-cd.yml
++--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/.github/workflows/ci-cd.yml	2026-11-01 03:11:52.000000000 +0000
+++++ /mnt/data/Machry_Fase8_02_Migrations/.github/workflows/ci-cd.yml	2026-11-01 03:54:07.177841130 +0000
++@@ -1,74 +1,75 @@
++-name: CI e CD
++-
++-on:
++-  pull_request:
++-  push:
++-    branches: [main, yuri]
++-  workflow_dispatch:
++-
++-concurrency:
++-  group: machry-${{ github.ref }}
++-  cancel-in-progress: true
++-
++-jobs:
++-  api:
++-    name: API Flask
++-    runs-on: ubuntu-latest
++-    steps:
++-      - uses: actions/checkout@v4
++-      - uses: actions/setup-python@v5
++-        with:
++-          python-version: "3.12"
++-          cache: pip
++-      - run: pip install -r requirements-dev.txt
++-      - run: pytest -q
++-
++-  frontend:
++-    name: Frontend Vite
++-    runs-on: ubuntu-latest
++-    defaults:
++-      run:
++-        working-directory: frontend
++-    steps:
++-      - uses: actions/checkout@v4
++-      - uses: pnpm/action-setup@v4
++-        with:
++-          version: 11.25.0
++-      - uses: actions/setup-node@v4
++-        with:
++-          node-version: "22"
++-          cache: pnpm
++-          cache-dependency-path: frontend/pnpm-lock.yaml
++-      - run: pnpm install --frozen-lockfile
++-      - run: pnpm exec tsc --noEmit
++-      - run: pnpm run build
++-
++-  containers:
++-    name: Imagens Docker
++-    runs-on: ubuntu-latest
++-    steps:
++-      - uses: actions/checkout@v4
++-      - run: docker compose build
++-
++-  deploy:
++-    name: Publicar na VM
++-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
++-    needs: [api, frontend, containers]
++-    runs-on: ubuntu-latest
++-    environment: production
++-    steps:
++-      - name: Atualizar aplicação pela conexão SSH
++-        uses: appleboy/ssh-action@v1.2.0
++-        with:
++-          host: ${{ secrets.VM_HOST }}
++-          username: ${{ secrets.VM_USER }}
++-          key: ${{ secrets.VM_SSH_KEY }}
++-          port: ${{ secrets.VM_SSH_PORT || 22 }}
++-          script_stop: true
++-          script: |
++-            cd "${{ secrets.VM_APP_PATH }}"
++-            git pull --ff-only origin main
++-            docker compose build
++-            docker compose run --rm api flask --app app init-db
++-            docker compose up -d --remove-orphans
++-            docker image prune -f
+++name: CI e CD
+++
+++on:
+++  pull_request:
+++  push:
+++    branches: [main, yuri]
+++  workflow_dispatch:
+++
+++concurrency:
+++  group: machry-${{ github.ref }}
+++  cancel-in-progress: true
+++
+++jobs:
+++  api:
+++    name: API Flask
+++    runs-on: ubuntu-latest
+++    steps:
+++      - uses: actions/checkout@v4
+++      - uses: actions/setup-python@v5
+++        with:
+++          python-version: "3.12"
+++          cache: pip
+++      - run: pip install -r requirements-dev.txt
+++      - run: pytest -q
+++
+++  frontend:
+++    name: Frontend Vite
+++    runs-on: ubuntu-latest
+++    defaults:
+++      run:
+++        working-directory: frontend
+++    steps:
+++      - uses: actions/checkout@v4
+++      - uses: pnpm/action-setup@v4
+++        with:
+++          version: 11.25.0
+++      - uses: actions/setup-node@v4
+++        with:
+++          node-version: "22"
+++          cache: pnpm
+++          cache-dependency-path: frontend/pnpm-lock.yaml
+++      - run: pnpm install --frozen-lockfile
+++      - run: pnpm exec tsc --noEmit
+++      - run: pnpm run build
+++
+++  containers:
+++    name: Imagens Docker
+++    runs-on: ubuntu-latest
+++    steps:
+++      - uses: actions/checkout@v4
+++      - run: docker compose build
+++
+++  deploy:
+++    name: Publicar na VM
+++    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+++    needs: [api, frontend, containers]
+++    runs-on: ubuntu-latest
+++    environment: production
+++    steps:
+++      - name: Atualizar aplicação pela conexão SSH
+++        uses: appleboy/ssh-action@v1.2.0
+++        with:
+++          host: ${{ secrets.VM_HOST }}
+++          username: ${{ secrets.VM_USER }}
+++          key: ${{ secrets.VM_SSH_KEY }}
+++          port: ${{ secrets.VM_SSH_PORT || 22 }}
+++          script_stop: true
+++          script: |
+++            cd "${{ secrets.VM_APP_PATH }}"
+++            git pull --ff-only origin main
+++            docker compose build
+++            docker compose run --rm api flask --app app db upgrade
+++            docker compose run --rm api flask --app app init-db
+++            docker compose up -d --remove-orphans
+++            docker image prune -f
++diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/.pytest_cache/v/cache/nodeids /mnt/data/Machry_Fase8_02_Migrations/.pytest_cache/v/cache/nodeids
++--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/.pytest_cache/v/cache/nodeids	2026-11-01 03:50:55.038446456 +0000
+++++ /mnt/data/Machry_Fase8_02_Migrations/.pytest_cache/v/cache/nodeids	2026-11-01 03:54:36.560959858 +0000
++@@ -16,6 +16,7 @@
++   "tests/test_estoque.py::test_validacoes",
++   "tests/test_fichas_tecnicas.py::test_crud_ficha_tecnica",
++   "tests/test_fichas_tecnicas.py::test_regras_da_ficha",
+++  "tests/test_migrations.py::test_baseline_alembic_cria_schema_e_views",
++   "tests/test_producao.py::test_criar_solicitacao_com_ficha_inexistente",
++   "tests/test_producao.py::test_criar_solicitacao_por_endpoint",
++   "tests/test_producao.py::test_detalhe_inexistente",
++diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/Dockerfile /mnt/data/Machry_Fase8_02_Migrations/Dockerfile
++--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/Dockerfile	2026-11-01 03:11:52.000000000 +0000
+++++ /mnt/data/Machry_Fase8_02_Migrations/Dockerfile	2026-11-01 03:53:23.338193539 +0000
++@@ -1,12 +1,12 @@
++-FROM python:3.12-slim
++-
++-WORKDIR /app
++-
++-COPY requirements.txt .
++-RUN pip install --no-cache-dir -r requirements.txt
++-
++-COPY . .
++-
++-EXPOSE 5000
++-
++-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--access-logfile", "-", "app:create_app()"]
+++FROM python:3.12-slim
+++
+++WORKDIR /app
+++
+++COPY requirements.txt .
+++RUN pip install --no-cache-dir -r requirements.txt
+++
+++COPY . .
+++
+++EXPOSE 5000
+++
+++CMD ["sh", "-c", "flask --app app db upgrade && flask --app app init-db && exec gunicorn --bind 0.0.0.0:5000 --workers 2 --access-logfile - 'app:create_app()'"]
++diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/README.md /mnt/data/Machry_Fase8_02_Migrations/README.md
++--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/README.md	2026-11-01 03:11:52.000000000 +0000
+++++ /mnt/data/Machry_Fase8_02_Migrations/README.md	2026-11-01 03:53:54.908380167 +0000
++@@ -1,159 +1,169 @@
++-# Machry
++-
++-Sistema de operação para restaurante, com API Flask, frontend React com Vite e TypeScript e persistência SQLAlchemy. O ambiente padrão usa SQLite em volume local. A mesma camada de persistência aceita PostgreSQL quando a infraestrutura for migrada.
++-
++-## Funcionalidades atuais
++-
++-- Catálogo de insumos, produtos intermediários e produtos finais.
++-- Fichas técnicas com rendimento, fases ordenadas e componentes.
++-- Validações de domínio recuperadas do projeto anterior.
++-- Lotes, localizações, movimentações e sugestão de saída por FEFO.
++-- Estoque geral de insumos, produtos intermediários e produtos finais, com entradas, saídas e ajustes pela interface.
++-- Consulta das solicitações de produção.
++-- Interface responsiva para produtos e fichas técnicas.
++-- Login por sessão com perfis de proprietária, gestor e cozinha.
++-- Swagger em `/docs`.
++-
++-## Executar na VM com Docker e SQLite
++-
++-Crie o arquivo de ambiente e inicialize o banco uma única vez:
++-
++-```bash
++-cp .env.example .env
++-docker compose build
++-docker compose run --rm api flask --app app init-db --seed
++-docker compose up -d
++-```
++-
++-Acessos padrão:
++-
++-- Interface: `http://IP_DA_VM:8080`
++-- API: `http://IP_DA_VM:5000`
++-- Swagger: `http://IP_DA_VM:5000/docs`
++-- Saúde da API: `http://IP_DA_VM:5000/health`
++-
++-O SQLite é salvo em `./data/app.db` na VM. Faça backup dessa pasta antes de atualizar ou mover o serviço.
++-
++-Para acompanhar os containers:
++-
++-```bash
++-docker compose ps
++-docker compose logs -f api frontend
++-```
++-
++-## Desenvolvimento local
++-
++-### API Flask
++-
++-Requer Python 3.12+.
++-
++-```bash
++-python -m venv .venv
++-# Windows: .venv\Scripts\activate
++-# Linux/macOS: source .venv/bin/activate
++-pip install -r requirements-dev.txt
++-flask --app app init-db --seed
++-flask --app app run
++-```
++-
++-### Frontend React, Vite e TypeScript
++-
++-Requer Node.js 22+ e pnpm.
++-
++-```bash
++-cd frontend
++-pnpm install
++-pnpm dev
++-```
++-
++-O servidor Vite abre em `http://localhost:5173` e encaminha `/api` para o Flask em `http://localhost:5000`.
++-
++-### Acessos iniciais de desenvolvimento
++-
++-Ao executar `flask --app app init-db`, o sistema cria ou atualiza as contas iniciais:
++-
++-| Perfil | Usuário | Senha inicial |
++-|---|---|---|
++-| Proprietária | `dona` | `Dona@123` |
++-| Gestor | `gestor` | `Gestor@123` |
++-| Cozinha | `cozinha` | `Cozinha@123` |
++-
++-Altere as credenciais e `SECRET_KEY` no arquivo `.env` antes de publicar. As senhas são armazenadas no banco somente como hash.
++-
++-Para validar a compilação:
++-
++-```bash
++-pnpm exec tsc --noEmit
++-pnpm build
++-```
++-
++-## PostgreSQL
++-
++-O container PostgreSQL já está preparado como um profile opcional. Ajuste o `.env`:
++-
++-```dotenv
++-DB_CONNECTION=postgresql
++-DB_HOST=postgres
++-DB_PORT=5432
++-DB_DATABASE=ft_machry
++-DB_USERNAME=machry
++-DB_PASSWORD=uma-senha-forte
++-```
++-
++-Depois inicialize com:
++-
++-```bash
++-docker compose --profile postgres up -d postgres
++-docker compose --profile postgres run --rm api flask --app app init-db --seed
++-docker compose --profile postgres up -d
++-```
++-
++-Também é possível fornecer uma `DATABASE_URL` completa. Essa variável tem prioridade sobre os campos separados.
++-
++-## CI/CD no GitHub
++-
++-O workflow `.github/workflows/ci-cd.yml` executa automaticamente:
++-
++-1. Testes da API em Python 3.12.
++-2. Verificação TypeScript e build Vite.
++-3. Build das imagens Docker.
++-4. Deploy por SSH quando um commit chega à `main`.
++-
++-Cadastre estes secrets no environment `production` do GitHub:
++-
++-- `VM_HOST`: endereço da VM.
++-- `VM_USER`: usuário SSH.
++-- `VM_SSH_KEY`: chave privada usada pelo GitHub Actions.
++-- `VM_SSH_PORT`: porta SSH; use `22` quando não houver alteração.
++-- `VM_APP_PATH`: caminho absoluto do clone na VM.
++-
++-A VM precisa ter Git, Docker e o plugin Docker Compose. O repositório deve estar previamente clonado no caminho indicado, na branch `main`, e o usuário do deploy precisa ter permissão para executar Docker.
++-
++-O deploy usa `git pull --ff-only`, reconstrói os containers, inicializa um banco novo quando necessário e aplica `docker compose up -d`.
++-
++-## API de fichas técnicas
++-
++-Rotas principais:
++-
++-- `GET/POST /api/fichas-tecnicas`
++-- `GET/PUT/DELETE /api/fichas-tecnicas/{id}`
++-- `GET /api/fichas-tecnicas/fases`
++-
++-Regras aplicadas:
++-
++-- Insumos não podem possuir ficha técnica.
++-- Um produto possui no máximo uma ficha.
++-- O produto resultante não pode ser componente de si mesmo.
++-- Componentes e fases precisam existir e estar ativos quando aplicável.
++-- Ordem de fase e componente não podem se repetir.
++-- Componentes só podem apontar para fases da própria ficha.
++-- A atualização de cabeçalho, fases e componentes ocorre na mesma transação.
++-- Fichas com histórico de produção não podem ser excluídas.
++-
++-## Testes
++-
++-```bash
++-pytest -q
++-```
++-
++-Cada teste cria um SQLite temporário. O arquivo `data/app.db` não é alterado.
+++# Machry
+++
+++Sistema de operação para restaurante, com API Flask, frontend React com Vite e TypeScript e persistência SQLAlchemy. O ambiente padrão usa SQLite em volume local. A mesma camada de persistência aceita PostgreSQL quando a infraestrutura for migrada.
+++
+++## Funcionalidades atuais
+++
+++- Catálogo de insumos, produtos intermediários e produtos finais.
+++- Fichas técnicas com rendimento, fases ordenadas e componentes.
+++- Validações de domínio recuperadas do projeto anterior.
+++- Lotes, localizações, movimentações e sugestão de saída por FEFO.
+++- Estoque geral de insumos, produtos intermediários e produtos finais, com entradas, saídas e ajustes pela interface.
+++- Consulta das solicitações de produção.
+++- Interface responsiva para produtos e fichas técnicas.
+++- Login por sessão com perfis de proprietária, gestor e cozinha.
+++- Swagger em `/docs`.
+++
+++## Executar na VM com Docker e SQLite
+++
+++Crie o arquivo de ambiente e inicialize o banco uma única vez:
+++
+++```bash
+++cp .env.example .env
+++docker compose build
+++docker compose run --rm api flask --app app db upgrade
+++docker compose run --rm api flask --app app init-db --seed
+++docker compose up -d
+++```
+++
+++Acessos padrão:
+++
+++- Interface: `http://IP_DA_VM:8080`
+++- API: `http://IP_DA_VM:5000`
+++- Swagger: `http://IP_DA_VM:5000/docs`
+++- Saúde da API: `http://IP_DA_VM:5000/health`
+++
+++O SQLite é salvo em `./data/app.db` na VM. Faça backup dessa pasta antes de atualizar ou mover o serviço.
+++
+++Para acompanhar os containers:
+++
+++```bash
+++docker compose ps
+++docker compose logs -f api frontend
+++```
+++
+++## Desenvolvimento local
+++
+++### API Flask
+++
+++Requer Python 3.12+.
+++
+++```bash
+++python -m venv .venv
+++# Windows: .venv\Scripts\activate
+++# Linux/macOS: source .venv/bin/activate
+++pip install -r requirements-dev.txt
+++flask --app app db upgrade
+++flask --app app init-db --seed
+++flask --app app run
+++```
+++
+++### Frontend React, Vite e TypeScript
+++
+++Requer Node.js 22+ e pnpm.
+++
+++```bash
+++cd frontend
+++pnpm install
+++pnpm dev
+++```
+++
+++O servidor Vite abre em `http://localhost:5173` e encaminha `/api` para o Flask em `http://localhost:5000`.
+++
+++### Acessos iniciais de desenvolvimento
+++
+++Ao executar `flask --app app init-db`, o sistema cria ou atualiza as contas iniciais:
+++
+++| Perfil | Usuário | Senha inicial |
+++|---|---|---|
+++| Proprietária | `dona` | `Dona@123` |
+++| Gestor | `gestor` | `Gestor@123` |
+++| Cozinha | `cozinha` | `Cozinha@123` |
+++
+++Altere as credenciais e `SECRET_KEY` no arquivo `.env` antes de publicar. As senhas são armazenadas no banco somente como hash.
+++
+++Para validar a compilação:
+++
+++```bash
+++pnpm exec tsc --noEmit
+++pnpm build
+++```
+++
+++
+++## Migrations do banco
+++
+++O schema agora é versionado com Flask-Migrate/Alembic. Para um banco novo, execute `flask --app app db upgrade` antes de `init-db`. Para alterar models, gere uma migration com `flask --app app db migrate -m "descricao"`, revise o arquivo e aplique com `db upgrade`.
+++
+++Bancos que já existiam antes da Fase 8.2 devem seguir o procedimento de baseline/stamp descrito em [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md); não execute a migration inicial sobre tabelas já existentes sem revisar o schema.
+++
+++## PostgreSQL
+++
+++O container PostgreSQL já está preparado como um profile opcional. Ajuste o `.env`:
+++
+++```dotenv
+++DB_CONNECTION=postgresql
+++DB_HOST=postgres
+++DB_PORT=5432
+++DB_DATABASE=ft_machry
+++DB_USERNAME=machry
+++DB_PASSWORD=uma-senha-forte
+++```
+++
+++Depois inicialize com:
+++
+++```bash
+++docker compose --profile postgres up -d postgres
+++docker compose --profile postgres run --rm api flask --app app db upgrade
+++docker compose --profile postgres run --rm api flask --app app init-db --seed
+++docker compose --profile postgres up -d
+++```
+++
+++Também é possível fornecer uma `DATABASE_URL` completa. Essa variável tem prioridade sobre os campos separados.
+++
+++## CI/CD no GitHub
+++
+++O workflow `.github/workflows/ci-cd.yml` executa automaticamente:
+++
+++1. Testes da API em Python 3.12.
+++2. Verificação TypeScript e build Vite.
+++3. Build das imagens Docker.
+++4. Deploy por SSH quando um commit chega à `main`.
+++
+++Cadastre estes secrets no environment `production` do GitHub:
+++
+++- `VM_HOST`: endereço da VM.
+++- `VM_USER`: usuário SSH.
+++- `VM_SSH_KEY`: chave privada usada pelo GitHub Actions.
+++- `VM_SSH_PORT`: porta SSH; use `22` quando não houver alteração.
+++- `VM_APP_PATH`: caminho absoluto do clone na VM.
+++
+++A VM precisa ter Git, Docker e o plugin Docker Compose. O repositório deve estar previamente clonado no caminho indicado, na branch `main`, e o usuário do deploy precisa ter permissão para executar Docker.
+++
+++O deploy usa `git pull --ff-only`, reconstrói os containers e a API executa `flask db upgrade` antes de iniciar o Gunicorn. Alterações de schema passam a ser aplicadas por migrations versionadas.
+++
+++## API de fichas técnicas
+++
+++Rotas principais:
+++
+++- `GET/POST /api/fichas-tecnicas`
+++- `GET/PUT/DELETE /api/fichas-tecnicas/{id}`
+++- `GET /api/fichas-tecnicas/fases`
+++
+++Regras aplicadas:
+++
+++- Insumos não podem possuir ficha técnica.
+++- Um produto possui no máximo uma ficha.
+++- O produto resultante não pode ser componente de si mesmo.
+++- Componentes e fases precisam existir e estar ativos quando aplicável.
+++- Ordem de fase e componente não podem se repetir.
+++- Componentes só podem apontar para fases da própria ficha.
+++- A atualização de cabeçalho, fases e componentes ocorre na mesma transação.
+++- Fichas com histórico de produção não podem ser excluídas.
+++
+++## Testes
+++
+++```bash
+++pytest -q
+++```
+++
+++Cada teste cria um SQLite temporário. O arquivo `data/app.db` não é alterado.
++diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/db/database_config.py /mnt/data/Machry_Fase8_02_Migrations/db/database_config.py
++--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/db/database_config.py	2026-11-01 03:11:52.000000000 +0000
+++++ /mnt/data/Machry_Fase8_02_Migrations/db/database_config.py	2026-11-01 03:53:23.338272046 +0000
++@@ -1,167 +1,173 @@
++-import os
++-
++-import click
++-from flask import Flask
++-from flask_sqlalchemy import SQLAlchemy
++-from sqlalchemy import URL, event, inspect, text
++-from werkzeug.security import generate_password_hash
++-
++-
++-db = SQLAlchemy()
++-
++-
++-def _montar_database_uri(config: dict):
++-    if config.get("DATABASE_URL"):
++-        return config["DATABASE_URL"]
++-
++-    conexao = str(config.get("DB_CONNECTION", "sqlite")).lower()
++-    if conexao in {"postgres", "postgresql"}:
++-        return URL.create(
++-            "postgresql+psycopg2",
++-            username=config["DB_USERNAME"],
++-            password=config["DB_PASSWORD"],
++-            host=config["DB_HOST"],
++-            port=int(config["DB_PORT"]),
++-            database=config["DB_DATABASE"],
++-        )
++-    if conexao != "sqlite":
++-        raise ValueError("DB_CONNECTION deve ser sqlite, postgres ou postgresql")
++-
++-    caminho = os.path.abspath(config["DATABASE_PATH"]).replace("\\", "/")
++-    os.makedirs(os.path.dirname(caminho) or ".", exist_ok=True)
++-    return f"sqlite:///{caminho}"
++-
++-
++-def _configurar_sqlite(engine) -> None:
++-    @event.listens_for(engine, "connect")
++-    def _configurar_conexao(conexao_dbapi, _):
++-        conexao_dbapi.execute("PRAGMA foreign_keys = ON")
++-        conexao_dbapi.isolation_level = None
++-
++-    @event.listens_for(engine, "begin")
++-    def _begin_immediate(conexao):
++-        conexao.exec_driver_sql("BEGIN IMMEDIATE")
++-
++-
++-def _tabelas_existem(engine) -> bool:
++-    return inspect(engine).has_table("usuario")
++-
++-
++-def _migrar_autenticacao() -> None:
++-    colunas = {coluna["name"] for coluna in inspect(db.engine).get_columns("usuario")}
++-    if "username" not in colunas:
++-        db.session.execute(text("ALTER TABLE usuario ADD COLUMN username VARCHAR(80)"))
++-    if "senha_hash" not in colunas:
++-        db.session.execute(text("ALTER TABLE usuario ADD COLUMN senha_hash VARCHAR(255)"))
++-    db.session.commit()
++-
++-
++-def _provisionar_usuarios_iniciais() -> None:
++-    from app.features.estoque.models import Usuario
++-    from flask import current_app
++-
++-    configuracoes = [
++-        ("Proprietária", current_app.config["OWNER_USERNAME"], current_app.config["OWNER_INITIAL_PASSWORD"], "OWNER"),
++-        ("Gestor", current_app.config["MANAGER_USERNAME"], current_app.config["MANAGER_INITIAL_PASSWORD"], "ADMIN"),
++-        ("Cozinha", current_app.config["COOK_USERNAME"], current_app.config["COOK_INITIAL_PASSWORD"], "USER"),
++-    ]
++-    usuarios = db.session.execute(db.select(Usuario).order_by(Usuario.id)).scalars().all()
++-    por_username = {usuario.username.lower(): usuario for usuario in usuarios if usuario.username}
++-    por_papel = {usuario.papel: usuario for usuario in usuarios if usuario.papel}
++-
++-    for nome, username, password, papel in configuracoes:
++-        username = username.strip().lower()
++-        usuario = por_username.get(username)
++-        if usuario is None and papel == "OWNER":
++-            usuario = por_papel.get("OWNER") or por_papel.get("ADMIN")
++-        elif usuario is None and papel == "USER":
++-            usuario = por_papel.get("USER")
++-        if usuario is None:
++-            usuario = Usuario(nome=nome, username=username, senha_hash=generate_password_hash(password), papel=papel)
++-            db.session.add(usuario)
++-        else:
++-            usuario.username = usuario.username or username
++-            usuario.senha_hash = usuario.senha_hash or generate_password_hash(password)
++-            if papel == "OWNER":
++-                usuario.papel = "OWNER"
++-        por_username[username] = usuario
++-    db.session.commit()
++-
++-    db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_usuario_username ON usuario (username)"))
++-    db.session.commit()
++-
++-
++-VIEWS = {
++-    "vw_inventario": """
++-        SELECT p.id AS produto_id, p.nome AS produto, p.tipo AS tipo_produto,
++-               p.unidade_medida, l.id AS lote_id, l.quantidade,
++-               l.data_validade, loc.nome AS localizacao
++-          FROM lote l
++-          JOIN produto p ON p.id = l.produto_id
++-          JOIN localizacao loc ON loc.id = l.localizacao_id
++-         WHERE l.quantidade > 0
++-    """,
++-    "vw_fifo": """
++-        SELECT l.* FROM lote l WHERE l.quantidade > 0
++-         ORDER BY l.produto_id, l.data_validade ASC, l.criado_em ASC
++-    """,
++-    "vw_sp_componente": """
++-        SELECT c.id AS sp_componente_id, c.solicitacao_producao_id,
++-               c.produto_id, p.nome AS componente, p.unidade_medida,
++-               sf.ordem AS fase_ordem, fp.nome AS fase,
++-               c.quantidade_prevista,
++-               COALESCE(SUM(m.quantidade), 0) AS quantidade_realizada,
++-               SUM(m.quantidade * l.custo_unitario) AS custo_realizado
++-          FROM sp_componente c
++-          JOIN produto p ON p.id = c.produto_id
++-          LEFT JOIN sp_fase sf ON sf.id = c.sp_fase_id
++-          LEFT JOIN fase_producao fp ON fp.id = sf.fase_id
++-          LEFT JOIN movimentacao_estoque m
++-                 ON m.sp_componente_id = c.id AND m.tipo = 'CONSUMO_PRODUCAO'
++-          LEFT JOIN lote l ON l.id = m.lote_id
++-         GROUP BY c.id, c.solicitacao_producao_id, c.produto_id, p.nome,
++-                  p.unidade_medida, sf.ordem, fp.nome, c.quantidade_prevista
++-    """,
++-    "vw_sp_producao": """
++-        SELECT m.solicitacao_producao_id, m.lote_id, m.quantidade, m.criado_em
++-          FROM movimentacao_estoque m WHERE m.tipo = 'PRODUCAO'
++-    """,
++-}
++-
++-
++-def _criar_views() -> None:
++-    for nome, consulta in VIEWS.items():
++-        db.session.execute(text(f"CREATE VIEW {nome} AS {consulta}"))
++-    db.session.commit()
++-
++-
++-@click.command("init-db")
++-@click.option("--seed", is_flag=True, help="Também carrega os dados de exemplo.")
++-def init_db_command(seed: bool):
++-    if _tabelas_existem(db.engine):
++-        _migrar_autenticacao()
++-        _provisionar_usuarios_iniciais()
++-        click.echo("Banco já criado e atualizado")
++-        return
++-
++-    db.create_all()
++-    _criar_views()
++-    if seed:
++-        from db.seed import carregar_seeds
++-
++-        carregar_seeds()
++-    _provisionar_usuarios_iniciais()
++-    click.echo("Banco inicializado." + (" (com seeds)" if seed else ""))
++-
++-
++-def init_app(app: Flask):
++-    if "SQLALCHEMY_DATABASE_URI" not in app.config:
++-        app.config["SQLALCHEMY_DATABASE_URI"] = _montar_database_uri(app.config)
++-    app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
++-
++-    db.init_app(app)
++-    with app.app_context():
++-        if db.engine.dialect.name == "sqlite":
++-            _configurar_sqlite(db.engine)
++-
++-    app.cli.add_command(init_db_command)
+++import os
+++
+++import click
+++from flask import Flask
+++from flask_sqlalchemy import SQLAlchemy
+++from flask_migrate import Migrate
+++from sqlalchemy import URL, event, inspect, text
+++from werkzeug.security import generate_password_hash
+++
+++
+++db = SQLAlchemy()
+++migrate = Migrate(compare_type=True)
+++
+++
+++def _montar_database_uri(config: dict):
+++    if config.get("DATABASE_URL"):
+++        return config["DATABASE_URL"]
+++
+++    conexao = str(config.get("DB_CONNECTION", "sqlite")).lower()
+++    if conexao in {"postgres", "postgresql"}:
+++        return URL.create(
+++            "postgresql+psycopg2",
+++            username=config["DB_USERNAME"],
+++            password=config["DB_PASSWORD"],
+++            host=config["DB_HOST"],
+++            port=int(config["DB_PORT"]),
+++            database=config["DB_DATABASE"],
+++        )
+++    if conexao != "sqlite":
+++        raise ValueError("DB_CONNECTION deve ser sqlite, postgres ou postgresql")
+++
+++    caminho = os.path.abspath(config["DATABASE_PATH"]).replace("\\", "/")
+++    os.makedirs(os.path.dirname(caminho) or ".", exist_ok=True)
+++    return f"sqlite:///{caminho}"
+++
+++
+++def _configurar_sqlite(engine) -> None:
+++    @event.listens_for(engine, "connect")
+++    def _configurar_conexao(conexao_dbapi, _):
+++        conexao_dbapi.execute("PRAGMA foreign_keys = ON")
+++        conexao_dbapi.isolation_level = None
+++
+++    @event.listens_for(engine, "begin")
+++    def _begin_immediate(conexao):
+++        conexao.exec_driver_sql("BEGIN IMMEDIATE")
+++
+++
+++def _tabelas_existem(engine) -> bool:
+++    return inspect(engine).has_table("usuario")
+++
+++
+++def _provisionar_usuarios_iniciais() -> None:
+++    from app.features.estoque.models import Usuario
+++    from flask import current_app
+++
+++    configuracoes = [
+++        ("Proprietária", current_app.config["OWNER_USERNAME"], current_app.config["OWNER_INITIAL_PASSWORD"], "OWNER"),
+++        ("Gestor", current_app.config["MANAGER_USERNAME"], current_app.config["MANAGER_INITIAL_PASSWORD"], "ADMIN"),
+++        ("Cozinha", current_app.config["COOK_USERNAME"], current_app.config["COOK_INITIAL_PASSWORD"], "USER"),
+++    ]
+++    usuarios = db.session.execute(db.select(Usuario).order_by(Usuario.id)).scalars().all()
+++    por_username = {usuario.username.lower(): usuario for usuario in usuarios if usuario.username}
+++    por_papel = {usuario.papel: usuario for usuario in usuarios if usuario.papel}
+++
+++    for nome, username, password, papel in configuracoes:
+++        username = username.strip().lower()
+++        usuario = por_username.get(username)
+++        if usuario is None and papel == "OWNER":
+++            usuario = por_papel.get("OWNER") or por_papel.get("ADMIN")
+++        elif usuario is None and papel == "USER":
+++            usuario = por_papel.get("USER")
+++        if usuario is None:
+++            usuario = Usuario(nome=nome, username=username, senha_hash=generate_password_hash(password), papel=papel)
+++            db.session.add(usuario)
+++        else:
+++            usuario.username = usuario.username or username
+++            usuario.senha_hash = usuario.senha_hash or generate_password_hash(password)
+++            if papel == "OWNER":
+++                usuario.papel = "OWNER"
+++        por_username[username] = usuario
+++    db.session.commit()
+++
+++
+++
+++VIEWS = {
+++    "vw_inventario": """
+++        SELECT p.id AS produto_id, p.nome AS produto, p.tipo AS tipo_produto,
+++               p.unidade_medida, l.id AS lote_id, l.quantidade,
+++               l.data_validade, loc.nome AS localizacao
+++          FROM lote l
+++          JOIN produto p ON p.id = l.produto_id
+++          JOIN localizacao loc ON loc.id = l.localizacao_id
+++         WHERE l.quantidade > 0
+++    """,
+++    "vw_fifo": """
+++        SELECT l.* FROM lote l WHERE l.quantidade > 0
+++         ORDER BY l.produto_id, l.data_validade ASC, l.criado_em ASC
+++    """,
+++    "vw_sp_componente": """
+++        SELECT c.id AS sp_componente_id, c.solicitacao_producao_id,
+++               c.produto_id, p.nome AS componente, p.unidade_medida,
+++               sf.ordem AS fase_ordem, fp.nome AS fase,
+++               c.quantidade_prevista,
+++               COALESCE(SUM(m.quantidade), 0) AS quantidade_realizada,
+++               SUM(m.quantidade * l.custo_unitario) AS custo_realizado
+++          FROM sp_componente c
+++          JOIN produto p ON p.id = c.produto_id
+++          LEFT JOIN sp_fase sf ON sf.id = c.sp_fase_id
+++          LEFT JOIN fase_producao fp ON fp.id = sf.fase_id
+++          LEFT JOIN movimentacao_estoque m
+++                 ON m.sp_componente_id = c.id AND m.tipo = 'CONSUMO_PRODUCAO'
+++          LEFT JOIN lote l ON l.id = m.lote_id
+++         GROUP BY c.id, c.solicitacao_producao_id, c.produto_id, p.nome,
+++                  p.unidade_medida, sf.ordem, fp.nome, c.quantidade_prevista
+++    """,
+++    "vw_sp_producao": """
+++        SELECT m.solicitacao_producao_id, m.lote_id, m.quantidade, m.criado_em
+++          FROM movimentacao_estoque m WHERE m.tipo = 'PRODUCAO'
+++    """,
+++}
+++
+++
+++def _criar_views() -> None:
+++    for nome, consulta in VIEWS.items():
+++        db.session.execute(text(f"CREATE VIEW {nome} AS {consulta}"))
+++    db.session.commit()
+++
+++
+++@click.command("init-db")
+++@click.option("--seed", is_flag=True, help="Também carrega os dados de exemplo em um banco vazio.")
+++def init_db_command(seed: bool):
+++    from flask import current_app
+++
+++    if not _tabelas_existem(db.engine):
+++        # create_all fica restrito à suíte unitária. Em runtime o schema é responsabilidade do Alembic.
+++        if current_app.config.get("TESTING"):
+++            db.create_all()
+++            _criar_views()
+++        else:
+++            raise click.ClickException(
+++                "Schema não inicializado. Execute 'flask --app app db upgrade' antes de 'init-db'."
+++            )
+++
+++    seed_aplicado = False
+++    if seed:
+++        from app.features.produtos.models import Produto
+++
+++        possui_catalogo = db.session.scalar(db.select(Produto.id).limit(1)) is not None
+++        if not possui_catalogo:
+++            from db.seed import carregar_seeds
+++
+++            carregar_seeds()
+++            seed_aplicado = True
+++
+++    _provisionar_usuarios_iniciais()
+++    if seed and not seed_aplicado:
+++        click.echo("Banco inicializado; seeds ignorados porque o catálogo já possui dados.")
+++    else:
+++        click.echo("Banco inicializado." + (" (com seeds)" if seed_aplicado else ""))
+++
+++
+++def init_app(app: Flask):
+++    if "SQLALCHEMY_DATABASE_URI" not in app.config:
+++        app.config["SQLALCHEMY_DATABASE_URI"] = _montar_database_uri(app.config)
+++    app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
+++
+++    db.init_app(app)
+++    migrate.init_app(app, db, directory="migrations")
+++    with app.app_context():
+++        if db.engine.dialect.name == "sqlite":
+++            _configurar_sqlite(db.engine)
+++
+++    app.cli.add_command(init_db_command)
++diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/docs/FASE8_02.md /mnt/data/Machry_Fase8_02_Migrations/docs/FASE8_02.md
++--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/docs/FASE8_02.md	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/Machry_Fase8_02_Migrations/docs/FASE8_02.md	2026-11-01 03:53:37.898764704 +0000
++@@ -0,0 +1,17 @@
+++# Fase 8.2 — Flask-Migrate / Alembic
+++
+++## Mudanças
+++
+++- Flask-Migrate e Alembic adicionados às dependências.
+++- `Migrate` integrado ao Application Factory.
+++- Criado repositório `migrations/`.
+++- Criada baseline `fee791234a46` com todas as tabelas, constraints, índices e as quatro views atuais.
+++- `run.bat` e `run.sh` executam `flask db upgrade` antes do bootstrap.
+++- Container da API aplica migrations antes de iniciar Gunicorn.
+++- `init-db` deixa de criar schema em runtime; `create_all()` fica restrito a `TESTING`.
+++- Seeds só são aplicados em catálogo vazio.
+++- Adicionado smoke test da migration em SQLite.
+++
+++## Próxima fase
+++
+++Fase 8.3 — consolidar domínio antes de evoluir o modelo de produção.
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/docs/MIGRATIONS.md /mnt/data/Machry_Fase8_02_Migrations/docs/MIGRATIONS.md
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/docs/MIGRATIONS.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/docs/MIGRATIONS.md	2026-11-01 03:53:37.897984535 +0000
+@@ -0,0 +1,68 @@
++# Migrations do banco
++
++A partir da Fase 8.2, o schema do Machry/Cozinha Mais é versionado por **Flask-Migrate + Alembic**.
++
++## Banco novo
++
++Instale as dependências e aplique todas as migrations:
++
++```bash
++pip install -r requirements.txt
++flask --app app db upgrade
++flask --app app init-db --seed
++```
++
++`db upgrade` cria/atualiza o schema. `init-db` não é mais responsável por criar tabelas em runtime; ele provisiona os usuários iniciais e, opcionalmente, os dados de demonstração.
++
++## Alterar models
++
++Depois de modificar models SQLAlchemy:
++
++```bash
++flask --app app db migrate -m "descricao da alteracao"
++```
++
++Revise obrigatoriamente o arquivo gerado em `migrations/versions/` e então execute:
++
++```bash
++flask --app app db upgrade
++```
++
++O autogenerate do Alembic não entende automaticamente todos os objetos de banco. Views, dados especiais e alterações destrutivas precisam ser revisados/escritos explicitamente na migration.
++
++## Banco existente da Fase 8.1 ou anterior
++
++A migration `fee791234a46` representa o schema-base já existente na Fase 8.1. Portanto **não execute `upgrade` diretamente em um banco que já possui essas tabelas**, pois a migration tentaria criá-las novamente.
++
++Primeiro faça backup e confirme que o banco realmente corresponde ao schema da Fase 8.1. Depois marque a baseline como já aplicada:
++
++```bash
++flask --app app db stamp fee791234a46
++flask --app app db current
++```
++
++A partir daí, futuras migrations podem ser aplicadas normalmente:
++
++```bash
++flask --app app db upgrade
++```
++
++Se o banco for mais antigo ou tiver divergências manuais, não use `stamp` às cegas: ele registra uma revisão sem alterar o schema.
++
++## Comandos úteis
++
++```bash
++flask --app app db current
++flask --app app db history
++flask --app app db heads
++flask --app app db migrate -m "descricao"
++flask --app app db upgrade
++flask --app app db downgrade
++```
++
++## Regra do projeto
++
++- Models SQLAlchemy descrevem o estado desejado da aplicação.
++- Migrations descrevem **como chegar** a esse estado sem apagar os dados.
++- Alterações de schema em runtime não devem usar `db.create_all()`, `ALTER TABLE` manual ou `drop_all()`.
++- `db.create_all()` permanece apenas no bootstrap isolado da suíte de testes unitários.
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/migrations/README /mnt/data/Machry_Fase8_02_Migrations/migrations/README
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/migrations/README	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/migrations/README	2026-11-01 03:52:09.039760876 +0000
+@@ -0,0 +1,9 @@
++Single-database migration repository for Machry/Cozinha Mais.
++
++Use the Flask-Migrate commands from the project root:
++
++    flask --app app db current
++    flask --app app db migrate -m "descricao"
++    flask --app app db upgrade
++
++For an existing database created before Alembic, review docs/MIGRATIONS.md before stamping the baseline.
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/migrations/alembic.ini /mnt/data/Machry_Fase8_02_Migrations/migrations/alembic.ini
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/migrations/alembic.ini	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/migrations/alembic.ini	2026-11-01 03:52:09.036103959 +0000
+@@ -0,0 +1,37 @@
++[alembic]
++script_location = %(here)s
++prepend_sys_path = .
++
++[loggers]
++keys = root,sqlalchemy,alembic
++
++[handlers]
++keys = console
++
++[formatters]
++keys = generic
++
++[logger_root]
++level = WARN
++handlers = console
++qualname =
++
++[logger_sqlalchemy]
++level = WARN
++handlers =
++qualname = sqlalchemy.engine
++
++[logger_alembic]
++level = INFO
++handlers =
++qualname = alembic
++
++[handler_console]
++class = StreamHandler
++args = (sys.stderr,)
++level = NOTSET
++formatter = generic
++
++[formatter_generic]
++format = %(levelname)-5.5s [%(name)s] %(message)s
++datefmt = %H:%M:%S
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/migrations/env.py /mnt/data/Machry_Fase8_02_Migrations/migrations/env.py
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/migrations/env.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/migrations/env.py	2026-11-01 03:52:09.038578691 +0000
+@@ -0,0 +1,68 @@
++from __future__ import annotations
++
++from logging.config import fileConfig
++import os
++import sys
++from pathlib import Path
++
++from alembic import context
++from sqlalchemy import engine_from_config, pool
++
++ROOT = Path(__file__).resolve().parents[1]
++if str(ROOT) not in sys.path:
++    sys.path.insert(0, str(ROOT))
++
++from app import create_app
++from db.database_config import db
++
++config = context.config
++if config.config_file_name is not None:
++    fileConfig(config.config_file_name)
++
++
++def _application():
++    """Cria a aplicação usando o mesmo carregamento de configuração do runtime."""
++    return create_app()
++
++
++app = _application()
++with app.app_context():
++    target_metadata = db.metadata
++    database_url = str(db.engine.url).replace("%", "%%")
++    config.set_main_option("sqlalchemy.url", database_url)
++
++
++def run_migrations_offline() -> None:
++    url = config.get_main_option("sqlalchemy.url")
++    context.configure(
++        url=url,
++        target_metadata=target_metadata,
++        literal_binds=True,
++        compare_type=True,
++        dialect_opts={"paramstyle": "named"},
++    )
++    with context.begin_transaction():
++        context.run_migrations()
++
++
++def run_migrations_online() -> None:
++    connectable = engine_from_config(
++        config.get_section(config.config_ini_section, {}),
++        prefix="sqlalchemy.",
++        poolclass=pool.NullPool,
++    )
++    with connectable.connect() as connection:
++        context.configure(
++            connection=connection,
++            target_metadata=target_metadata,
++            compare_type=True,
++            render_as_batch=connection.dialect.name == "sqlite",
++        )
++        with context.begin_transaction():
++            context.run_migrations()
++
++
++if context.is_offline_mode():
++    run_migrations_offline()
++else:
++    run_migrations_online()
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/migrations/script.py.mako /mnt/data/Machry_Fase8_02_Migrations/migrations/script.py.mako
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/migrations/script.py.mako	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/migrations/script.py.mako	2026-11-01 03:52:09.037280896 +0000
+@@ -0,0 +1,25 @@
++"""${message}
++
++Revision ID: ${up_revision}
++Revises: ${down_revision | comma,n}
++Create Date: ${create_date}
++
++"""
++from typing import Sequence, Union
++
++from alembic import op
++import sqlalchemy as sa
++${imports if imports else ""}
++
++revision: str = ${repr(up_revision)}
++down_revision: Union[str, Sequence[str], None] = ${repr(down_revision)}
++branch_labels: Union[str, Sequence[str], None] = ${repr(branch_labels)}
++depends_on: Union[str, Sequence[str], None] = ${repr(depends_on)}
++
++
++def upgrade() -> None:
++    ${upgrades if upgrades else "pass"}
++
++
++def downgrade() -> None:
++    ${downgrades if downgrades else "pass"}
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/migrations/versions/fee791234a46_baseline_schema.py /mnt/data/Machry_Fase8_02_Migrations/migrations/versions/fee791234a46_baseline_schema.py
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/migrations/versions/fee791234a46_baseline_schema.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/migrations/versions/fee791234a46_baseline_schema.py	2026-11-01 03:52:55.042040844 +0000
+@@ -0,0 +1,275 @@
++"""baseline schema
++
++Revision ID: fee791234a46
++Revises: 
++Create Date: 2026-11-01 03:52:18.219940
++
++"""
++from typing import Sequence, Union
++
++from alembic import op
++import sqlalchemy as sa
++
++
++revision: str = 'fee791234a46'
++down_revision: Union[str, Sequence[str], None] = None
++branch_labels: Union[str, Sequence[str], None] = None
++depends_on: Union[str, Sequence[str], None] = None
++
++
++def upgrade() -> None:
++    # ### commands auto generated by Alembic - please adjust! ###
++    op.create_table('fase_producao',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('nome', sa.Text(), nullable=False),
++    sa.PrimaryKeyConstraint('id'),
++    sa.UniqueConstraint('nome')
++    )
++    op.create_table('grupo_produto',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('nome', sa.Text(), nullable=False),
++    sa.PrimaryKeyConstraint('id'),
++    sa.UniqueConstraint('nome')
++    )
++    op.create_table('localizacao',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('nome', sa.Text(), nullable=False),
++    sa.Column('tipo', sa.Text(), server_default='SECO', nullable=False),
++    sa.Column('parent_id', sa.Integer(), nullable=True),
++    sa.Column('foto_url', sa.Text(), nullable=True),
++    sa.CheckConstraint("tipo IN ('CONGELADO', 'RESFRIADO', 'SECO')", name='ck_localizacao_tipo'),
++    sa.ForeignKeyConstraint(['parent_id'], ['localizacao.id'], ),
++    sa.PrimaryKeyConstraint('id'),
++    sa.UniqueConstraint('nome')
++    )
++    op.create_table('usuario',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('nome', sa.Text(), nullable=False),
++    sa.Column('username', sa.String(length=80), nullable=False),
++    sa.Column('senha_hash', sa.String(length=255), nullable=False),
++    sa.Column('papel', sa.Text(), server_default='USER', nullable=False),
++    sa.Column('foto_url', sa.Text(), nullable=True),
++    sa.Column('ativo', sa.Integer(), server_default='1', nullable=False),
++    sa.Column('criado_em', sa.Text(), server_default=sa.text('(CAST(CURRENT_TIMESTAMP AS TEXT))'), nullable=False),
++    sa.CheckConstraint("papel IN ('ADMIN', 'OWNER', 'USER')", name='ck_usuario_papel'),
++    sa.PrimaryKeyConstraint('id'),
++    sa.UniqueConstraint('username')
++    )
++    op.create_table('produto',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('nome', sa.Text(), nullable=False),
++    sa.Column('tipo', sa.Text(), nullable=False),
++    sa.Column('unidade_medida', sa.Text(), nullable=False),
++    sa.Column('grupo_id', sa.Integer(), nullable=True),
++    sa.Column('conservacao', sa.Text(), server_default='SECO', nullable=False),
++    sa.Column('validade_obrigatoria', sa.Integer(), server_default='0', nullable=False),
++    sa.Column('validade_padrao_dias', sa.Integer(), nullable=True),
++    sa.Column('foto_url', sa.Text(), nullable=True),
++    sa.Column('ativo', sa.Integer(), server_default='1', nullable=False),
++    sa.Column('criado_em', sa.Text(), server_default=sa.text('(CAST(CURRENT_TIMESTAMP AS TEXT))'), nullable=False),
++    sa.CheckConstraint("conservacao IN ('CONGELADO', 'RESFRIADO', 'SECO')", name='ck_produto_conservacao'),
++    sa.CheckConstraint("tipo IN ('INSUMO', 'INTERMEDIARIO', 'FINAL')", name='ck_produto_tipo'),
++    sa.ForeignKeyConstraint(['grupo_id'], ['grupo_produto.id'], ),
++    sa.PrimaryKeyConstraint('id')
++    )
++    op.create_table('ficha_tecnica',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('produto_id', sa.Integer(), nullable=False),
++    sa.Column('rendimento', sa.Numeric(precision=18, scale=3), nullable=False),
++    sa.Column('observacao', sa.Text(), nullable=True),
++    sa.CheckConstraint('rendimento > 0', name='ck_ficha_rendimento'),
++    sa.ForeignKeyConstraint(['produto_id'], ['produto.id'], ),
++    sa.PrimaryKeyConstraint('id'),
++    sa.UniqueConstraint('produto_id')
++    )
++    op.create_table('lote',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('produto_id', sa.Integer(), nullable=False),
++    sa.Column('localizacao_id', sa.Integer(), nullable=False),
++    sa.Column('quantidade', sa.Numeric(asdecimal=False), server_default='0', nullable=False),
++    sa.Column('data_producao', sa.String(), nullable=True),
++    sa.Column('data_validade', sa.String(), nullable=True),
++    sa.Column('custo_unitario', sa.Numeric(asdecimal=False), nullable=True),
++    sa.Column('criado_em', sa.String(), server_default=sa.text('(CAST(CURRENT_TIMESTAMP AS TEXT))'), nullable=False),
++    sa.CheckConstraint('quantidade >= 0', name='ck_lote_quantidade'),
++    sa.ForeignKeyConstraint(['localizacao_id'], ['localizacao.id'], ),
++    sa.ForeignKeyConstraint(['produto_id'], ['produto.id'], ),
++    sa.PrimaryKeyConstraint('id')
++    )
++    with op.batch_alter_table('lote', schema=None) as batch_op:
++        batch_op.create_index('idx_lote_fifo', ['produto_id', 'data_validade', 'localizacao_id'], unique=False)
++
++    op.create_table('produto_transformacao',
++    sa.Column('produto_origem_id', sa.Integer(), nullable=False),
++    sa.Column('produto_destino_id', sa.Integer(), nullable=False),
++    sa.CheckConstraint('produto_origem_id <> produto_destino_id', name='ck_transformacao_produtos_diferentes'),
++    sa.ForeignKeyConstraint(['produto_destino_id'], ['produto.id'], ),
++    sa.ForeignKeyConstraint(['produto_origem_id'], ['produto.id'], ),
++    sa.PrimaryKeyConstraint('produto_origem_id', 'produto_destino_id')
++    )
++    op.create_table('ficha_tecnica_fase',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('ficha_tecnica_id', sa.Integer(), nullable=False),
++    sa.Column('fase_id', sa.Integer(), nullable=False),
++    sa.Column('ordem', sa.Integer(), nullable=False),
++    sa.Column('tempo_previsto_min', sa.Integer(), nullable=False),
++    sa.CheckConstraint('ordem > 0', name='ck_ficha_fase_ordem'),
++    sa.CheckConstraint('tempo_previsto_min > 0', name='ck_ficha_fase_tempo'),
++    sa.ForeignKeyConstraint(['fase_id'], ['fase_producao.id'], ),
++    sa.ForeignKeyConstraint(['ficha_tecnica_id'], ['ficha_tecnica.id'], ),
++    sa.PrimaryKeyConstraint('id'),
++    sa.UniqueConstraint('ficha_tecnica_id', 'ordem', name='uq_ficha_fase_ordem')
++    )
++    op.create_table('solicitacao_producao',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('ficha_tecnica_id', sa.Integer(), nullable=False),
++    sa.Column('usuario_id', sa.Integer(), nullable=False),
++    sa.Column('status', sa.Text(), server_default='ABERTA', nullable=False),
++    sa.Column('criado_em', sa.String(), server_default=sa.text('(CAST(CURRENT_TIMESTAMP AS TEXT))'), nullable=False),
++    sa.Column('concluido_em', sa.String(), nullable=True),
++    sa.CheckConstraint("status IN ('ABERTA', 'EM_SEPARACAO', 'EM_PRODUCAO', 'CONCLUIDA', 'CANCELADA')", name='ck_solicitacao_status'),
++    sa.ForeignKeyConstraint(['ficha_tecnica_id'], ['ficha_tecnica.id'], ),
++    sa.ForeignKeyConstraint(['usuario_id'], ['usuario.id'], ),
++    sa.PrimaryKeyConstraint('id')
++    )
++    op.create_table('ficha_tecnica_componente',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('ficha_tecnica_id', sa.Integer(), nullable=False),
++    sa.Column('produto_id', sa.Integer(), nullable=False),
++    sa.Column('quantidade', sa.Numeric(precision=18, scale=3), nullable=False),
++    sa.Column('ficha_tecnica_fase_id', sa.Integer(), nullable=True),
++    sa.CheckConstraint('quantidade > 0', name='ck_ficha_componente_quantidade'),
++    sa.ForeignKeyConstraint(['ficha_tecnica_fase_id'], ['ficha_tecnica_fase.id'], ),
++    sa.ForeignKeyConstraint(['ficha_tecnica_id'], ['ficha_tecnica.id'], ),
++    sa.ForeignKeyConstraint(['produto_id'], ['produto.id'], ),
++    sa.PrimaryKeyConstraint('id'),
++    sa.UniqueConstraint('ficha_tecnica_id', 'produto_id', name='uq_ficha_componente_produto')
++    )
++    op.create_table('sp_fase',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('solicitacao_producao_id', sa.Integer(), nullable=False),
++    sa.Column('fase_id', sa.Integer(), nullable=False),
++    sa.Column('ordem', sa.Integer(), nullable=False),
++    sa.Column('tempo_previsto_min', sa.Integer(), nullable=False),
++    sa.Column('tempo_realizado_min', sa.Integer(), nullable=True),
++    sa.ForeignKeyConstraint(['fase_id'], ['fase_producao.id'], ),
++    sa.ForeignKeyConstraint(['solicitacao_producao_id'], ['solicitacao_producao.id'], ),
++    sa.PrimaryKeyConstraint('id'),
++    sa.UniqueConstraint('solicitacao_producao_id', 'ordem', name='uq_sp_fase_ordem')
++    )
++    op.create_table('sp_componente',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('solicitacao_producao_id', sa.Integer(), nullable=False),
++    sa.Column('produto_id', sa.Integer(), nullable=False),
++    sa.Column('quantidade_prevista', sa.Numeric(asdecimal=False), nullable=False),
++    sa.Column('sp_fase_id', sa.Integer(), nullable=True),
++    sa.CheckConstraint('quantidade_prevista > 0', name='ck_sp_quantidade_prevista'),
++    sa.ForeignKeyConstraint(['produto_id'], ['produto.id'], ),
++    sa.ForeignKeyConstraint(['solicitacao_producao_id'], ['solicitacao_producao.id'], ),
++    sa.ForeignKeyConstraint(['sp_fase_id'], ['sp_fase.id'], ),
++    sa.PrimaryKeyConstraint('id'),
++    sa.UniqueConstraint('solicitacao_producao_id', 'produto_id', name='uq_sp_componente_produto')
++    )
++    op.create_table('movimentacao_estoque',
++    sa.Column('id', sa.Integer(), nullable=False),
++    sa.Column('tipo', sa.Text(), nullable=False),
++    sa.Column('lote_id', sa.Integer(), nullable=False),
++    sa.Column('lote_destino_id', sa.Integer(), nullable=True),
++    sa.Column('quantidade', sa.Numeric(asdecimal=False), nullable=False),
++    sa.Column('quantidade_destino', sa.Numeric(asdecimal=False), nullable=True),
++    sa.Column('motivo', sa.Text(), nullable=True),
++    sa.Column('usuario_id', sa.Integer(), nullable=False),
++    sa.Column('solicitacao_producao_id', sa.Integer(), nullable=True),
++    sa.Column('sp_componente_id', sa.Integer(), nullable=True),
++    sa.Column('observacao', sa.Text(), nullable=True),
++    sa.Column('criado_em', sa.String(), server_default=sa.text('(CAST(CURRENT_TIMESTAMP AS TEXT))'), nullable=False),
++    sa.CheckConstraint("tipo IN ('ENTRADA', 'PRODUCAO', 'SAIDA', 'CONSUMO_PRODUCAO', 'TRANSFERENCIA', 'TRANSFORMACAO', 'AJUSTE_ENTRADA', 'AJUSTE_SAIDA')", name='ck_movimentacao_tipo'),
++    sa.CheckConstraint('lote_destino_id IS NULL OR lote_destino_id <> lote_id', name='ck_movimentacao_lotes_diferentes'),
++    sa.CheckConstraint('quantidade > 0', name='ck_movimentacao_quantidade'),
++    sa.CheckConstraint('quantidade_destino IS NULL OR quantidade_destino > 0', name='ck_movimentacao_quantidade_destino'),
++    sa.ForeignKeyConstraint(['lote_destino_id'], ['lote.id'], ),
++    sa.ForeignKeyConstraint(['lote_id'], ['lote.id'], ),
++    sa.ForeignKeyConstraint(['solicitacao_producao_id'], ['solicitacao_producao.id'], ),
++    sa.ForeignKeyConstraint(['sp_componente_id'], ['sp_componente.id'], ),
++    sa.ForeignKeyConstraint(['usuario_id'], ['usuario.id'], ),
++    sa.PrimaryKeyConstraint('id')
++    )
++    with op.batch_alter_table('movimentacao_estoque', schema=None) as batch_op:
++        batch_op.create_index('idx_mov_lote', ['lote_id', 'criado_em'], unique=False)
++        batch_op.create_index('idx_mov_sp', ['solicitacao_producao_id'], unique=False)
++        batch_op.create_index('idx_mov_sp_componente', ['sp_componente_id'], unique=False)
++
++    # Views de leitura fazem parte do contrato atual do domínio.
++    op.execute("""
++        CREATE VIEW vw_inventario AS
++        SELECT p.id AS produto_id, p.nome AS produto, p.tipo AS tipo_produto,
++               p.unidade_medida, l.id AS lote_id, l.quantidade,
++               l.data_validade, loc.nome AS localizacao
++          FROM lote l
++          JOIN produto p ON p.id = l.produto_id
++          JOIN localizacao loc ON loc.id = l.localizacao_id
++         WHERE l.quantidade > 0
++    """)
++    op.execute("""
++        CREATE VIEW vw_fifo AS
++        SELECT l.* FROM lote l WHERE l.quantidade > 0
++         ORDER BY l.produto_id, l.data_validade ASC, l.criado_em ASC
++    """)
++    op.execute("""
++        CREATE VIEW vw_sp_componente AS
++        SELECT c.id AS sp_componente_id, c.solicitacao_producao_id,
++               c.produto_id, p.nome AS componente, p.unidade_medida,
++               sf.ordem AS fase_ordem, fp.nome AS fase,
++               c.quantidade_prevista,
++               COALESCE(SUM(m.quantidade), 0) AS quantidade_realizada,
++               SUM(m.quantidade * l.custo_unitario) AS custo_realizado
++          FROM sp_componente c
++          JOIN produto p ON p.id = c.produto_id
++          LEFT JOIN sp_fase sf ON sf.id = c.sp_fase_id
++          LEFT JOIN fase_producao fp ON fp.id = sf.fase_id
++          LEFT JOIN movimentacao_estoque m
++                 ON m.sp_componente_id = c.id AND m.tipo = 'CONSUMO_PRODUCAO'
++          LEFT JOIN lote l ON l.id = m.lote_id
++         GROUP BY c.id, c.solicitacao_producao_id, c.produto_id, p.nome,
++                  p.unidade_medida, sf.ordem, fp.nome, c.quantidade_prevista
++    """)
++    op.execute("""
++        CREATE VIEW vw_sp_producao AS
++        SELECT m.solicitacao_producao_id, m.lote_id, m.quantidade, m.criado_em
++          FROM movimentacao_estoque m WHERE m.tipo = 'PRODUCAO'
++    """)
++
++    # ### end Alembic commands ###
++
++
++def downgrade() -> None:
++    # Views dependem das tabelas e precisam cair primeiro.
++    op.execute("DROP VIEW IF EXISTS vw_sp_producao")
++    op.execute("DROP VIEW IF EXISTS vw_sp_componente")
++    op.execute("DROP VIEW IF EXISTS vw_fifo")
++    op.execute("DROP VIEW IF EXISTS vw_inventario")
++
++    # ### commands auto generated by Alembic - please adjust! ###
++    with op.batch_alter_table('movimentacao_estoque', schema=None) as batch_op:
++        batch_op.drop_index('idx_mov_sp_componente')
++        batch_op.drop_index('idx_mov_sp')
++        batch_op.drop_index('idx_mov_lote')
++
++    op.drop_table('movimentacao_estoque')
++    op.drop_table('sp_componente')
++    op.drop_table('sp_fase')
++    op.drop_table('ficha_tecnica_componente')
++    op.drop_table('solicitacao_producao')
++    op.drop_table('ficha_tecnica_fase')
++    op.drop_table('produto_transformacao')
++    with op.batch_alter_table('lote', schema=None) as batch_op:
++        batch_op.drop_index('idx_lote_fifo')
++
++    op.drop_table('lote')
++    op.drop_table('ficha_tecnica')
++    op.drop_table('produto')
++    op.drop_table('usuario')
++    op.drop_table('localizacao')
++    op.drop_table('grupo_produto')
++    op.drop_table('fase_producao')
++    # ### end Alembic commands ###
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/requirements.txt /mnt/data/Machry_Fase8_02_Migrations/requirements.txt
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/requirements.txt	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/requirements.txt	2026-11-01 03:51:46.240912986 +0000
+@@ -1,7 +1,9 @@
+-Flask>=3.0
+-Flask-SQLAlchemy>=3.1
+-gunicorn>=23.0
+-psycopg2-binary>=2.9
+-pydantic>=2.0
+-pydantic-settings>=2.0
+-python-dotenv>=1.0
++Flask>=3.0
++Flask-SQLAlchemy>=3.1
++gunicorn>=23.0
++psycopg2-binary>=2.9
++pydantic>=2.0
++pydantic-settings>=2.0
++python-dotenv>=1.0
++Flask-Migrate>=4.0
++Alembic>=1.13
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/run.bat /mnt/data/Machry_Fase8_02_Migrations/run.bat
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/run.bat	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/run.bat	2026-11-01 03:53:23.338107532 +0000
+@@ -1,45 +1,46 @@
+-@echo off
+-setlocal EnableExtensions
+-cd /d "%~dp0"
+-set "PYTHON="
+-if exist ".venv\Scripts\python.exe" goto ready
+-where py >nul 2>&1
+-if not errorlevel 1 set "PYTHON=py -3"
+-if not defined PYTHON set "PYTHON=python"
+-%PYTHON% -c "import sys; assert sys.version_info >= (3,12)" >nul 2>&1
+-if errorlevel 1 (echo [ERRO] Python 3.12+ necessario.& pause & exit /b 1)
+-echo [1/5] Preparando Python...
+-%PYTHON% -m venv .venv || goto error
+-:ready
+-echo [2/5] Instalando backend...
+-".venv\Scripts\python.exe" -m pip install -r requirements.txt || goto error
+-if not defined DB_CONNECTION set "DB_CONNECTION=sqlite"
+-if /i not "%DB_CONNECTION%"=="sqlite" (echo [ERRO] run.bat e exclusivo do SQLite local. Use Docker para PostgreSQL.& pause & exit /b 1)
+-if not defined DATABASE_PATH set "DATABASE_PATH=%CD%\data\app.db"
+-echo [3/5] Inicializando banco sem apagar dados...
+-if /i "%~1"=="--seed" (
+- ".venv\Scripts\python.exe" -m flask --app app init-db --seed || goto error
+-) else (
+- ".venv\Scripts\python.exe" -m flask --app app init-db || goto error
+-)
+-echo [4/5] Preparando frontend...
+-where npm >nul 2>&1 || (echo [ERRO] Instale Node.js 22+ com npm.& pause & exit /b 1)
+-pushd frontend
+-if not exist "node_modules\vite" call npm install --no-audit --no-fund
+-if errorlevel 1 (popd & goto error)
+-popd
+-echo [5/5] Iniciando Flask e React...
+-start "Cozinha Mais - API" cmd /k "cd /d ""%CD%"" && set ""DB_CONNECTION=sqlite"" && set ""DATABASE_PATH=%DATABASE_PATH%"" && "".venv\Scripts\python.exe"" -m flask --app app run --host 127.0.0.1 --port 5000"
+-echo.
+-echo Cozinha Mais: http://localhost:8080
+-echo Outros computadores: http://IP_DESTA_MAQUINA:8080
+-ipconfig | findstr /i "IPv4"
+-echo API: http://localhost:5000/health
+-pushd frontend
+-call npm run dev
+-popd
+-exit /b %errorlevel%
+-:error
+-echo [ERRO] Nao foi possivel iniciar. Dados existentes nao foram apagados.
+-pause
+-exit /b 1
++@echo off
++setlocal EnableExtensions
++cd /d "%~dp0"
++set "PYTHON="
++if exist ".venv\Scripts\python.exe" goto ready
++where py >nul 2>&1
++if not errorlevel 1 set "PYTHON=py -3"
++if not defined PYTHON set "PYTHON=python"
++%PYTHON% -c "import sys; assert sys.version_info >= (3,12)" >nul 2>&1
++if errorlevel 1 (echo [ERRO] Python 3.12+ necessario.& pause & exit /b 1)
++echo [1/5] Preparando Python...
++%PYTHON% -m venv .venv || goto error
++:ready
++echo [2/5] Instalando backend...
++".venv\Scripts\python.exe" -m pip install -r requirements.txt || goto error
++if not defined DB_CONNECTION set "DB_CONNECTION=sqlite"
++if /i not "%DB_CONNECTION%"=="sqlite" (echo [ERRO] run.bat e exclusivo do SQLite local. Use Docker para PostgreSQL.& pause & exit /b 1)
++if not defined DATABASE_PATH set "DATABASE_PATH=%CD%\data\app.db"
++echo [3/5] Aplicando migrations e inicializando banco sem apagar dados...
++".venv\Scripts\python.exe" -m flask --app app db upgrade || goto error
++if /i "%~1"=="--seed" (
++ ".venv\Scripts\python.exe" -m flask --app app init-db --seed || goto error
++) else (
++ ".venv\Scripts\python.exe" -m flask --app app init-db || goto error
++)
++echo [4/5] Preparando frontend...
++where npm >nul 2>&1 || (echo [ERRO] Instale Node.js 22+ com npm.& pause & exit /b 1)
++pushd frontend
++if not exist "node_modules\vite" call npm install --no-audit --no-fund
++if errorlevel 1 (popd & goto error)
++popd
++echo [5/5] Iniciando Flask e React...
++start "Cozinha Mais - API" cmd /k "cd /d ""%CD%"" && set ""DB_CONNECTION=sqlite"" && set ""DATABASE_PATH=%DATABASE_PATH%"" && "".venv\Scripts\python.exe"" -m flask --app app run --host 127.0.0.1 --port 5000"
++echo.
++echo Cozinha Mais: http://localhost:8080
++echo Outros computadores: http://IP_DESTA_MAQUINA:8080
++ipconfig | findstr /i "IPv4"
++echo API: http://localhost:5000/health
++pushd frontend
++call npm run dev
++popd
++exit /b %errorlevel%
++:error
++echo [ERRO] Nao foi possivel iniciar. Dados existentes nao foram apagados.
++pause
++exit /b 1
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/run.sh /mnt/data/Machry_Fase8_02_Migrations/run.sh
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/run.sh	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/run.sh	2026-11-01 03:53:23.337924451 +0000
+@@ -1,16 +1,17 @@
+-#!/usr/bin/env bash
+-set -euo pipefail
+-cd "$(dirname "$0")"
+-export DB_CONNECTION=sqlite
+-export DATABASE_PATH="${DATABASE_PATH:-$PWD/data/app.db}"
+-if ! command -v python3 >/dev/null; then echo 'Instale Python 3.12+.'; exit 1; fi
+-if [ ! -f .venv/bin/python ]; then python3 -m venv .venv; fi
+-.venv/bin/python -m pip install -r requirements.txt
+-if [ "${1:-}" = '--seed' ]; then .venv/bin/python -m flask --app app init-db --seed; else .venv/bin/python -m flask --app app init-db; fi
+-command -v npm >/dev/null || { echo 'Instale Node.js 22+.'; exit 1; }
+-if [ ! -d frontend/node_modules/vite ]; then (cd frontend && npm install --no-audit --no-fund); fi
+-.venv/bin/python -m flask --app app run --host 127.0.0.1 --port 5000 &
+-API_PID=$!
+-trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+-printf 'Cozinha Mais: http://localhost:8080 (LAN: http://IP_DO_PC:8080)\n'
+-(cd frontend && npm run dev)
++#!/usr/bin/env bash
++set -euo pipefail
++cd "$(dirname "$0")"
++export DB_CONNECTION=sqlite
++export DATABASE_PATH="${DATABASE_PATH:-$PWD/data/app.db}"
++if ! command -v python3 >/dev/null; then echo 'Instale Python 3.12+.'; exit 1; fi
++if [ ! -f .venv/bin/python ]; then python3 -m venv .venv; fi
++.venv/bin/python -m pip install -r requirements.txt
++.venv/bin/python -m flask --app app db upgrade
++if [ "${1:-}" = '--seed' ]; then .venv/bin/python -m flask --app app init-db --seed; else .venv/bin/python -m flask --app app init-db; fi
++command -v npm >/dev/null || { echo 'Instale Node.js 22+.'; exit 1; }
++if [ ! -d frontend/node_modules/vite ]; then (cd frontend && npm install --no-audit --no-fund); fi
++.venv/bin/python -m flask --app app run --host 127.0.0.1 --port 5000 &
++API_PID=$!
++trap 'kill "$API_PID" 2>/dev/null || true' EXIT
++printf 'Cozinha Mais: http://localhost:8080 (LAN: http://IP_DO_PC:8080)\n'
++(cd frontend && npm run dev)
+diff -ruN '--exclude=__pycache__' /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/tests/test_migrations.py /mnt/data/Machry_Fase8_02_Migrations/tests/test_migrations.py
+--- /mnt/data/machry_phase82/Machry_Fase8_01_Base_Estabilizada/tests/test_migrations.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_02_Migrations/tests/test_migrations.py	2026-11-01 03:53:37.897132206 +0000
+@@ -0,0 +1,54 @@
++import os
++import sqlite3
++import subprocess
++import sys
++from pathlib import Path
++
++
++def test_baseline_alembic_cria_schema_e_views(tmp_path):
++    root = Path(__file__).resolve().parents[1]
++    database = tmp_path / "migration.db"
++    env = os.environ.copy()
++    env.update(
++        {
++            "DB_CONNECTION": "sqlite",
++            "DATABASE_PATH": str(database),
++            "SECRET_KEY": "migration-test-secret",
++        }
++    )
++
++    resultado = subprocess.run(
++        [
++            sys.executable,
++            "-m",
++            "alembic",
++            "-c",
++            "migrations/alembic.ini",
++            "upgrade",
++            "head",
++        ],
++        cwd=root,
++        env=env,
++        text=True,
++        capture_output=True,
++        check=False,
++    )
++    assert resultado.returncode == 0, resultado.stdout + resultado.stderr
++
++    with sqlite3.connect(database) as conexao:
++        objetos = {
++            (tipo, nome)
++            for tipo, nome in conexao.execute(
++                "SELECT type, name FROM sqlite_master WHERE type IN ('table', 'view')"
++            )
++        }
++        revisao = conexao.execute("SELECT version_num FROM alembic_version").fetchone()
++
++    assert revisao == ("fee791234a46",)
++    assert ("table", "produto") in objetos
++    assert ("table", "solicitacao_producao") in objetos
++    assert ("table", "movimentacao_estoque") in objetos
++    assert ("view", "vw_inventario") in objetos
++    assert ("view", "vw_fifo") in objetos
++    assert ("view", "vw_sp_componente") in objetos
++    assert ("view", "vw_sp_producao") in objetos

@@ -1,0 +1,1163 @@
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/COZINHA_MAIS_LEIA-ME.md Machry_Fase8_06_Producao_Estoque/COZINHA_MAIS_LEIA-ME.md
+--- Machry_Fase8_05_Execucao_Real/COZINHA_MAIS_LEIA-ME.md	2026-11-01 04:55:12.875158610 +0000
++++ Machry_Fase8_06_Producao_Estoque/COZINHA_MAIS_LEIA-ME.md	2026-11-01 05:00:05.370790355 +0000
+@@ -24,7 +24,7 @@
+ 
+ ## Pendências que dependem de backend/DevOps
+ 
+-Baixa automática FEFO na conclusão de produção; geração de produto acabado; senha própria/primeiro login; rate limit/auditoria; alerta de estoque mínimo; backup; testes de implantação; TLS e segredos de produção. **Não são anunciados como implementados.** Transformação pela API exige lote de destino preexistente. O histórico está limitado aos 500 registros mais recentes retornados pela API.
++Geração automática de produto acabado e tratamento completo de perdas; senha própria/primeiro login; rate limit/auditoria; alerta de estoque mínimo; backup; testes de implantação; TLS e segredos de produção. **Não são anunciados como implementados.** Transformação pela API exige lote de destino preexistente. O histórico está limitado aos 500 registros mais recentes retornados pela API.
+ 
+ ## Importante para a equipe
+ 
+@@ -37,4 +37,9 @@
+ 
+ ## Evolução — Fase 8.5
+ 
+-A execução da produção agora registra quantidade efetivamente produzida, tempos reais e observações por fase sem alterar o planejamento original. As fases de cada solicitação armazenam um snapshot do nome da fase para preservar o histórico mesmo que o catálogo seja renomeado. A integração automática com o estoque continua reservada à próxima fase.
++A execução da produção agora registra quantidade efetivamente produzida, tempos reais e observações por fase sem alterar o planejamento original. As fases de cada solicitação armazenam um snapshot do nome da fase para preservar o histórico mesmo que o catálogo seja renomeado. A integração automática com o estoque foi implementada na Fase 8.6.
++
++
++## Evolução — Fase 8.6
++
++Ao concluir uma produção em andamento, o backend agora baixa automaticamente os componentes planejados do estoque usando FEFO. As movimentações são registradas como `CONSUMO_PRODUCAO`, ligadas à solicitação e ao componente, e usam o usuário autenticado como autor. Conclusão e estoque compartilham a mesma transação: falta de qualquer ingrediente causa rollback completo e mantém a produção em andamento. A geração do lote do produto acabado permanece para a próxima fase.
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/README.md Machry_Fase8_06_Producao_Estoque/README.md
+--- Machry_Fase8_05_Execucao_Real/README.md	2026-11-01 04:55:13.203158241 +0000
++++ Machry_Fase8_06_Producao_Estoque/README.md	2026-11-01 05:00:05.370681454 +0000
+@@ -193,3 +193,12 @@
+ A produção agora separa explicitamente **planejado × realizado**. `SolicitacaoProducao` ganhou `quantidade_produzida` e `observacao_execucao`; `SpFase` ganhou snapshot histórico do nome da fase, observação e horários de início/fim. O endpoint `PUT /api/producao/solicitacoes/{id}/execucao` registra o realizado apenas enquanto a produção está `EM_PRODUCAO`.
+ 
+ A migration `c4e8f1a2b730` faz backfill do snapshot das fases existentes e atualiza `vw_sp_componente` para usar o snapshot. Veja [`docs/FASE8_05.md`](docs/FASE8_05.md).
++
++
++## Fase 8.6 — integração Produção ↔ Estoque
++
++A transição `EM_PRODUCAO → CONCLUIDA` agora é uma operação transacional de domínio. Antes de concluir, o backend lê os `SpComponente` planejados, bloqueia os lotes utilizáveis, ignora lotes vencidos e monta a baixa automática em ordem **FEFO (First Expired, First Out)**. Cada parcela consumida gera uma `MovimentacaoEstoque` do tipo `CONSUMO_PRODUCAO`, vinculada à `SolicitacaoProducao` e ao `SpComponente` correspondente.
++
++O usuário responsável pela baixa é obtido da sessão autenticada (`g.usuario.id`), não de um identificador fornecido pelo cliente. Se qualquer componente não tiver saldo suficiente, a conclusão retorna `409`, nenhum lote é alterado, nenhum movimento parcial permanece e a solicitação continua `EM_PRODUCAO`. Tentativas repetidas de concluir uma produção já concluída não geram novo consumo.
++
++Esta fase não altera o schema: os campos `solicitacao_producao_id`, `sp_componente_id` e o tipo `CONSUMO_PRODUCAO` já existiam. O head do Alembic permanece `c4e8f1a2b730`. Veja [`docs/FASE8_06.md`](docs/FASE8_06.md).
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/app/features/estoque/repository.py Machry_Fase8_06_Producao_Estoque/app/features/estoque/repository.py
+--- Machry_Fase8_05_Execucao_Real/app/features/estoque/repository.py	2026-11-01 04:10:48.000000000 +0000
++++ Machry_Fase8_06_Producao_Estoque/app/features/estoque/repository.py	2026-11-01 04:57:29.372572149 +0000
+@@ -70,6 +70,7 @@
+     def inserir_movimentacao(
+         self, *, tipo, lote_origem: Lote, lote_destino: Optional[Lote], quantidade,
+         quantidade_destino, motivo, usuario_id, observacao,
++        solicitacao_producao_id=None, sp_componente_id=None,
+     ) -> MovimentacaoEstoque:
+         mov = MovimentacaoEstoque(
+             tipo=tipo,
+@@ -79,6 +80,8 @@
+             quantidade_destino=quantidade_destino,
+             motivo=motivo,
+             usuario_id=usuario_id,
++            solicitacao_producao_id=solicitacao_producao_id,
++            sp_componente_id=sp_componente_id,
+             observacao=observacao,
+         )
+         db.session.add(mov)
+@@ -188,6 +191,35 @@
+             {"produto_id": produto_id, "hoje": date.today().isoformat()},
+         ).mappings().all()
+ 
++    def lotes_fefo_para_consumo(self, produto_id: int) -> list[Lote]:
++        """Lotes válidos em FEFO, bloqueados durante a baixa quando o banco suporta FOR UPDATE."""
++        consulta = (
++            db.select(Lote)
++            .where(
++                Lote.produto_id == produto_id,
++                Lote.quantidade > 0,
++                db.or_(Lote.data_validade.is_(None), Lote.data_validade >= date.today().isoformat()),
++            )
++            .order_by(
++                Lote.data_validade.is_(None),
++                Lote.data_validade,
++                Lote.criado_em,
++                Lote.id,
++            )
++            .with_for_update()
++        )
++        return list(db.session.scalars(consulta).all())
++
++    def existe_consumo_producao(self, solicitacao_id: int) -> bool:
++        return db.session.scalar(
++            db.select(MovimentacaoEstoque.id)
++            .where(
++                MovimentacaoEstoque.solicitacao_producao_id == solicitacao_id,
++                MovimentacaoEstoque.tipo == "CONSUMO_PRODUCAO",
++            )
++            .limit(1)
++        ) is not None
++
+     # -- entidades de outras features, lidas só para validação cruzada --------
+ 
+     def obter_produto(self, produto_id: int) -> Optional[Produto]:
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/app/features/estoque/services.py Machry_Fase8_06_Producao_Estoque/app/features/estoque/services.py
+--- Machry_Fase8_05_Execucao_Real/app/features/estoque/services.py	2026-11-01 03:11:52.000000000 +0000
++++ Machry_Fase8_06_Producao_Estoque/app/features/estoque/services.py	2026-11-01 04:58:49.765162133 +0000
+@@ -1,225 +1,283 @@
+-"""Regras de negócio do estoque, orquestrando o repository."""
+-from __future__ import annotations
+-
+-from typing import Optional
+-
+-from app.utils.errors import RegistroNaoEncontrado
+-
+-from . import models, schemas
+-from .repository import EstoqueRepository
+-
+-TIPOS_QUE_EXIGEM_SAIDA = {"SAIDA", "AJUSTE_SAIDA", "TRANSFERENCIA", "TRANSFORMACAO"}
+-
+-
+-class EstoqueService:
+-    def __init__(self, repository: EstoqueRepository) -> None:
+-        self.repository = repository
+-
+-    def listar_inventario(
+-        self, produto_id: Optional[int] = None, lote_id: Optional[int] = None
+-    ) -> list[models.ItemInventario]:
+-        linhas = self.repository.listar_inventario(produto_id, lote_id)
+-        return [models.ItemInventario.from_row(r) for r in linhas]
+-
+-    def listar_movimentacoes(
+-        self,
+-        limite: int = 100,
+-        lote_id: Optional[int] = None,
+-        usuario_id: Optional[int] = None,
+-        tipo: Optional[str] = None,
+-    ) -> list[models.MovimentacaoEstoque]:
+-        linhas = self.repository.listar_movimentacoes(limite, lote_id, usuario_id, tipo)
+-        return [models.MovimentacaoEstoque.from_row(r) for r in linhas]
+-
+-    def registrar_movimentacao(
+-        self, dados: schemas.MovimentacaoCreate
+-    ) -> models.MovimentacaoEstoque:
+-        with self.repository.transacao():
+-            origem = self._obter_lote_ou_falhar(dados.lote_id, para_atualizacao=True)
+-            self._validar_usuario_ativo(dados.usuario_id)
+-            self._validar_saldo_suficiente(origem, dados)
+-            destino = None
+-            if dados.lote_destino_id is not None:
+-                destino = self._validar_lote_destino(origem, dados)
+-            return self.repository.inserir_movimentacao(
+-                tipo=dados.tipo,
+-                lote_origem=origem,
+-                lote_destino=destino,
+-                quantidade=dados.quantidade,
+-                quantidade_destino=dados.quantidade_destino,
+-                motivo=dados.motivo,
+-                usuario_id=dados.usuario_id,
+-                observacao=dados.observacao,
+-            )
+-
+-    def sugestao_saida(self, produto_id: int, quantidade: float) -> models.SugestaoSaida:
+-        if self.repository.obter_produto_ativo(produto_id) is None:
+-            raise RegistroNaoEncontrado("produto não encontrado")
+-        faltante = quantidade
+-        selecao: list[models.LoteSugerido] = []
+-        for lote in self.repository.lotes_fefo_disponiveis(produto_id):
+-            usar = min(faltante, lote["quantidade"])
+-            if usar > 0:
+-                selecao.append(
+-                    models.LoteSugerido(
+-                        lote_id=lote["id"], quantidade=usar, data_validade=lote["data_validade"]
+-                    )
+-                )
+-                faltante -= usar
+-            if faltante <= 0:
+-                break
+-        return models.SugestaoSaida(
+-            produto_id=produto_id,
+-            quantidade_solicitada=quantidade,
+-            lotes=selecao,
+-            quantidade_faltante=max(0, faltante),
+-        )
+-
+-    def _obter_lote_ou_falhar(self, lote_id: int, para_atualizacao: bool = False):
+-        lote = self.repository.obter_lote(lote_id, para_atualizacao=para_atualizacao)
+-        if lote is None:
+-            raise ValueError(f"lote {lote_id} não encontrado")
+-        return lote
+-
+-    def _validar_usuario_ativo(self, usuario_id: int) -> None:
+-        if self.repository.obter_usuario_ativo(usuario_id) is None:
+-            raise ValueError("usuário não encontrado ou inativo")
+-
+-    def _validar_saldo_suficiente(self, origem, dados: schemas.MovimentacaoCreate) -> None:
+-        if dados.tipo in TIPOS_QUE_EXIGEM_SAIDA and origem.quantidade < dados.quantidade:
+-            raise ValueError("saldo insuficiente")
+-
+-    def _validar_lote_destino(self, origem, dados: schemas.MovimentacaoCreate):
+-        destino = self._obter_lote_ou_falhar(dados.lote_destino_id, para_atualizacao=True)
+-        local_destino = self.repository.obter_localizacao(destino.localizacao_id)
+-        produto_destino = self.repository.obter_produto(destino.produto_id)
+-        if (
+-            not local_destino
+-            or not produto_destino
+-            or produto_destino.conservacao != local_destino.tipo
+-        ):
+-            raise ValueError("lote destino com conservação incompatível")
+-        if dados.tipo == "TRANSFERENCIA" and origem.produto_id != destino.produto_id:
+-            raise ValueError("transferência requer mesmo produto")
+-        if dados.tipo == "TRANSFORMACAO" and not self.repository.transformacao_cadastrada(
+-            origem.produto_id, destino.produto_id
+-        ):
+-            raise ValueError("transformação não cadastrada entre os produtos")
+-        return destino
+-
+-    def listar_localizacoes(self) -> list[models.Localizacao]:
+-        return self.repository.listar_localizacoes()
+-
+-    def criar_localizacao(self, dados: schemas.LocalizacaoCreate) -> models.Localizacao:
+-        with self.repository.transacao():
+-            if dados.parent_id is not None:
+-                self._validar_localizacao_existe(dados.parent_id)
+-            return self.repository.inserir_localizacao(
+-                nome=dados.nome, tipo=dados.tipo, parent_id=dados.parent_id, foto_url=dados.foto_url
+-            )
+-
+-    def atualizar_localizacao(
+-        self, loc_id: int, dados: schemas.LocalizacaoUpdate
+-    ) -> models.Localizacao:
+-        campos = dados.model_dump(exclude_unset=True)
+-
+-        with self.repository.transacao():
+-            self._obter_localizacao_ou_falhar(loc_id)
+-            if "parent_id" in campos and campos["parent_id"] is not None:
+-                self._validar_novo_parent(loc_id, campos["parent_id"])
+-            if "tipo" in campos and self.repository.existe_incompatibilidade_tipo(
+-                loc_id, campos["tipo"]
+-            ):
+-                raise ValueError(
+-                    "alteração de tipo incompatível com produtos dos lotes existentes"
+-                )
+-            self.repository.atualizar_localizacao(loc_id, campos)
+-            return self.repository.obter_localizacao(loc_id)
+-
+-    def remover_localizacao(self, loc_id: int) -> None:
+-        with self.repository.transacao():
+-            if not self.repository.remover_localizacao(loc_id):
+-                raise RegistroNaoEncontrado("localização não encontrada")
+-
+-    def _obter_localizacao_ou_falhar(self, loc_id: int):
+-        localizacao = self.repository.obter_localizacao(loc_id)
+-        if localizacao is None:
+-            raise RegistroNaoEncontrado("localização não encontrada")
+-        return localizacao
+-
+-    def _validar_localizacao_existe(self, loc_id: int) -> None:
+-        if self.repository.obter_localizacao(loc_id) is None:
+-            raise ValueError("localização pai não encontrada")
+-
+-    def _validar_novo_parent(self, loc_id: int, pai: int) -> None:
+-        self._validar_localizacao_existe(pai)
+-        if pai == loc_id:
+-            raise ValueError("localização não pode ser pai de si mesma")
+-        visitados = {loc_id}
+-        atual = pai
+-        while atual is not None:
+-            if atual in visitados:
+-                raise ValueError("hierarquia de localização circular")
+-            visitados.add(atual)
+-            atual = self.repository.obter_localizacao(atual).parent_id
+-
+-    def listar_lotes(
+-        self, produto_id: Optional[int] = None, localizacao_id: Optional[int] = None
+-    ) -> list[models.LoteListado]:
+-        linhas = self.repository.listar_lotes(produto_id, localizacao_id)
+-        return [models.LoteListado.from_row(r) for r in linhas]
+-
+-    def obter_lote(self, lote_id: int) -> Optional[models.Lote]:
+-        return self.repository.obter_lote(lote_id)
+-
+-    def criar_lote(self, dados: schemas.LoteCreate) -> models.Lote:
+-        with self.repository.transacao():
+-            produto, localizacao = self._buscar_produto_e_localizacao(
+-                dados.produto_id, dados.localizacao_id
+-            )
+-            self._validar_validade_obrigatoria(
+-                produto, dados.data_validade, "produto exige data_validade"
+-            )
+-            self._validar_conservacao_compativel(produto, localizacao)
+-            return self.repository.inserir_lote(
+-                produto_id=dados.produto_id,
+-                localizacao_id=dados.localizacao_id,
+-                data_producao=dados.data_producao.isoformat() if dados.data_producao else None,
+-                data_validade=dados.data_validade.isoformat() if dados.data_validade else None,
+-                custo_unitario=dados.custo_unitario,
+-            )
+-
+-    def atualizar_lote(self, lote_id: int, dados: schemas.LoteUpdate) -> models.Lote:
+-        campos = dados.model_dump(exclude_unset=True, mode="json")
+-
+-        with self.repository.transacao():
+-            lote = self._obter_lote_ou_404(lote_id)
+-            validade = campos.get("data_validade", lote.data_validade)
+-            producao = campos.get("data_producao", lote.data_producao)
+-            produto = self.repository.obter_produto(lote.produto_id)
+-            self._validar_validade_obrigatoria(produto, validade, "validade obrigatória")
+-            if producao and validade and producao > validade:
+-                raise ValueError("validade anterior à produção")
+-            self.repository.atualizar_lote(lote_id, campos)
+-            return self.repository.obter_lote(lote_id)
+-
+-    def _buscar_produto_e_localizacao(self, produto_id: int, localizacao_id: int):
+-        produto = self.repository.obter_produto_ativo(produto_id)
+-        localizacao = self.repository.obter_localizacao(localizacao_id)
+-        if not produto or not localizacao:
+-            raise ValueError("produto ativo ou localização não encontrados")
+-        return produto, localizacao
+-
+-    def _validar_validade_obrigatoria(self, produto, data_validade, mensagem: str) -> None:
+-        if produto.validade_obrigatoria and not data_validade:
+-            raise ValueError(mensagem)
+-
+-    def _validar_conservacao_compativel(self, produto, localizacao) -> None:
+-        if produto.conservacao != localizacao.tipo:
+-            raise ValueError("conservação do produto incompatível com localização")
+-
+-    def _obter_lote_ou_404(self, lote_id: int):
+-        lote = self.repository.obter_lote(lote_id)
+-        if lote is None:
+-            raise RegistroNaoEncontrado("lote não encontrado")
+-        return lote
++"""Regras de negócio do estoque, orquestrando o repository."""
++from __future__ import annotations
++
++from decimal import Decimal
++from typing import Iterable, Optional
++
++from app.utils.errors import Conflito, EstoqueInsuficiente, RegistroNaoEncontrado
++
++from . import models, schemas
++from .repository import EstoqueRepository
++
++TIPOS_QUE_EXIGEM_SAIDA = {"SAIDA", "AJUSTE_SAIDA", "TRANSFERENCIA", "TRANSFORMACAO", "CONSUMO_PRODUCAO"}
++
++
++class EstoqueService:
++    def __init__(self, repository: EstoqueRepository) -> None:
++        self.repository = repository
++
++    def listar_inventario(
++        self, produto_id: Optional[int] = None, lote_id: Optional[int] = None
++    ) -> list[models.ItemInventario]:
++        linhas = self.repository.listar_inventario(produto_id, lote_id)
++        return [models.ItemInventario.from_row(r) for r in linhas]
++
++    def listar_movimentacoes(
++        self,
++        limite: int = 100,
++        lote_id: Optional[int] = None,
++        usuario_id: Optional[int] = None,
++        tipo: Optional[str] = None,
++    ) -> list[models.MovimentacaoEstoque]:
++        linhas = self.repository.listar_movimentacoes(limite, lote_id, usuario_id, tipo)
++        return [models.MovimentacaoEstoque.from_row(r) for r in linhas]
++
++    def registrar_movimentacao(
++        self, dados: schemas.MovimentacaoCreate
++    ) -> models.MovimentacaoEstoque:
++        with self.repository.transacao():
++            origem = self._obter_lote_ou_falhar(dados.lote_id, para_atualizacao=True)
++            self._validar_usuario_ativo(dados.usuario_id)
++            self._validar_saldo_suficiente(origem, dados)
++            destino = None
++            if dados.lote_destino_id is not None:
++                destino = self._validar_lote_destino(origem, dados)
++            return self.repository.inserir_movimentacao(
++                tipo=dados.tipo,
++                lote_origem=origem,
++                lote_destino=destino,
++                quantidade=dados.quantidade,
++                quantidade_destino=dados.quantidade_destino,
++                motivo=dados.motivo,
++                usuario_id=dados.usuario_id,
++                observacao=dados.observacao,
++            )
++
++    def sugestao_saida(self, produto_id: int, quantidade: float) -> models.SugestaoSaida:
++        if self.repository.obter_produto_ativo(produto_id) is None:
++            raise RegistroNaoEncontrado("produto não encontrado")
++        faltante = quantidade
++        selecao: list[models.LoteSugerido] = []
++        for lote in self.repository.lotes_fefo_disponiveis(produto_id):
++            usar = min(faltante, lote["quantidade"])
++            if usar > 0:
++                selecao.append(
++                    models.LoteSugerido(
++                        lote_id=lote["id"], quantidade=usar, data_validade=lote["data_validade"]
++                    )
++                )
++                faltante -= usar
++            if faltante <= 0:
++                break
++        return models.SugestaoSaida(
++            produto_id=produto_id,
++            quantidade_solicitada=quantidade,
++            lotes=selecao,
++            quantidade_faltante=max(0, faltante),
++        )
++
++    def consumir_componentes_producao(
++        self, *, solicitacao_id: int, componentes: Iterable[object], usuario_id: int
++    ) -> list[models.MovimentacaoEstoque]:
++        """Baixa os componentes planejados usando FEFO dentro da transação do chamador.
++
++        Este método propositalmente NÃO abre nem fecha transação: a conclusão da
++        produção é responsável pelo commit único de status + estoque.
++        """
++        self._validar_usuario_ativo(usuario_id)
++        if self.repository.existe_consumo_producao(solicitacao_id):
++            raise Conflito("o consumo de estoque desta produção já foi registrado")
++
++        # Primeiro montamos o plano inteiro mantendo os lotes relevantes bloqueados.
++        # Só depois de provar que TODOS os componentes têm saldo suficiente alteramos
++        # quantidades e criamos movimentos. Isso reduz trabalho antes de um eventual
++        # rollback e mantém o fluxo mais fácil de auditar.
++        plano: list[tuple[object, object, Decimal]] = []
++        for componente in componentes:
++            necessario = Decimal(str(componente.quantidade_prevista))
++            restante = necessario
++            lotes = self.repository.lotes_fefo_para_consumo(componente.produto_id)
++
++            disponivel = sum(Decimal(str(lote.quantidade)) for lote in lotes)
++            if disponivel < necessario:
++                raise EstoqueInsuficiente(
++                    f"estoque insuficiente para o produto {componente.produto_id}: "
++                    f"necessário {float(necessario):g}, disponível {float(disponivel):g}"
++                )
++
++            for lote in lotes:
++                if restante <= 0:
++                    break
++                saldo = Decimal(str(lote.quantidade))
++                usar = min(restante, saldo)
++                if usar > 0:
++                    plano.append((componente, lote, usar))
++                    restante -= usar
++
++        movimentos: list[models.MovimentacaoEstoque] = []
++        for componente, lote, usar in plano:
++            movimentos.append(
++                self.repository.inserir_movimentacao(
++                    tipo="CONSUMO_PRODUCAO",
++                    lote_origem=lote,
++                    lote_destino=None,
++                    quantidade=float(usar),
++                    quantidade_destino=None,
++                    motivo=None,
++                    usuario_id=usuario_id,
++                    solicitacao_producao_id=solicitacao_id,
++                    sp_componente_id=componente.id,
++                    observacao="Baixa automática FEFO da produção",
++                )
++            )
++
++        return movimentos
++
++    def _obter_lote_ou_falhar(self, lote_id: int, para_atualizacao: bool = False):
++        lote = self.repository.obter_lote(lote_id, para_atualizacao=para_atualizacao)
++        if lote is None:
++            raise ValueError(f"lote {lote_id} não encontrado")
++        return lote
++
++    def _validar_usuario_ativo(self, usuario_id: int) -> None:
++        if self.repository.obter_usuario_ativo(usuario_id) is None:
++            raise ValueError("usuário não encontrado ou inativo")
++
++    def _validar_saldo_suficiente(self, origem, dados: schemas.MovimentacaoCreate) -> None:
++        if dados.tipo in TIPOS_QUE_EXIGEM_SAIDA and origem.quantidade < dados.quantidade:
++            raise ValueError("saldo insuficiente")
++
++    def _validar_lote_destino(self, origem, dados: schemas.MovimentacaoCreate):
++        destino = self._obter_lote_ou_falhar(dados.lote_destino_id, para_atualizacao=True)
++        local_destino = self.repository.obter_localizacao(destino.localizacao_id)
++        produto_destino = self.repository.obter_produto(destino.produto_id)
++        if (
++            not local_destino
++            or not produto_destino
++            or produto_destino.conservacao != local_destino.tipo
++        ):
++            raise ValueError("lote destino com conservação incompatível")
++        if dados.tipo == "TRANSFERENCIA" and origem.produto_id != destino.produto_id:
++            raise ValueError("transferência requer mesmo produto")
++        if dados.tipo == "TRANSFORMACAO" and not self.repository.transformacao_cadastrada(
++            origem.produto_id, destino.produto_id
++        ):
++            raise ValueError("transformação não cadastrada entre os produtos")
++        return destino
++
++    def listar_localizacoes(self) -> list[models.Localizacao]:
++        return self.repository.listar_localizacoes()
++
++    def criar_localizacao(self, dados: schemas.LocalizacaoCreate) -> models.Localizacao:
++        with self.repository.transacao():
++            if dados.parent_id is not None:
++                self._validar_localizacao_existe(dados.parent_id)
++            return self.repository.inserir_localizacao(
++                nome=dados.nome, tipo=dados.tipo, parent_id=dados.parent_id, foto_url=dados.foto_url
++            )
++
++    def atualizar_localizacao(
++        self, loc_id: int, dados: schemas.LocalizacaoUpdate
++    ) -> models.Localizacao:
++        campos = dados.model_dump(exclude_unset=True)
++
++        with self.repository.transacao():
++            self._obter_localizacao_ou_falhar(loc_id)
++            if "parent_id" in campos and campos["parent_id"] is not None:
++                self._validar_novo_parent(loc_id, campos["parent_id"])
++            if "tipo" in campos and self.repository.existe_incompatibilidade_tipo(
++                loc_id, campos["tipo"]
++            ):
++                raise ValueError(
++                    "alteração de tipo incompatível com produtos dos lotes existentes"
++                )
++            self.repository.atualizar_localizacao(loc_id, campos)
++            return self.repository.obter_localizacao(loc_id)
++
++    def remover_localizacao(self, loc_id: int) -> None:
++        with self.repository.transacao():
++            if not self.repository.remover_localizacao(loc_id):
++                raise RegistroNaoEncontrado("localização não encontrada")
++
++    def _obter_localizacao_ou_falhar(self, loc_id: int):
++        localizacao = self.repository.obter_localizacao(loc_id)
++        if localizacao is None:
++            raise RegistroNaoEncontrado("localização não encontrada")
++        return localizacao
++
++    def _validar_localizacao_existe(self, loc_id: int) -> None:
++        if self.repository.obter_localizacao(loc_id) is None:
++            raise ValueError("localização pai não encontrada")
++
++    def _validar_novo_parent(self, loc_id: int, pai: int) -> None:
++        self._validar_localizacao_existe(pai)
++        if pai == loc_id:
++            raise ValueError("localização não pode ser pai de si mesma")
++        visitados = {loc_id}
++        atual = pai
++        while atual is not None:
++            if atual in visitados:
++                raise ValueError("hierarquia de localização circular")
++            visitados.add(atual)
++            atual = self.repository.obter_localizacao(atual).parent_id
++
++    def listar_lotes(
++        self, produto_id: Optional[int] = None, localizacao_id: Optional[int] = None
++    ) -> list[models.LoteListado]:
++        linhas = self.repository.listar_lotes(produto_id, localizacao_id)
++        return [models.LoteListado.from_row(r) for r in linhas]
++
++    def obter_lote(self, lote_id: int) -> Optional[models.Lote]:
++        return self.repository.obter_lote(lote_id)
++
++    def criar_lote(self, dados: schemas.LoteCreate) -> models.Lote:
++        with self.repository.transacao():
++            produto, localizacao = self._buscar_produto_e_localizacao(
++                dados.produto_id, dados.localizacao_id
++            )
++            self._validar_validade_obrigatoria(
++                produto, dados.data_validade, "produto exige data_validade"
++            )
++            self._validar_conservacao_compativel(produto, localizacao)
++            return self.repository.inserir_lote(
++                produto_id=dados.produto_id,
++                localizacao_id=dados.localizacao_id,
++                data_producao=dados.data_producao.isoformat() if dados.data_producao else None,
++                data_validade=dados.data_validade.isoformat() if dados.data_validade else None,
++                custo_unitario=dados.custo_unitario,
++            )
++
++    def atualizar_lote(self, lote_id: int, dados: schemas.LoteUpdate) -> models.Lote:
++        campos = dados.model_dump(exclude_unset=True, mode="json")
++
++        with self.repository.transacao():
++            lote = self._obter_lote_ou_404(lote_id)
++            validade = campos.get("data_validade", lote.data_validade)
++            producao = campos.get("data_producao", lote.data_producao)
++            produto = self.repository.obter_produto(lote.produto_id)
++            self._validar_validade_obrigatoria(produto, validade, "validade obrigatória")
++            if producao and validade and producao > validade:
++                raise ValueError("validade anterior à produção")
++            self.repository.atualizar_lote(lote_id, campos)
++            return self.repository.obter_lote(lote_id)
++
++    def _buscar_produto_e_localizacao(self, produto_id: int, localizacao_id: int):
++        produto = self.repository.obter_produto_ativo(produto_id)
++        localizacao = self.repository.obter_localizacao(localizacao_id)
++        if not produto or not localizacao:
++            raise ValueError("produto ativo ou localização não encontrados")
++        return produto, localizacao
++
++    def _validar_validade_obrigatoria(self, produto, data_validade, mensagem: str) -> None:
++        if produto.validade_obrigatoria and not data_validade:
++            raise ValueError(mensagem)
++
++    def _validar_conservacao_compativel(self, produto, localizacao) -> None:
++        if produto.conservacao != localizacao.tipo:
++            raise ValueError("conservação do produto incompatível com localização")
++
++    def _obter_lote_ou_404(self, lote_id: int):
++        lote = self.repository.obter_lote(lote_id)
++        if lote is None:
++            raise RegistroNaoEncontrado("lote não encontrado")
++        return lote
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/app/features/producao/repository.py Machry_Fase8_06_Producao_Estoque/app/features/producao/repository.py
+--- Machry_Fase8_05_Execucao_Real/app/features/producao/repository.py	2026-11-01 04:31:37.875037498 +0000
++++ Machry_Fase8_06_Producao_Estoque/app/features/producao/repository.py	2026-11-01 04:57:29.372492502 +0000
+@@ -1,5 +1,6 @@
+ from __future__ import annotations
+ 
++from contextlib import contextmanager
+ from decimal import Decimal
+ 
+ from sqlalchemy import text
+@@ -13,13 +14,30 @@
+ 
+ class ProducaoRepository:
+ 
++    @contextmanager
++    def transacao(self):
++        """Uma única fronteira de commit/rollback para operações entre features."""
++        try:
++            yield db.session
++        except Exception:
++            db.session.rollback()
++            raise
++        else:
++            db.session.commit()
++
+     def listar_solicitacoes(self) -> list[SolicitacaoProducao]:
+         return db.session.query(SolicitacaoProducao).order_by(
+             SolicitacaoProducao.criado_em.desc()
+         ).all()
+ 
+-    def obter_solicitacao(self, sp_id: int):
+-        return db.session.get(SolicitacaoProducao, sp_id)
++    def obter_solicitacao(self, sp_id: int, para_atualizacao: bool = False):
++        if not para_atualizacao:
++            return db.session.get(SolicitacaoProducao, sp_id)
++        return db.session.execute(
++            db.select(SolicitacaoProducao)
++            .where(SolicitacaoProducao.id == sp_id)
++            .with_for_update()
++        ).scalar_one_or_none()
+ 
+     def obter_ficha(self, ficha_id: int):
+         return db.session.get(FichaTecnica, ficha_id)
+@@ -83,17 +101,32 @@
+         db.session.commit()
+         return solicitacao
+ 
+-    def atualizar_status(
++    def definir_status(
+         self, solicitacao: SolicitacaoProducao, status: str
+     ) -> SolicitacaoProducao:
++        """Altera o estado sem commit para permitir orquestração transacional."""
+         solicitacao.status = status
+         if status == "EM_PRODUCAO" and solicitacao.iniciado_em is None:
+             solicitacao.iniciado_em = db.func.current_timestamp()
+         if status == "CONCLUIDA":
+             solicitacao.concluido_em = db.func.current_timestamp()
+-        db.session.commit()
+         return solicitacao
+ 
++    def atualizar_status(
++        self, solicitacao: SolicitacaoProducao, status: str
++    ) -> SolicitacaoProducao:
++        with self.transacao():
++            self.definir_status(solicitacao, status)
++        return solicitacao
++
++    def listar_componentes_modelo(self, sp_id: int) -> list[SpComponente]:
++        return (
++            db.session.query(SpComponente)
++            .filter(SpComponente.solicitacao_producao_id == sp_id)
++            .order_by(SpComponente.id)
++            .all()
++        )
++
+     def listar_fases_modelo(self, sp_id: int) -> list[SpFase]:
+         return (
+             db.session.query(SpFase)
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/app/features/producao/routes.py Machry_Fase8_06_Producao_Estoque/app/features/producao/routes.py
+--- Machry_Fase8_05_Execucao_Real/app/features/producao/routes.py	2026-11-01 04:31:37.877055218 +0000
++++ Machry_Fase8_06_Producao_Estoque/app/features/producao/routes.py	2026-11-01 04:57:29.372899373 +0000
+@@ -33,7 +33,7 @@
+ @bp.put("/solicitacoes/<int:sp_id>/status")
+ def atualizar_status(sp_id: int):
+     dados = entrada(schemas.SolicitacaoStatusUpdate)
+-    item = get_service().atualizar_status(sp_id, dados.status)
++    item = get_service().atualizar_status(sp_id, dados.status, g.usuario.id)
+     return schemas.SolicitacaoProducaoOut.model_validate(item).model_dump()
+ 
+ 
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/app/features/producao/services.py Machry_Fase8_06_Producao_Estoque/app/features/producao/services.py
+--- Machry_Fase8_05_Execucao_Real/app/features/producao/services.py	2026-11-01 04:31:37.876205381 +0000
++++ Machry_Fase8_06_Producao_Estoque/app/features/producao/services.py	2026-11-01 04:57:29.372818463 +0000
+@@ -3,6 +3,8 @@
+ 
+ from decimal import Decimal
+ 
++from app.features.estoque.repository import EstoqueRepository
++from app.features.estoque.services import EstoqueService
+ from app.utils.errors import RegistroNaoEncontrado
+ 
+ from . import models, schemas
+@@ -48,10 +50,43 @@
+             observacao=dados.observacao,
+         )
+ 
+-    def atualizar_status(self, sp_id: int, status: str) -> models.SolicitacaoProducao:
++    def atualizar_status(
++        self, sp_id: int, status: str, usuario_id: int
++    ) -> models.SolicitacaoProducao:
++        if status == "CONCLUIDA":
++            return self._concluir_com_consumo(sp_id, usuario_id)
++
+         solicitacao = self.repository.obter_solicitacao(sp_id)
+         if solicitacao is None:
+             raise RegistroNaoEncontrado("solicitação não encontrada")
++        self._validar_transicao(solicitacao, status)
++        return self.repository.atualizar_status(solicitacao, status)
++
++    def _concluir_com_consumo(
++        self, sp_id: int, usuario_id: int
++    ) -> models.SolicitacaoProducao:
++        # O lock da solicitação serializa tentativas concorrentes de conclusão.
++        # A mesma sessão SQLAlchemy é compartilhada por produção e estoque.
++        with self.repository.transacao():
++            solicitacao = self.repository.obter_solicitacao(
++                sp_id, para_atualizacao=True
++            )
++            if solicitacao is None:
++                raise RegistroNaoEncontrado("solicitação não encontrada")
++            self._validar_transicao(solicitacao, "CONCLUIDA")
++
++            componentes = self.repository.listar_componentes_modelo(sp_id)
++            EstoqueService(EstoqueRepository()).consumir_componentes_producao(
++                solicitacao_id=sp_id,
++                componentes=componentes,
++                usuario_id=usuario_id,
++            )
++            self.repository.definir_status(solicitacao, "CONCLUIDA")
++
++        return solicitacao
++
++    @staticmethod
++    def _validar_transicao(solicitacao: models.SolicitacaoProducao, status: str) -> None:
+         permitidos = {
+             "ABERTA": {"EM_SEPARACAO", "EM_PRODUCAO", "CANCELADA"},
+             "EM_SEPARACAO": {"EM_PRODUCAO", "CANCELADA"},
+@@ -61,7 +96,6 @@
+         }
+         if status not in permitidos[solicitacao.status]:
+             raise ValueError(f"não é possível alterar de {solicitacao.status} para {status}")
+-        return self.repository.atualizar_status(solicitacao, status)
+ 
+     def registrar_execucao(
+         self, sp_id: int, dados: schemas.ExecucaoProducaoUpdate
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/app/utils/errors.py Machry_Fase8_06_Producao_Estoque/app/utils/errors.py
+--- Machry_Fase8_05_Execucao_Real/app/utils/errors.py	2026-11-01 03:11:52.000000000 +0000
++++ Machry_Fase8_06_Producao_Estoque/app/utils/errors.py	2026-11-01 04:57:29.372317943 +0000
+@@ -1,49 +1,53 @@
+-"""Tratamento de erro comum a qualquer blueprint da API.
+-
+-Cada feature chama `registrar_tratadores_erro(bp)` uma vez (no seu
+-`__init__.py`) para converter exceções de validação/negócio em respostas HTTP,
+-em vez de repetir try/except em cada view.
+-"""
+-from flask import Blueprint
+-from pydantic import ValidationError
+-from sqlalchemy.exc import IntegrityError
+-
+-
+-class RegistroNaoEncontrado(Exception):
+-    """A entidade identificada pela URL (path) não existe."""
+-
+-
+-class Conflito(Exception):
+-    """A operação conflita com outro registro ou com o histórico."""
+-
+-
+-def _resposta(msg, status=400):
+-    return {"erro": str(msg)}, status
+-
+-
+-def _mensagem_validacao(exc: ValidationError) -> str:
+-    msg = exc.errors()[0]["msg"]
+-    prefixo = "Value error, "
+-    return msg[len(prefixo):] if msg.startswith(prefixo) else msg
+-
+-
+-def registrar_tratadores_erro(bp: Blueprint) -> None:
+-    @bp.errorhandler(ValidationError)
+-    def _tratar_validacao(exc):
+-        return _resposta(_mensagem_validacao(exc))
+-
+-    @bp.errorhandler(RegistroNaoEncontrado)
+-    def _tratar_nao_encontrado(exc):
+-        return _resposta(str(exc), 404)
+-
+-    @bp.errorhandler(Conflito)
+-    def _tratar_conflito(exc):
+-        return _resposta(str(exc), 409)
+-
+-    @bp.errorhandler(ValueError)
+-    def _tratar_valor_invalido(exc):
+-        return _resposta(str(exc))
+-
+-    @bp.errorhandler(IntegrityError)
+-    def _tratar_integridade(exc):
+-        return _resposta("operação incompatível com registros existentes", 409)
++"""Tratamento de erro comum a qualquer blueprint da API.
++
++Cada feature chama `registrar_tratadores_erro(bp)` uma vez (no seu
++`__init__.py`) para converter exceções de validação/negócio em respostas HTTP,
++em vez de repetir try/except em cada view.
++"""
++from flask import Blueprint
++from pydantic import ValidationError
++from sqlalchemy.exc import IntegrityError
++
++
++class RegistroNaoEncontrado(Exception):
++    """A entidade identificada pela URL (path) não existe."""
++
++
++class Conflito(Exception):
++    """A operação conflita com outro registro ou com o histórico."""
++
++
++class EstoqueInsuficiente(Conflito):
++    """Não há saldo utilizável suficiente para concluir uma operação."""
++
++
++def _resposta(msg, status=400):
++    return {"erro": str(msg)}, status
++
++
++def _mensagem_validacao(exc: ValidationError) -> str:
++    msg = exc.errors()[0]["msg"]
++    prefixo = "Value error, "
++    return msg[len(prefixo):] if msg.startswith(prefixo) else msg
++
++
++def registrar_tratadores_erro(bp: Blueprint) -> None:
++    @bp.errorhandler(ValidationError)
++    def _tratar_validacao(exc):
++        return _resposta(_mensagem_validacao(exc))
++
++    @bp.errorhandler(RegistroNaoEncontrado)
++    def _tratar_nao_encontrado(exc):
++        return _resposta(str(exc), 404)
++
++    @bp.errorhandler(Conflito)
++    def _tratar_conflito(exc):
++        return _resposta(str(exc), 409)
++
++    @bp.errorhandler(ValueError)
++    def _tratar_valor_invalido(exc):
++        return _resposta(str(exc))
++
++    @bp.errorhandler(IntegrityError)
++    def _tratar_integridade(exc):
++        return _resposta("operação incompatível com registros existentes", 409)
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/docs/FASE8_06.md Machry_Fase8_06_Producao_Estoque/docs/FASE8_06.md
+--- Machry_Fase8_05_Execucao_Real/docs/FASE8_06.md	1970-01-01 00:00:00.000000000 +0000
++++ Machry_Fase8_06_Producao_Estoque/docs/FASE8_06.md	2026-11-01 05:00:05.370871384 +0000
+@@ -0,0 +1,34 @@
++# Fase 8.6 — Produção ↔ Estoque
++
++## Objetivo
++
++Integrar a conclusão de produção ao estoque sem criar um segundo controle de saldo. O estoque continua sendo a fonte única da quantidade realmente consumida.
++
++## Fluxo implementado
++
++1. A solicitação precisa estar `EM_PRODUCAO`.
++2. O backend bloqueia a solicitação durante a conclusão.
++3. Os `SpComponente` definem as quantidades que precisam ser consumidas.
++4. Para cada produto, o estoque busca apenas lotes com saldo e não vencidos.
++5. Os lotes são ordenados por FEFO: validade mais próxima primeiro; sem validade fica por último.
++6. O sistema monta o plano completo antes de alterar qualquer saldo.
++7. Cada alocação gera `MovimentacaoEstoque(tipo=CONSUMO_PRODUCAO)`.
++8. A movimentação recebe `solicitacao_producao_id`, `sp_componente_id` e o usuário autenticado.
++9. Somente depois das baixas a solicitação é marcada `CONCLUIDA`.
++10. Um único commit confirma toda a operação. Qualquer erro executa rollback.
++
++## Idempotência e concorrência
++
++A solicitação é lida com `FOR UPDATE` nos bancos que suportam o recurso. Isso serializa tentativas concorrentes de conclusão. O serviço de estoque também rejeita uma segunda baixa se já existir `CONSUMO_PRODUCAO` para a solicitação.
++
++## Estoque insuficiente
++
++`EstoqueInsuficiente` deriva de `Conflito`, retornando HTTP `409`. O erro informa o produto, quantidade necessária e quantidade disponível. Como a baixa está na mesma transação da conclusão, não existem movimentos ou saldos parciais após a falha.
++
++## Decisões
++
++- O algoritmo FEFO continua pertencendo ao módulo `estoque`.
++- `ProducaoService` apenas orquestra a operação.
++- Quantidade realizada de cada componente continua derivada da soma das movimentações de estoque (`vw_sp_componente`).
++- Nesta fase, a baixa automática usa a quantidade planejada do `SpComponente`. Ajustes/perdas serão tratados na etapa seguinte.
++- Não houve mudança de schema; a migration atual continua `c4e8f1a2b730`.
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/docs/VALIDACAO_FASE8_06.md Machry_Fase8_06_Producao_Estoque/docs/VALIDACAO_FASE8_06.md
+--- Machry_Fase8_05_Execucao_Real/docs/VALIDACAO_FASE8_06.md	1970-01-01 00:00:00.000000000 +0000
++++ Machry_Fase8_06_Producao_Estoque/docs/VALIDACAO_FASE8_06.md	2026-11-01 05:01:22.381707299 +0000
+@@ -0,0 +1,17 @@
++# Validação — Fase 8.6
++
++- pytest: **58 passed**;
++- regressão da Fase 8.5: 53 testes anteriores preservados;
++- FEFO automático na conclusão: OK;
++- lote vencido ignorado: OK;
++- divisão de um componente entre múltiplos lotes: OK;
++- vínculos `solicitacao_producao_id` e `sp_componente_id`: OK;
++- autoria pela sessão autenticada: OK;
++- rollback total com estoque insuficiente: OK;
++- retry não gera consumo duplicado: OK;
++- AST: **49 arquivos Python** válidos;
++- OpenAPI YAML: sintaxe válida;
++- Alembic `upgrade head`: OK;
++- Alembic `current`: `c4e8f1a2b730 (head)`;
++- Alembic `check`: **No new upgrade operations detected**;
++- nenhuma migration nova foi necessária porque os vínculos de produção já existiam no schema.
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/docs/openapi.yaml Machry_Fase8_06_Producao_Estoque/docs/openapi.yaml
+--- Machry_Fase8_05_Execucao_Real/docs/openapi.yaml	2026-11-01 04:34:30.384133504 +0000
++++ Machry_Fase8_06_Producao_Estoque/docs/openapi.yaml	2026-11-01 05:00:05.370452607 +0000
+@@ -433,6 +433,7 @@
+       - {name: id, in: path, required: true, schema: {type: integer}}
+     put:
+       summary: Atualiza o estado de uma solicitação
++      description: Ao mudar de EM_PRODUCAO para CONCLUIDA, o backend valida o estoque e registra automaticamente CONSUMO_PRODUCAO em ordem FEFO. A conclusão e as baixas acontecem na mesma transação.
+       tags: [producao]
+       requestBody:
+         required: true
+@@ -445,10 +446,13 @@
+                 status: {type: string, enum: [ABERTA, EM_SEPARACAO, EM_PRODUCAO, CONCLUIDA, CANCELADA]}
+       responses:
+         "200":
+-          description: Solicitação atualizada
++          description: Solicitação atualizada; na conclusão, os componentes foram baixados do estoque por FEFO
+           content:
+             application/json:
+               schema: {$ref: "#/components/schemas/SolicitacaoProducao"}
++        "400": {$ref: "#/components/responses/Invalido"}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++        "409": {$ref: "#/components/responses/Conflito"}
+ 
+   /api/producao/solicitacoes/{id}/execucao:
+     parameters:
+@@ -755,3 +759,8 @@
+       content:
+         application/json:
+           schema: {$ref: "#/components/schemas/Erro"}
++    Conflito:
++      description: Conflito de estado ou estoque insuficiente para concluir a operação
++      content:
++        application/json:
++          schema: {$ref: "#/components/schemas/Erro"}
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=*.pyc' '--exclude=FASE8_06_CHANGES.diff' Machry_Fase8_05_Execucao_Real/tests/test_producao_estoque.py Machry_Fase8_06_Producao_Estoque/tests/test_producao_estoque.py
+--- Machry_Fase8_05_Execucao_Real/tests/test_producao_estoque.py	1970-01-01 00:00:00.000000000 +0000
++++ Machry_Fase8_06_Producao_Estoque/tests/test_producao_estoque.py	2026-11-01 04:58:28.874027964 +0000
+@@ -0,0 +1,197 @@
++"""Integração transacional entre produção e estoque — Fase 8.6."""
++
++
++def _criar_lote_com_saldo(client, produto_id, localizacao_id, quantidade, validade=None):
++    payload = {"produto_id": produto_id, "localizacao_id": localizacao_id}
++    if validade is not None:
++        payload["data_validade"] = validade
++    resposta = client.post("/api/estoque/lotes", json=payload)
++    assert resposta.status_code == 201, resposta.get_json()
++    lote_id = resposta.get_json()["id"]
++
++    entrada = client.post(
++        "/api/estoque/movimentacoes",
++        json={
++            "tipo": "ENTRADA",
++            "lote_id": lote_id,
++            "usuario_id": 1,
++            "quantidade": quantidade,
++        },
++    )
++    assert entrada.status_code == 201, entrada.get_json()
++    return lote_id
++
++
++def _abastecer_ficha_padrao(client, *, farinha_massa=400, leite=(100, 250)):
++    """Cria estoque suficiente para os cinco componentes da ficha seed.
++
++    O leite é dividido em dois lotes para provar a ordem FEFO.
++    """
++    lotes = {}
++    lotes["massa"] = _criar_lote_com_saldo(
++        client, 8, 2, farinha_massa, "2099-05-01"
++    )
++    lotes["leite_primeiro"] = _criar_lote_com_saldo(
++        client, 3, 2, leite[0], "2098-01-01"
++    )
++    lotes["leite_segundo"] = _criar_lote_com_saldo(
++        client, 3, 2, leite[1], "2099-01-01"
++    )
++    lotes["creme"] = _criar_lote_com_saldo(
++        client, 7, 2, 500, "2099-05-01"
++    )
++    lotes["chantili"] = _criar_lote_com_saldo(
++        client, 9, 2, 50, "2099-05-01"
++    )
++    lotes["nozes"] = _criar_lote_com_saldo(client, 4, 1, 100)
++    return lotes
++
++
++def _criar_e_iniciar(client):
++    criada = client.post(
++        "/api/producao/solicitacoes", json={"ficha_tecnica_id": 1}
++    )
++    assert criada.status_code == 201, criada.get_json()
++    sp_id = criada.get_json()["id"]
++    iniciada = client.put(
++        f"/api/producao/solicitacoes/{sp_id}/status",
++        json={"status": "EM_PRODUCAO"},
++    )
++    assert iniciada.status_code == 200, iniciada.get_json()
++    return sp_id
++
++
++def test_concluir_producao_consume_componentes_por_fefo(seeded_client):
++    c = seeded_client
++    lotes = _abastecer_ficha_padrao(c)
++    sp_id = _criar_e_iniciar(c)
++
++    resposta = c.put(
++        f"/api/producao/solicitacoes/{sp_id}/status",
++        json={"status": "CONCLUIDA"},
++    )
++    assert resposta.status_code == 200, resposta.get_json()
++    assert resposta.get_json()["status"] == "CONCLUIDA"
++
++    # O leite precisava de 300 ml: esgota o lote que vence antes e usa 200 do segundo.
++    assert c.get(f"/api/estoque/lotes/{lotes['leite_primeiro']}").get_json()["quantidade"] == 0
++    assert c.get(f"/api/estoque/lotes/{lotes['leite_segundo']}").get_json()["quantidade"] == 50
++
++    detalhe = c.get(f"/api/producao/solicitacoes/{sp_id}").get_json()
++    for componente in detalhe["componentes"]:
++        assert componente["quantidade_realizada"] == componente["quantidade_prevista"]
++
++    movimentos = c.get(
++        "/api/estoque/movimentacoes?tipo=CONSUMO_PRODUCAO&limite=100"
++    ).get_json()
++    # Cinco componentes; leite ocupa dois lotes = seis movimentos.
++    assert len(movimentos) == 6
++    assert all(m["solicitacao_producao_id"] == sp_id for m in movimentos)
++    assert all(m["sp_componente_id"] is not None for m in movimentos)
++    assert all(m["usuario_id"] == 1 for m in movimentos)
++
++
++def test_falta_de_estoque_faz_rollback_total(seeded_client):
++    c = seeded_client
++    # Primeiro componente (massa) tem saldo; leite ficará insuficiente depois dele.
++    lotes = _abastecer_ficha_padrao(c, leite=(100, 100))
++    sp_id = _criar_e_iniciar(c)
++
++    resposta = c.put(
++        f"/api/producao/solicitacoes/{sp_id}/status",
++        json={"status": "CONCLUIDA"},
++    )
++    assert resposta.status_code == 409, resposta.get_json()
++    assert "estoque insuficiente" in resposta.get_json()["erro"]
++
++    # Nem a baixa do componente anterior pode sobreviver ao erro posterior.
++    assert c.get(f"/api/estoque/lotes/{lotes['massa']}").get_json()["quantidade"] == 400
++    assert c.get(f"/api/estoque/lotes/{lotes['leite_primeiro']}").get_json()["quantidade"] == 100
++    assert c.get(f"/api/estoque/lotes/{lotes['leite_segundo']}").get_json()["quantidade"] == 100
++
++    movimentos = c.get(
++        "/api/estoque/movimentacoes?tipo=CONSUMO_PRODUCAO&limite=100"
++    ).get_json()
++    assert movimentos == []
++    solicitacao = c.get(f"/api/producao/solicitacoes/{sp_id}").get_json()["solicitacao"]
++    assert solicitacao["status"] == "EM_PRODUCAO"
++    assert solicitacao["concluido_em"] is None
++
++
++def test_retry_de_conclusao_nao_consume_duas_vezes(seeded_client):
++    c = seeded_client
++    lotes = _abastecer_ficha_padrao(c)
++    sp_id = _criar_e_iniciar(c)
++
++    primeira = c.put(
++        f"/api/producao/solicitacoes/{sp_id}/status",
++        json={"status": "CONCLUIDA"},
++    )
++    assert primeira.status_code == 200
++    saldo_apos_primeira = c.get(
++        f"/api/estoque/lotes/{lotes['leite_segundo']}"
++    ).get_json()["quantidade"]
++    qtd_movimentos = len(
++        c.get("/api/estoque/movimentacoes?tipo=CONSUMO_PRODUCAO&limite=100").get_json()
++    )
++
++    segunda = c.put(
++        f"/api/producao/solicitacoes/{sp_id}/status",
++        json={"status": "CONCLUIDA"},
++    )
++    assert segunda.status_code == 400
++    assert c.get(
++        f"/api/estoque/lotes/{lotes['leite_segundo']}"
++    ).get_json()["quantidade"] == saldo_apos_primeira
++    assert len(
++        c.get("/api/estoque/movimentacoes?tipo=CONSUMO_PRODUCAO&limite=100").get_json()
++    ) == qtd_movimentos
++
++
++def test_lote_vencido_nao_e_usado_no_consumo_automatico(seeded_client):
++    c = seeded_client
++    vencido = _criar_lote_com_saldo(c, 3, 2, 999, "2020-01-01")
++    lotes = _abastecer_ficha_padrao(c)
++    sp_id = _criar_e_iniciar(c)
++
++    resposta = c.put(
++        f"/api/producao/solicitacoes/{sp_id}/status",
++        json={"status": "CONCLUIDA"},
++    )
++    assert resposta.status_code == 200, resposta.get_json()
++    assert c.get(f"/api/estoque/lotes/{vencido}").get_json()["quantidade"] == 999
++    assert c.get(f"/api/estoque/lotes/{lotes['leite_primeiro']}").get_json()["quantidade"] == 0
++
++
++def test_cozinha_e_a_autora_da_baixa_quando_conclui(seeded_client):
++    c = seeded_client
++    _abastecer_ficha_padrao(c)
++    sp_id = _criar_e_iniciar(c)
++
++    c.post("/api/auth/logout")
++    login = c.post(
++        "/api/auth/login", json={"username": "cozinha", "password": "Cozinha@123"}
++    )
++    assert login.status_code == 200
++
++    resposta = c.put(
++        f"/api/producao/solicitacoes/{sp_id}/status",
++        json={"status": "CONCLUIDA"},
++    )
++    assert resposta.status_code == 200, resposta.get_json()
++    movimentos = c.get("/api/producao/solicitacoes/%d" % sp_id).get_json()["componentes"]
++    assert all(item["quantidade_realizada"] == item["quantidade_prevista"] for item in movimentos)
++
++    # USER não pode consultar /estoque; validamos autoria diretamente no banco.
++    from app.features.estoque.models import MovimentacaoEstoque
++    from db.database_config import db
++
++    with c.application.app_context():
++        consumos = db.session.execute(
++            db.select(MovimentacaoEstoque).where(
++                MovimentacaoEstoque.solicitacao_producao_id == sp_id,
++                MovimentacaoEstoque.tipo == "CONSUMO_PRODUCAO",
++            )
++        ).scalars().all()
++        assert consumos
++        assert {m.usuario_id for m in consumos} == {3}

@@ -1,0 +1,9 @@
+Single-database migration repository for Machry/Cozinha Mais.
+
+Use the Flask-Migrate commands from the project root:
+
+    flask --app app db current
+    flask --app app db migrate -m "descricao"
+    flask --app app db upgrade
+
+For an existing database created before Alembic, review docs/MIGRATIONS.md before stamping the baseline.

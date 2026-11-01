@@ -1,0 +1,1067 @@
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/COZINHA_MAIS_LEIA-ME.md /mnt/data/Machry_Fase8_05_Execucao_Real/COZINHA_MAIS_LEIA-ME.md
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/COZINHA_MAIS_LEIA-ME.md	2026-11-01 04:28:13.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/COZINHA_MAIS_LEIA-ME.md	2026-11-01 04:34:43.149663843 +0000
+@@ -34,3 +34,7 @@
+ ## Evolução — Fase 8.4
+ 
+ O backend agora persiste planejamento de produção com quantidade, prioridade, data/horário, responsável e observação. Componentes da ficha são escalados automaticamente pelo rendimento. A interface React ainda usa o payload legado (somente ficha), que permanece compatível; a experiência visual de planejamento será expandida na fase específica de alinhamento do frontend.
++
++## Evolução — Fase 8.5
++
++A execução da produção agora registra quantidade efetivamente produzida, tempos reais e observações por fase sem alterar o planejamento original. As fases de cada solicitação armazenam um snapshot do nome da fase para preservar o histórico mesmo que o catálogo seja renomeado. A integração automática com o estoque continua reservada à próxima fase.
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/README.md /mnt/data/Machry_Fase8_05_Execucao_Real/README.md
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/README.md	2026-11-01 04:28:13.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/README.md	2026-11-01 04:34:43.149663843 +0000
+@@ -187,3 +187,9 @@
+ Exemplo: uma ficha com rendimento 10 e 5 kg de um componente, quando planejada para 20 unidades, gera 10 kg como `quantidade_prevista` do componente.
+ 
+ A migration `b7d9e2f4a610` adiciona os campos de planejamento e preenche solicitações antigas usando o rendimento da ficha correspondente. Veja [`docs/FASE8_04.md`](docs/FASE8_04.md).
++
++## Fase 8.5 — execução real da produção
++
++A produção agora separa explicitamente **planejado × realizado**. `SolicitacaoProducao` ganhou `quantidade_produzida` e `observacao_execucao`; `SpFase` ganhou snapshot histórico do nome da fase, observação e horários de início/fim. O endpoint `PUT /api/producao/solicitacoes/{id}/execucao` registra o realizado apenas enquanto a produção está `EM_PRODUCAO`.
++
++A migration `c4e8f1a2b730` faz backfill do snapshot das fases existentes e atualiza `vw_sp_componente` para usar o snapshot. Veja [`docs/FASE8_05.md`](docs/FASE8_05.md).
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/__init__.py /mnt/data/Machry_Fase8_05_Execucao_Real/app/__init__.py
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/__init__.py	2026-11-01 04:10:48.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/app/__init__.py	2026-11-01 04:31:46.115207298 +0000
+@@ -47,7 +47,9 @@
+             return None
+         if papel == "USER" and metodo == "GET" and caminho.startswith(("/api/producao", "/api/fichas-tecnicas")):
+             return None
+-        if papel == "USER" and metodo == "PUT" and caminho.startswith("/api/producao/solicitacoes/") and caminho.endswith("/status"):
++        if papel == "USER" and metodo == "PUT" and caminho.startswith("/api/producao/solicitacoes/") and (
++            caminho.endswith("/status") or caminho.endswith("/execucao")
++        ):
+             return None
+         return {"erro": "você não tem permissão para acessar este recurso"}, 403
+ 
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/features/producao/models.py /mnt/data/Machry_Fase8_05_Execucao_Real/app/features/producao/models.py
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/features/producao/models.py	2026-11-01 04:25:28.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/app/features/producao/models.py	2026-11-01 04:31:13.746932651 +0000
+@@ -21,6 +21,10 @@
+             "quantidade_planejada > 0",
+             name="ck_solicitacao_quantidade_planejada",
+         ),
++        db.CheckConstraint(
++            "quantidade_produzida IS NULL OR quantidade_produzida >= 0",
++            name="ck_solicitacao_quantidade_produzida",
++        ),
+         db.Index(
+             "idx_solicitacao_planejamento",
+             "status",
+@@ -36,11 +40,13 @@
+     usuario_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
+     responsavel_id = db.Column(db.Integer, db.ForeignKey("usuario.id"))
+     quantidade_planejada = db.Column(db.Numeric(18, 3), nullable=False)
++    quantidade_produzida = db.Column(db.Numeric(18, 3))
+     prioridade = db.Column(
+         db.Text, nullable=False, default="NORMAL", server_default="NORMAL"
+     )
+     previsto_para = db.Column(db.String)
+     observacao = db.Column(db.Text)
++    observacao_execucao = db.Column(db.Text)
+     status = db.Column(db.Text, nullable=False, default="ABERTA", server_default="ABERTA")
+     criado_em = db.Column(
+         db.String,
+@@ -57,16 +63,25 @@
+         db.UniqueConstraint(
+             "solicitacao_producao_id", "ordem", name="uq_sp_fase_ordem"
+         ),
++        db.CheckConstraint(
++            "tempo_realizado_min IS NULL OR tempo_realizado_min >= 0",
++            name="ck_sp_fase_tempo_realizado",
++        ),
+     )
+ 
+     id = db.Column(db.Integer, primary_key=True)
+     solicitacao_producao_id = db.Column(
+         db.Integer, db.ForeignKey("solicitacao_producao.id"), nullable=False
+     )
++    # Mantemos a FK para rastreabilidade, mas a exibição histórica usa o snapshot.
+     fase_id = db.Column(db.Integer, db.ForeignKey("fase_producao.id"), nullable=False)
++    fase_nome_snapshot = db.Column(db.Text, nullable=False)
+     ordem = db.Column(db.Integer, nullable=False)
+     tempo_previsto_min = db.Column(db.Integer, nullable=False)
+     tempo_realizado_min = db.Column(db.Integer)
++    observacao = db.Column(db.Text)
++    iniciado_em = db.Column(db.String)
++    finalizado_em = db.Column(db.String)
+ 
+ 
+ class SpComponente(db.Model):
+@@ -107,10 +122,15 @@
+ 
+ @dataclass
+ class FaseSolicitacao:
++    sp_fase_id: int
++    fase_id: int
+     ordem: int
+     fase: str
+     tempo_previsto_min: int
+     tempo_realizado_min: Optional[int]
++    observacao: Optional[str]
++    iniciado_em: Optional[str]
++    finalizado_em: Optional[str]
+ 
+     @classmethod
+     def from_row(cls, row) -> "FaseSolicitacao":
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/features/producao/repository.py /mnt/data/Machry_Fase8_05_Execucao_Real/app/features/producao/repository.py
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/features/producao/repository.py	2026-11-01 04:25:01.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/app/features/producao/repository.py	2026-11-01 04:31:37.875037498 +0000
+@@ -60,6 +60,9 @@
+             fase_solicitacao = SpFase(
+                 solicitacao_producao_id=solicitacao.id,
+                 fase_id=fase.fase_id,
++                # Snapshot histórico: mudanças futuras no catálogo não alteram
++                # o nome exibido em produções já planejadas.
++                fase_nome_snapshot=fase.fase.nome,
+                 ordem=fase.ordem,
+                 tempo_previsto_min=fase.tempo_previsto_min,
+             )
+@@ -91,6 +94,42 @@
+         db.session.commit()
+         return solicitacao
+ 
++    def listar_fases_modelo(self, sp_id: int) -> list[SpFase]:
++        return (
++            db.session.query(SpFase)
++            .filter(SpFase.solicitacao_producao_id == sp_id)
++            .order_by(SpFase.ordem)
++            .all()
++        )
++
++    def salvar_execucao(
++        self,
++        solicitacao: SolicitacaoProducao,
++        *,
++        quantidade_produzida: Decimal | None,
++        observacao_execucao: str | None,
++        fases: list[tuple[SpFase, object]],
++    ) -> SolicitacaoProducao:
++        if quantidade_produzida is not None:
++            solicitacao.quantidade_produzida = quantidade_produzida
++        if observacao_execucao is not None:
++            solicitacao.observacao_execucao = observacao_execucao
++
++        for fase, dados in fases:
++            # Apenas campos enviados são substituídos; isso permite registrar
++            # a execução aos poucos durante o preparo.
++            if dados.tempo_realizado_min is not None:
++                fase.tempo_realizado_min = dados.tempo_realizado_min
++            if dados.observacao is not None:
++                fase.observacao = dados.observacao
++            if dados.iniciado_em is not None:
++                fase.iniciado_em = dados.iniciado_em
++            if dados.finalizado_em is not None:
++                fase.finalizado_em = dados.finalizado_em
++
++        db.session.commit()
++        return solicitacao
++
+     def listar_componentes(self, sp_id: int):
+         return db.session.execute(
+             text(
+@@ -103,9 +142,13 @@
+     def listar_fases(self, sp_id: int):
+         return db.session.execute(
+             text(
+-                """SELECT f.ordem, fp.nome AS fase, f.tempo_previsto_min, f.tempo_realizado_min
+-                   FROM sp_fase f JOIN fase_producao fp ON fp.id = f.fase_id
+-                   WHERE f.solicitacao_producao_id = :id ORDER BY f.ordem"""
++                """SELECT f.id AS sp_fase_id, f.fase_id, f.ordem,
++                          f.fase_nome_snapshot AS fase,
++                          f.tempo_previsto_min, f.tempo_realizado_min,
++                          f.observacao, f.iniciado_em, f.finalizado_em
++                     FROM sp_fase f
++                    WHERE f.solicitacao_producao_id = :id
++                    ORDER BY f.ordem"""
+             ),
+             {"id": sp_id},
+         ).mappings().all()
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/features/producao/routes.py /mnt/data/Machry_Fase8_05_Execucao_Real/app/features/producao/routes.py
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/features/producao/routes.py	2026-11-01 04:25:01.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/app/features/producao/routes.py	2026-11-01 04:31:37.877055218 +0000
+@@ -1,7 +1,6 @@
+ """Rotas HTTP de produção.
+ 
+-Controller puro: delega a leitura para o service e serializa com schemas.py
+-
++Controller puro: delega a leitura para o service e serializa com schemas.py.
+ """
+ from flask import Blueprint, g
+ 
+@@ -38,6 +37,13 @@
+     return schemas.SolicitacaoProducaoOut.model_validate(item).model_dump()
+ 
+ 
++@bp.put("/solicitacoes/<int:sp_id>/execucao")
++def registrar_execucao(sp_id: int):
++    dados = entrada(schemas.ExecucaoProducaoUpdate)
++    detalhe = get_service().registrar_execucao(sp_id, dados)
++    return schemas.SolicitacaoDetalheOut.model_validate(detalhe).model_dump()
++
++
+ @bp.get("/solicitacoes/<int:sp_id>")
+ def detalhar_solicitacao(sp_id):
+     detalhe = get_service().obter_detalhe(sp_id)
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/features/producao/schemas.py /mnt/data/Machry_Fase8_05_Execucao_Real/app/features/producao/schemas.py
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/features/producao/schemas.py	2026-11-01 04:25:01.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/app/features/producao/schemas.py	2026-11-01 04:31:13.748319646 +0000
+@@ -4,13 +4,33 @@
+ from datetime import datetime
+ from typing import Literal, Optional
+ 
+-from pydantic import BaseModel, ConfigDict, Field, field_validator
++from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+ 
+ 
+ PrioridadeProducao = Literal["BAIXA", "NORMAL", "ALTA", "URGENTE"]
+ StatusProducao = Literal["ABERTA", "EM_SEPARACAO", "EM_PRODUCAO", "CONCLUIDA", "CANCELADA"]
+ 
+ 
++def _normalizar_data_hora(valor: Optional[str], campo: str) -> Optional[str]:
++    if valor is None:
++        return None
++    valor = valor.strip()
++    if not valor:
++        return None
++    try:
++        momento = datetime.fromisoformat(valor)
++    except ValueError as exc:
++        raise ValueError(f"{campo} deve estar em formato ISO 8601") from exc
++    return momento.isoformat(timespec="seconds")
++
++
++def _normalizar_texto(valor: Optional[str]) -> Optional[str]:
++    if valor is None:
++        return None
++    valor = valor.strip()
++    return valor or None
++
++
+ class SolicitacaoCreate(BaseModel):
+     model_config = ConfigDict(extra="forbid")
+ 
+@@ -24,24 +44,12 @@
+     @field_validator("previsto_para")
+     @classmethod
+     def validar_previsto_para(cls, valor: Optional[str]) -> Optional[str]:
+-        if valor is None:
+-            return None
+-        valor = valor.strip()
+-        if not valor:
+-            return None
+-        try:
+-            momento = datetime.fromisoformat(valor)
+-        except ValueError as exc:
+-            raise ValueError("previsto_para deve estar em formato ISO 8601") from exc
+-        return momento.isoformat(timespec="seconds")
++        return _normalizar_data_hora(valor, "previsto_para")
+ 
+     @field_validator("observacao")
+     @classmethod
+     def normalizar_observacao(cls, valor: Optional[str]) -> Optional[str]:
+-        if valor is None:
+-            return None
+-        valor = valor.strip()
+-        return valor or None
++        return _normalizar_texto(valor)
+ 
+ 
+ class SolicitacaoStatusUpdate(BaseModel):
+@@ -50,6 +58,66 @@
+     status: StatusProducao
+ 
+ 
++class FaseExecucaoUpdate(BaseModel):
++    model_config = ConfigDict(extra="forbid")
++
++    sp_fase_id: int = Field(gt=0)
++    tempo_realizado_min: Optional[int] = Field(default=None, ge=0)
++    observacao: Optional[str] = Field(default=None, max_length=2000)
++    iniciado_em: Optional[str] = None
++    finalizado_em: Optional[str] = None
++
++    @field_validator("observacao")
++    @classmethod
++    def normalizar_observacao(cls, valor: Optional[str]) -> Optional[str]:
++        return _normalizar_texto(valor)
++
++    @field_validator("iniciado_em")
++    @classmethod
++    def validar_inicio(cls, valor: Optional[str]) -> Optional[str]:
++        return _normalizar_data_hora(valor, "iniciado_em")
++
++    @field_validator("finalizado_em")
++    @classmethod
++    def validar_fim(cls, valor: Optional[str]) -> Optional[str]:
++        return _normalizar_data_hora(valor, "finalizado_em")
++
++    @model_validator(mode="after")
++    def validar_intervalo(self):
++        if self.iniciado_em and self.finalizado_em:
++            inicio = datetime.fromisoformat(self.iniciado_em)
++            fim = datetime.fromisoformat(self.finalizado_em)
++            if fim < inicio:
++                raise ValueError("finalizado_em não pode ser anterior a iniciado_em")
++        return self
++
++
++class ExecucaoProducaoUpdate(BaseModel):
++    model_config = ConfigDict(extra="forbid")
++
++    quantidade_produzida: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)
++    observacao_execucao: Optional[str] = Field(default=None, max_length=2000)
++    fases: list[FaseExecucaoUpdate] = Field(default_factory=list)
++
++    @field_validator("observacao_execucao")
++    @classmethod
++    def normalizar_observacao(cls, valor: Optional[str]) -> Optional[str]:
++        return _normalizar_texto(valor)
++
++    @model_validator(mode="after")
++    def validar_conteudo(self):
++        ids = [fase.sp_fase_id for fase in self.fases]
++        if len(ids) != len(set(ids)):
++            raise ValueError("a mesma fase não pode aparecer duas vezes na execução")
++        if (
++            self.quantidade_produzida is None
++            and self.observacao_execucao is None
++            and not self.fases
++        ):
++            raise ValueError("informe ao menos um dado de execução")
++        return self
++
++
+ class SolicitacaoProducaoOut(BaseModel):
+     model_config = ConfigDict(from_attributes=True)
+ 
+@@ -58,9 +126,11 @@
+     usuario_id: int
+     responsavel_id: Optional[int] = None
+     quantidade_planejada: float
++    quantidade_produzida: Optional[float] = None
+     prioridade: str
+     previsto_para: Optional[str] = None
+     observacao: Optional[str] = None
++    observacao_execucao: Optional[str] = None
+     status: str
+     criado_em: str
+     iniciado_em: Optional[str] = None
+@@ -85,10 +155,15 @@
+ class FaseSolicitacaoOut(BaseModel):
+     model_config = ConfigDict(from_attributes=True)
+ 
++    sp_fase_id: int
++    fase_id: int
+     ordem: int
+     fase: str
+     tempo_previsto_min: int
+     tempo_realizado_min: Optional[int] = None
++    observacao: Optional[str] = None
++    iniciado_em: Optional[str] = None
++    finalizado_em: Optional[str] = None
+ 
+ 
+ class LoteProduzidoOut(BaseModel):
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/features/producao/services.py /mnt/data/Machry_Fase8_05_Execucao_Real/app/features/producao/services.py
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/app/features/producao/services.py	2026-11-01 04:25:01.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/app/features/producao/services.py	2026-11-01 04:31:37.876205381 +0000
+@@ -24,7 +24,11 @@
+             raise RegistroNaoEncontrado("ficha técnica não encontrada")
+ 
+         quantidade_planejada = Decimal(
+-            str(dados.quantidade_planejada if dados.quantidade_planejada is not None else ficha.rendimento)
++            str(
++                dados.quantidade_planejada
++                if dados.quantidade_planejada is not None
++                else ficha.rendimento
++            )
+         )
+         if quantidade_planejada <= 0:
+             raise ValueError("quantidade planejada deve ser maior que zero")
+@@ -59,6 +63,40 @@
+             raise ValueError(f"não é possível alterar de {solicitacao.status} para {status}")
+         return self.repository.atualizar_status(solicitacao, status)
+ 
++    def registrar_execucao(
++        self, sp_id: int, dados: schemas.ExecucaoProducaoUpdate
++    ) -> models.SolicitacaoDetalhe:
++        solicitacao = self.repository.obter_solicitacao(sp_id)
++        if solicitacao is None:
++            raise RegistroNaoEncontrado("solicitação não encontrada")
++        if solicitacao.status != "EM_PRODUCAO":
++            raise ValueError("a execução só pode ser registrada com a produção EM_PRODUCAO")
++
++        fases_por_id = {
++            fase.id: fase for fase in self.repository.listar_fases_modelo(sp_id)
++        }
++        atualizacoes: list[tuple[models.SpFase, schemas.FaseExecucaoUpdate]] = []
++        for fase_dados in dados.fases:
++            fase = fases_por_id.get(fase_dados.sp_fase_id)
++            if fase is None:
++                raise ValueError(
++                    f"a fase {fase_dados.sp_fase_id} não pertence à solicitação"
++                )
++            atualizacoes.append((fase, fase_dados))
++
++        quantidade_produzida = (
++            Decimal(str(dados.quantidade_produzida))
++            if dados.quantidade_produzida is not None
++            else None
++        )
++        self.repository.salvar_execucao(
++            solicitacao,
++            quantidade_produzida=quantidade_produzida,
++            observacao_execucao=dados.observacao_execucao,
++            fases=atualizacoes,
++        )
++        return self.obter_detalhe(sp_id)
++
+     def obter_detalhe(self, sp_id: int) -> models.SolicitacaoDetalhe:
+         solicitacao = self.repository.obter_solicitacao(sp_id)
+         if solicitacao is None:
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/db/database_config.py /mnt/data/Machry_Fase8_05_Execucao_Real/db/database_config.py
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/db/database_config.py	2026-11-01 04:11:31.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/db/database_config.py	2026-11-01 04:31:46.115412551 +0000
+@@ -101,19 +101,18 @@
+     "vw_sp_componente": """
+         SELECT c.id AS sp_componente_id, c.solicitacao_producao_id,
+                c.produto_id, p.nome AS componente, p.unidade_medida,
+-               sf.ordem AS fase_ordem, fp.nome AS fase,
++               sf.ordem AS fase_ordem, sf.fase_nome_snapshot AS fase,
+                c.quantidade_prevista,
+                COALESCE(SUM(m.quantidade), 0) AS quantidade_realizada,
+                SUM(m.quantidade * l.custo_unitario) AS custo_realizado
+           FROM sp_componente c
+           JOIN produto p ON p.id = c.produto_id
+           LEFT JOIN sp_fase sf ON sf.id = c.sp_fase_id
+-          LEFT JOIN fase_producao fp ON fp.id = sf.fase_id
+           LEFT JOIN movimentacao_estoque m
+                  ON m.sp_componente_id = c.id AND m.tipo = 'CONSUMO_PRODUCAO'
+           LEFT JOIN lote l ON l.id = m.lote_id
+          GROUP BY c.id, c.solicitacao_producao_id, c.produto_id, p.nome,
+-                  p.unidade_medida, sf.ordem, fp.nome, c.quantidade_prevista
++                  p.unidade_medida, sf.ordem, sf.fase_nome_snapshot, c.quantidade_prevista
+     """,
+     "vw_sp_producao": """
+         SELECT m.solicitacao_producao_id, m.lote_id, m.quantidade, m.criado_em
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/docs/FASE8_05.md /mnt/data/Machry_Fase8_05_Execucao_Real/docs/FASE8_05.md
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/docs/FASE8_05.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/docs/FASE8_05.md	2026-11-01 04:34:43.149663843 +0000
+@@ -0,0 +1,92 @@
++# Fase 8.5 — Execução real da produção
++
++Esta fase adiciona o registro do **realizado** sem sobrescrever o planejamento criado na Fase 8.4.
++
++## Objetivos
++
++- registrar `quantidade_produzida` separadamente de `quantidade_planejada`;
++- registrar observações de execução;
++- registrar tempo real por fase;
++- registrar início/fim e observação por fase;
++- preservar snapshot histórico do nome da fase;
++- manter compatibilidade com os endpoints já usados pelo frontend.
++
++## Modelo
++
++### `solicitacao_producao`
++
++Novos campos:
++
++- `quantidade_produzida` — nullable enquanto não houver apuração;
++- `observacao_execucao` — separada da observação de planejamento.
++
++`quantidade_planejada` continua imutável pela API de execução.
++
++### `sp_fase`
++
++Novos campos:
++
++- `fase_nome_snapshot`;
++- `observacao`;
++- `iniciado_em`;
++- `finalizado_em`.
++
++`tempo_realizado_min`, que já existia, passa a ser exposto e atualizado pela API de execução.
++
++O campo `fase_id` continua existindo para rastreabilidade, porém as telas e detalhes históricos usam `fase_nome_snapshot`. Assim, renomear `fase_producao.nome` não altera produções já planejadas.
++
++## Endpoint novo
++
++```http
++PUT /api/producao/solicitacoes/{id}/execucao
++```
++
++Exemplo:
++
++```json
++{
++  "quantidade_produzida": 19.5,
++  "observacao_execucao": "Rendimento abaixo do planejado.",
++  "fases": [
++    {
++      "sp_fase_id": 12,
++      "tempo_realizado_min": 34,
++      "observacao": "Necessitou mais tempo de cocção.",
++      "iniciado_em": "2026-11-01T08:00:00",
++      "finalizado_em": "2026-11-01T08:34:00"
++    }
++  ]
++}
++```
++
++A execução só pode ser modificada enquanto a solicitação estiver `EM_PRODUCAO`.
++
++A atualização é parcial: fases não enviadas permanecem como estavam.
++
++## Regras
++
++- pelo menos um dado de execução precisa ser informado;
++- a mesma `sp_fase_id` não pode ser repetida no payload;
++- a fase informada precisa pertencer à solicitação;
++- `tempo_realizado_min` não pode ser negativo;
++- `quantidade_produzida` não pode ser negativa;
++- `finalizado_em` não pode ser anterior a `iniciado_em` quando ambos forem enviados.
++
++## Migration
++
++Revision:
++
++```text
++c4e8f1a2b730
++```
++
++A migration faz backfill de `fase_nome_snapshot` para produções antigas usando o nome atual de `fase_producao` no momento do upgrade.
++
++A view `vw_sp_componente` foi atualizada para usar o snapshot da fase em vez do nome vivo do catálogo.
++
++## O que ainda NÃO acontece
++
++Esta fase não baixa estoque automaticamente e não cria lote de produto final. Esses pontos pertencem às próximas fases:
++
++- Fase 8.6 — Produção ↔ Estoque;
++- Fase 8.7 — Produto final + perdas.
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/docs/openapi.yaml /mnt/data/Machry_Fase8_05_Execucao_Real/docs/openapi.yaml
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/docs/openapi.yaml	2026-11-01 04:28:13.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/docs/openapi.yaml	2026-11-01 04:34:30.384133504 +0000
+@@ -450,6 +450,26 @@
+             application/json:
+               schema: {$ref: "#/components/schemas/SolicitacaoProducao"}
+ 
++  /api/producao/solicitacoes/{id}/execucao:
++    parameters:
++      - {name: id, in: path, required: true, schema: {type: integer}}
++    put:
++      summary: Registra dados reais da execução de uma produção em andamento
++      tags: [producao]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/ExecucaoProducaoInput"}
++      responses:
++        "200":
++          description: Execução registrada; retorna o detalhe atualizado
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/SolicitacaoDetalhe"}
++        "400": {$ref: "#/components/responses/Invalido"}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++
+ components:
+   securitySchemes:
+     cookieAuth:
+@@ -645,9 +665,11 @@
+         usuario_id: {type: integer, description: Usuário que criou a solicitação}
+         responsavel_id: {type: integer, nullable: true, description: Usuário designado para executar}
+         quantidade_planejada: {type: number, exclusiveMinimum: 0}
++        quantidade_produzida: {type: number, minimum: 0, nullable: true, description: Quantidade efetivamente produzida}
+         prioridade: {type: string, enum: [BAIXA, NORMAL, ALTA, URGENTE]}
+         previsto_para: {type: string, format: date-time, nullable: true}
+-        observacao: {type: string, nullable: true}
++        observacao: {type: string, nullable: true, description: Observação do planejamento}
++        observacao_execucao: {type: string, nullable: true, description: Observação registrada durante a execução}
+         status: {type: string, enum: [ABERTA, EM_SEPARACAO, EM_PRODUCAO, CONCLUIDA, CANCELADA]}
+         criado_em: {type: string, example: "2026-10-16 15:46:39"}
+         iniciado_em: {type: string, nullable: true}
+@@ -666,13 +688,36 @@
+         quantidade_prevista: {type: number}
+         quantidade_realizada: {type: number, description: Somatório das movimentações CONSUMO_PRODUCAO ligadas ao componente}
+         custo_realizado: {type: number, nullable: true}
++    FaseExecucaoInput:
++      type: object
++      required: [sp_fase_id]
++      properties:
++        sp_fase_id: {type: integer, minimum: 1}
++        tempo_realizado_min: {type: integer, minimum: 0, nullable: true}
++        observacao: {type: string, nullable: true, maxLength: 2000}
++        iniciado_em: {type: string, format: date-time, nullable: true}
++        finalizado_em: {type: string, format: date-time, nullable: true}
++    ExecucaoProducaoInput:
++      type: object
++      properties:
++        quantidade_produzida: {type: number, minimum: 0, nullable: true}
++        observacao_execucao: {type: string, nullable: true, maxLength: 2000}
++        fases:
++          type: array
++          items: {$ref: "#/components/schemas/FaseExecucaoInput"}
++      description: Pelo menos quantidade_produzida, observacao_execucao ou uma fase deve ser informada. A produção precisa estar EM_PRODUCAO.
+     FaseSolicitacao:
+       type: object
+       properties:
++        sp_fase_id: {type: integer}
++        fase_id: {type: integer, description: Referência ao catálogo original}
+         ordem: {type: integer}
+-        fase: {type: string}
++        fase: {type: string, description: Snapshot histórico do nome da fase}
+         tempo_previsto_min: {type: integer}
+         tempo_realizado_min: {type: integer, nullable: true}
++        observacao: {type: string, nullable: true}
++        iniciado_em: {type: string, format: date-time, nullable: true}
++        finalizado_em: {type: string, format: date-time, nullable: true}
+     LoteProduzido:
+       type: object
+       description: Linha da view vw_sp_producao (movimentações do tipo PRODUCAO)
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/frontend/src/types.ts /mnt/data/Machry_Fase8_05_Execucao_Real/frontend/src/types.ts
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/frontend/src/types.ts	2026-11-01 04:25:49.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/frontend/src/types.ts	2026-11-01 04:34:30.382103361 +0000
+@@ -96,9 +96,11 @@
+   usuario_id: number
+   responsavel_id: number | null
+   quantidade_planejada: number
++  quantidade_produzida: number | null
+   prioridade: 'BAIXA' | 'NORMAL' | 'ALTA' | 'URGENTE'
+   previsto_para: string | null
+   observacao: string | null
++  observacao_execucao: string | null
+   status: string
+   criado_em: string
+   iniciado_em: string | null
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/migrations/versions/c4e8f1a2b730_execucao_real_producao.py /mnt/data/Machry_Fase8_05_Execucao_Real/migrations/versions/c4e8f1a2b730_execucao_real_producao.py
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/migrations/versions/c4e8f1a2b730_execucao_real_producao.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/migrations/versions/c4e8f1a2b730_execucao_real_producao.py	2026-11-01 04:32:01.678210871 +0000
+@@ -0,0 +1,121 @@
++"""adiciona execução real e snapshot histórico da produção
++
++Revision ID: c4e8f1a2b730
++Revises: b7d9e2f4a610
++Create Date: 2026-11-01 05:30:00
++
++"""
++from typing import Sequence, Union
++
++from alembic import op
++import sqlalchemy as sa
++
++
++revision: str = "c4e8f1a2b730"
++down_revision: Union[str, Sequence[str], None] = "b7d9e2f4a610"
++branch_labels: Union[str, Sequence[str], None] = None
++depends_on: Union[str, Sequence[str], None] = None
++
++
++_VIEW_COMPONENTE_SNAPSHOT = """
++    CREATE VIEW vw_sp_componente AS
++    SELECT c.id AS sp_componente_id, c.solicitacao_producao_id,
++           c.produto_id, p.nome AS componente, p.unidade_medida,
++           sf.ordem AS fase_ordem, sf.fase_nome_snapshot AS fase,
++           c.quantidade_prevista,
++           COALESCE(SUM(m.quantidade), 0) AS quantidade_realizada,
++           SUM(m.quantidade * l.custo_unitario) AS custo_realizado
++      FROM sp_componente c
++      JOIN produto p ON p.id = c.produto_id
++      LEFT JOIN sp_fase sf ON sf.id = c.sp_fase_id
++      LEFT JOIN movimentacao_estoque m
++             ON m.sp_componente_id = c.id AND m.tipo = 'CONSUMO_PRODUCAO'
++      LEFT JOIN lote l ON l.id = m.lote_id
++     GROUP BY c.id, c.solicitacao_producao_id, c.produto_id, p.nome,
++              p.unidade_medida, sf.ordem, sf.fase_nome_snapshot,
++              c.quantidade_prevista
++"""
++
++_VIEW_COMPONENTE_ANTIGA = """
++    CREATE VIEW vw_sp_componente AS
++    SELECT c.id AS sp_componente_id, c.solicitacao_producao_id,
++           c.produto_id, p.nome AS componente, p.unidade_medida,
++           sf.ordem AS fase_ordem, fp.nome AS fase,
++           c.quantidade_prevista,
++           COALESCE(SUM(m.quantidade), 0) AS quantidade_realizada,
++           SUM(m.quantidade * l.custo_unitario) AS custo_realizado
++      FROM sp_componente c
++      JOIN produto p ON p.id = c.produto_id
++      LEFT JOIN sp_fase sf ON sf.id = c.sp_fase_id
++      LEFT JOIN fase_producao fp ON fp.id = sf.fase_id
++      LEFT JOIN movimentacao_estoque m
++             ON m.sp_componente_id = c.id AND m.tipo = 'CONSUMO_PRODUCAO'
++      LEFT JOIN lote l ON l.id = m.lote_id
++     GROUP BY c.id, c.solicitacao_producao_id, c.produto_id, p.nome,
++              p.unidade_medida, sf.ordem, fp.nome, c.quantidade_prevista
++"""
++
++
++def upgrade() -> None:
++    # A view usa sp_fase e precisa ser recriada depois do snapshot.
++    op.execute("DROP VIEW IF EXISTS vw_sp_componente")
++
++    with op.batch_alter_table("solicitacao_producao") as batch_op:
++        batch_op.add_column(
++            sa.Column("quantidade_produzida", sa.Numeric(18, 3), nullable=True)
++        )
++        batch_op.add_column(sa.Column("observacao_execucao", sa.Text(), nullable=True))
++        batch_op.create_check_constraint(
++            "ck_solicitacao_quantidade_produzida",
++            "quantidade_produzida IS NULL OR quantidade_produzida >= 0",
++        )
++
++    # Snapshot começa nullable para permitir backfill de produções existentes.
++    with op.batch_alter_table("sp_fase") as batch_op:
++        batch_op.add_column(sa.Column("fase_nome_snapshot", sa.Text(), nullable=True))
++        batch_op.add_column(sa.Column("observacao", sa.Text(), nullable=True))
++        batch_op.add_column(sa.Column("iniciado_em", sa.String(), nullable=True))
++        batch_op.add_column(sa.Column("finalizado_em", sa.String(), nullable=True))
++
++    op.execute(
++        """
++        UPDATE sp_fase
++           SET fase_nome_snapshot = (
++               SELECT fase_producao.nome
++                 FROM fase_producao
++                WHERE fase_producao.id = sp_fase.fase_id
++           )
++         WHERE fase_nome_snapshot IS NULL
++        """
++    )
++
++    with op.batch_alter_table("sp_fase") as batch_op:
++        batch_op.alter_column(
++            "fase_nome_snapshot",
++            existing_type=sa.Text(),
++            nullable=False,
++        )
++        batch_op.create_check_constraint(
++            "ck_sp_fase_tempo_realizado",
++            "tempo_realizado_min IS NULL OR tempo_realizado_min >= 0",
++        )
++
++    op.execute(_VIEW_COMPONENTE_SNAPSHOT)
++
++
++def downgrade() -> None:
++    op.execute("DROP VIEW IF EXISTS vw_sp_componente")
++
++    with op.batch_alter_table("sp_fase") as batch_op:
++        batch_op.drop_constraint("ck_sp_fase_tempo_realizado", type_="check")
++        batch_op.drop_column("finalizado_em")
++        batch_op.drop_column("iniciado_em")
++        batch_op.drop_column("observacao")
++        batch_op.drop_column("fase_nome_snapshot")
++
++    with op.batch_alter_table("solicitacao_producao") as batch_op:
++        batch_op.drop_constraint("ck_solicitacao_quantidade_produzida", type_="check")
++        batch_op.drop_column("observacao_execucao")
++        batch_op.drop_column("quantidade_produzida")
++
++    op.execute(_VIEW_COMPONENTE_ANTIGA)
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/tests/test_migrations.py /mnt/data/Machry_Fase8_05_Execucao_Real/tests/test_migrations.py
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/tests/test_migrations.py	2026-11-01 04:27:51.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/tests/test_migrations.py	2026-11-01 04:32:33.041761482 +0000
+@@ -50,7 +50,7 @@
+             linha[1] for linha in conexao.execute("PRAGMA index_list(solicitacao_producao)")
+         }
+ 
+-    assert revisao == ("b7d9e2f4a610",)
++    assert revisao == ("c4e8f1a2b730",)
+     assert ("table", "produto") in objetos
+     assert ("table", "solicitacao_producao") in objetos
+     assert ("table", "movimentacao_estoque") in objetos
+@@ -62,9 +62,11 @@
+     assert {
+         "responsavel_id",
+         "quantidade_planejada",
++        "quantidade_produzida",
+         "prioridade",
+         "previsto_para",
+         "observacao",
++        "observacao_execucao",
+         "iniciado_em",
+     }.issubset(colunas_solicitacao)
+     assert "idx_solicitacao_planejamento" in indices_solicitacao
+@@ -144,4 +146,95 @@
+         revisao = conexao.execute("SELECT version_num FROM alembic_version").fetchone()
+ 
+     assert linha == (10, "NORMAL", None)
+-    assert revisao == ("b7d9e2f4a610",)
++    assert revisao == ("c4e8f1a2b730",)
++
++
++def test_migration_execucao_faz_backfill_do_snapshot_de_fase(tmp_path):
++    root = Path(__file__).resolve().parents[1]
++    database = tmp_path / "migration-execucao.db"
++    env = os.environ.copy()
++    env.update(
++        {
++            "DB_CONNECTION": "sqlite",
++            "DATABASE_PATH": str(database),
++            "SECRET_KEY": "migration-execucao-secret",
++        }
++    )
++
++    anterior = subprocess.run(
++        [
++            sys.executable,
++            "-m",
++            "alembic",
++            "-c",
++            "migrations/alembic.ini",
++            "upgrade",
++            "b7d9e2f4a610",
++        ],
++        cwd=root,
++        env=env,
++        text=True,
++        capture_output=True,
++        check=False,
++    )
++    assert anterior.returncode == 0, anterior.stdout + anterior.stderr
++
++    with sqlite3.connect(database) as conexao:
++        conexao.execute(
++            "INSERT INTO usuario (id, nome, username, senha_hash, papel, ativo) "
++            "VALUES (1, 'Gestor', 'gestor', 'hash', 'ADMIN', 1)"
++        )
++        conexao.execute(
++            "INSERT INTO fase_producao (id, nome) VALUES (1, 'Cozir')"
++        )
++        conexao.execute(
++            "INSERT INTO produto (id, nome, tipo, unidade_medida, conservacao, validade_obrigatoria, ativo) "
++            "VALUES (1, 'Produto final', 'FINAL', 'un', 'SECO', 0, 1)"
++        )
++        conexao.execute(
++            "INSERT INTO ficha_tecnica (id, produto_id, rendimento) VALUES (1, 1, 10)"
++        )
++        conexao.execute(
++            "INSERT INTO solicitacao_producao "
++            "(id, ficha_tecnica_id, usuario_id, quantidade_planejada, prioridade, status) "
++            "VALUES (1, 1, 1, 10, 'NORMAL', 'EM_PRODUCAO')"
++        )
++        conexao.execute(
++            "INSERT INTO sp_fase "
++            "(id, solicitacao_producao_id, fase_id, ordem, tempo_previsto_min) "
++            "VALUES (1, 1, 1, 1, 30)"
++        )
++        conexao.commit()
++
++    atual = subprocess.run(
++        [
++            sys.executable,
++            "-m",
++            "alembic",
++            "-c",
++            "migrations/alembic.ini",
++            "upgrade",
++            "head",
++        ],
++        cwd=root,
++        env=env,
++        text=True,
++        capture_output=True,
++        check=False,
++    )
++    assert atual.returncode == 0, atual.stdout + atual.stderr
++
++    with sqlite3.connect(database) as conexao:
++        fase = conexao.execute(
++            "SELECT fase_nome_snapshot, observacao, iniciado_em, finalizado_em "
++            "FROM sp_fase WHERE id = 1"
++        ).fetchone()
++        solicitacao = conexao.execute(
++            "SELECT quantidade_produzida, observacao_execucao "
++            "FROM solicitacao_producao WHERE id = 1"
++        ).fetchone()
++        revisao = conexao.execute("SELECT version_num FROM alembic_version").fetchone()
++
++    assert fase == ("Cozir", None, None, None)
++    assert solicitacao == (None, None)
++    assert revisao == ("c4e8f1a2b730",)
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=*.pyc' '--exclude=FASE8_05_CHANGES.diff' /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/tests/test_producao.py /mnt/data/Machry_Fase8_05_Execucao_Real/tests/test_producao.py
+--- /mnt/data/_Machry_Fase8_04_original/Machry_Fase8_04_Planejamento/tests/test_producao.py	2026-11-01 04:25:48.000000000 +0000
++++ /mnt/data/Machry_Fase8_05_Execucao_Real/tests/test_producao.py	2026-11-01 04:36:02.312828280 +0000
+@@ -175,3 +175,176 @@
+     )
+     assert resposta.status_code == 200, resposta.get_json()
+     assert resposta.get_json()["iniciado_em"] is not None
++
++
++def test_execucao_registra_quantidade_tempo_observacoes_e_datas(seeded_client):
++    criada = _criar_solicitacao(seeded_client)
++    solicitacao_id = criada["id"]
++
++    inicio = seeded_client.put(
++        f"/api/producao/solicitacoes/{solicitacao_id}/status",
++        json={"status": "EM_PRODUCAO"},
++    )
++    assert inicio.status_code == 200
++
++    detalhe_inicial = seeded_client.get(
++        f"/api/producao/solicitacoes/{solicitacao_id}"
++    ).get_json()
++    fase = detalhe_inicial["fases"][0]
++
++    resposta = seeded_client.put(
++        f"/api/producao/solicitacoes/{solicitacao_id}/execucao",
++        json={
++            "quantidade_produzida": 0.95,
++            "observacao_execucao": "  Rendimento ligeiramente abaixo do previsto.  ",
++            "fases": [
++                {
++                    "sp_fase_id": fase["sp_fase_id"],
++                    "tempo_realizado_min": 12,
++                    "observacao": "  Mistura homogênea.  ",
++                    "iniciado_em": "2026-11-01T08:00:00",
++                    "finalizado_em": "2026-11-01T08:12:00",
++                }
++            ],
++        },
++    )
++    assert resposta.status_code == 200, resposta.get_json()
++    corpo = resposta.get_json()
++    assert corpo["solicitacao"]["quantidade_planejada"] == 1.0
++    assert corpo["solicitacao"]["quantidade_produzida"] == 0.95
++    assert corpo["solicitacao"]["observacao_execucao"] == "Rendimento ligeiramente abaixo do previsto."
++
++    fase_atualizada = next(
++        item for item in corpo["fases"] if item["sp_fase_id"] == fase["sp_fase_id"]
++    )
++    assert fase_atualizada["tempo_previsto_min"] == fase["tempo_previsto_min"]
++    assert fase_atualizada["tempo_realizado_min"] == 12
++    assert fase_atualizada["observacao"] == "Mistura homogênea."
++    assert fase_atualizada["iniciado_em"] == "2026-11-01T08:00:00"
++    assert fase_atualizada["finalizado_em"] == "2026-11-01T08:12:00"
++
++
++def test_execucao_so_pode_ser_registrada_em_producao(seeded_client):
++    criada = _criar_solicitacao(seeded_client)
++    resposta = seeded_client.put(
++        f"/api/producao/solicitacoes/{criada['id']}/execucao",
++        json={"quantidade_produzida": 1},
++    )
++    assert resposta.status_code == 400
++
++
++def test_execucao_rejeita_fase_de_outra_solicitacao(seeded_client):
++    primeira = _criar_solicitacao(seeded_client)
++    segunda = _criar_solicitacao(seeded_client)
++
++    for solicitacao in (primeira, segunda):
++        resposta = seeded_client.put(
++            f"/api/producao/solicitacoes/{solicitacao['id']}/status",
++            json={"status": "EM_PRODUCAO"},
++        )
++        assert resposta.status_code == 200
++
++    fase_segunda = seeded_client.get(
++        f"/api/producao/solicitacoes/{segunda['id']}"
++    ).get_json()["fases"][0]
++
++    resposta = seeded_client.put(
++        f"/api/producao/solicitacoes/{primeira['id']}/execucao",
++        json={
++            "fases": [
++                {
++                    "sp_fase_id": fase_segunda["sp_fase_id"],
++                    "tempo_realizado_min": 10,
++                }
++            ]
++        },
++    )
++    assert resposta.status_code == 400
++
++
++def test_execucao_rejeita_fase_duplicada(seeded_client):
++    criada = _criar_solicitacao(seeded_client)
++    seeded_client.put(
++        f"/api/producao/solicitacoes/{criada['id']}/status",
++        json={"status": "EM_PRODUCAO"},
++    )
++    fase = seeded_client.get(
++        f"/api/producao/solicitacoes/{criada['id']}"
++    ).get_json()["fases"][0]
++
++    resposta = seeded_client.put(
++        f"/api/producao/solicitacoes/{criada['id']}/execucao",
++        json={
++            "fases": [
++                {"sp_fase_id": fase["sp_fase_id"], "tempo_realizado_min": 10},
++                {"sp_fase_id": fase["sp_fase_id"], "tempo_realizado_min": 11},
++            ]
++        },
++    )
++    assert resposta.status_code == 400
++
++
++def test_execucao_rejeita_intervalo_de_fase_invertido(seeded_client):
++    criada = _criar_solicitacao(seeded_client)
++    seeded_client.put(
++        f"/api/producao/solicitacoes/{criada['id']}/status",
++        json={"status": "EM_PRODUCAO"},
++    )
++    fase = seeded_client.get(
++        f"/api/producao/solicitacoes/{criada['id']}"
++    ).get_json()["fases"][0]
++
++    resposta = seeded_client.put(
++        f"/api/producao/solicitacoes/{criada['id']}/execucao",
++        json={
++            "fases": [
++                {
++                    "sp_fase_id": fase["sp_fase_id"],
++                    "iniciado_em": "2026-11-01T09:00:00",
++                    "finalizado_em": "2026-11-01T08:00:00",
++                }
++            ]
++        },
++    )
++    assert resposta.status_code == 400
++
++
++def test_snapshot_da_fase_nao_muda_quando_catalogo_e_renomeado(seeded_client):
++    from app.features.fichas_tecnicas.models import FaseProducao
++    from db.database_config import db
++
++    criada = _criar_solicitacao(seeded_client)
++    antes = seeded_client.get(
++        f"/api/producao/solicitacoes/{criada['id']}"
++    ).get_json()
++    nome_snapshot = antes["fases"][0]["fase"]
++
++    with seeded_client.application.app_context():
++        fase_catalogo = db.session.get(FaseProducao, antes["fases"][0]["fase_id"])
++        fase_catalogo.nome = "Nome alterado depois da produção"
++        db.session.commit()
++
++    depois = seeded_client.get(
++        f"/api/producao/solicitacoes/{criada['id']}"
++    ).get_json()
++    assert depois["fases"][0]["fase"] == nome_snapshot
++
++
++def test_cozinha_pode_registrar_execucao(seeded_client):
++    criada = _criar_solicitacao(seeded_client)
++    seeded_client.put(
++        f"/api/producao/solicitacoes/{criada['id']}/status",
++        json={"status": "EM_PRODUCAO"},
++    )
++    seeded_client.post("/api/auth/logout")
++    login = seeded_client.post(
++        "/api/auth/login",
++        json={"username": "cozinha", "password": "Cozinha@123"},
++    )
++    assert login.status_code == 200
++
++    resposta = seeded_client.put(
++        f"/api/producao/solicitacoes/{criada['id']}/execucao",
++        json={"quantidade_produzida": 1},
++    )
++    assert resposta.status_code == 200, resposta.get_json()

@@ -1,0 +1,286 @@
+# Alterações da Fase 8.1 — Base Estabilizada
+
+--- /mnt/data/projetos_fase3/FTMARCHY/feature-cozinha-mais/tests/test_producao.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_01_Base_Estabilizada/tests/test_producao.py	2026-11-01 03:40:19.971165945 +0000
+@@ -1,69 +1,85 @@
+-"""Testes de entrada/saída dos endpoints de produção (somente leitura)."""
+-from sqlalchemy import text
+-
+-from db.database_config import db
+-
+-
+-def _criar_solicitacao_com_fase_e_componente(app):
+-    # Não existe endpoint para criar solicitação de produção ainda, então o
+-    # fixture é montado direto no banco, usando dados já carregados pelo seed
+-    # (ficha_tecnica 1, usuario 1, fase 1, produto 8).
+-    with app.app_context():
+-        db.session.execute(
+-            text(
+-                "INSERT INTO solicitacao_producao "
+-                "(id, ficha_tecnica_id, usuario_id, status) "
+-                "VALUES (1, 1, 1, 'EM_PRODUCAO')"
+-            )
+-        )
+-        db.session.execute(
+-            text(
+-                "INSERT INTO sp_fase "
+-                "(id, solicitacao_producao_id, fase_id, ordem, tempo_previsto_min) "
+-                "VALUES (1, 1, 1, 1, 10)"
+-            )
+-        )
+-        db.session.execute(
+-            text(
+-                "INSERT INTO sp_componente "
+-                "(id, solicitacao_producao_id, produto_id, quantidade_prevista, sp_fase_id) "
+-                "VALUES (1, 1, 8, 400, 1)"
+-            )
+-        )
+-        db.session.commit()
+-
+-
+-def test_lista_vazia(client):
+-    r = client.get('/api/producao/solicitacoes')
+-    assert r.status_code == 200 and r.get_json() == []
+-
+-
+-def test_detalhe_inexistente(client):
+-    assert client.get('/api/producao/solicitacoes/999').status_code == 404
+-
+-
+-def test_lista_e_detalhe_com_dados(app, seeded_client):
+-    _criar_solicitacao_com_fase_e_componente(app)
+-    c = seeded_client
+-
+-    lista = c.get('/api/producao/solicitacoes')
+-    assert lista.status_code == 200
+-    assert [s['id'] for s in lista.get_json()] == [1]
+-    assert lista.get_json()[0]['status'] == 'EM_PRODUCAO'
+-
+-    detalhe = c.get('/api/producao/solicitacoes/1')
+-    assert detalhe.status_code == 200
+-    corpo = detalhe.get_json()
+-    assert corpo['solicitacao']['id'] == 1
+-    assert corpo['solicitacao']['status'] == 'EM_PRODUCAO'
+-
+-    assert len(corpo['fases']) == 1
+-    assert corpo['fases'][0]['fase'] == 'Bater/Misturar'
+-    assert corpo['fases'][0]['tempo_previsto_min'] == 10
+-
+-    assert len(corpo['componentes']) == 1
+-    assert corpo['componentes'][0]['componente'] == 'Massa de bolo'
+-    assert corpo['componentes'][0]['quantidade_prevista'] == 400
+-    assert corpo['componentes'][0]['quantidade_realizada'] == 0  # nenhum CONSUMO_PRODUCAO ainda
+-
+-    assert corpo['lotes_produzidos'] == []  # nenhuma movimentação PRODUCAO ainda
++"""Testes dos endpoints públicos de produção.
++
++A Fase 8 usa estes testes como contrato de regressão: a criação de uma
++solicitação deve acontecer pela própria API, sem montar a produção diretamente
++no banco. Isso garante que routes -> service -> repository sejam exercitados.
++"""
++
++
++def _criar_solicitacao(client, ficha_id=1):
++    resposta = client.post(
++        "/api/producao/solicitacoes",
++        json={"ficha_tecnica_id": ficha_id},
++    )
++    assert resposta.status_code == 201, resposta.get_json()
++    return resposta.get_json()
++
++
++def test_lista_vazia(client):
++    r = client.get("/api/producao/solicitacoes")
++    assert r.status_code == 200 and r.get_json() == []
++
++
++def test_criar_solicitacao_por_endpoint(seeded_client):
++    criada = _criar_solicitacao(seeded_client)
++    assert criada["ficha_tecnica_id"] == 1
++    assert criada["usuario_id"] == 1
++    assert criada["status"] == "ABERTA"
++
++
++def test_criar_solicitacao_com_ficha_inexistente(client):
++    resposta = client.post(
++        "/api/producao/solicitacoes",
++        json={"ficha_tecnica_id": 9999},
++    )
++    assert resposta.status_code == 404
++
++
++def test_detalhe_inexistente(client):
++    assert client.get("/api/producao/solicitacoes/999").status_code == 404
++
++
++def test_lista_e_detalhe_com_dados(seeded_client):
++    c = seeded_client
++    criada = _criar_solicitacao(c)
++    solicitacao_id = criada["id"]
++
++    # Exercita também a máquina de estados pública da produção.
++    atualizada = c.put(
++        f"/api/producao/solicitacoes/{solicitacao_id}/status",
++        json={"status": "EM_PRODUCAO"},
++    )
++    assert atualizada.status_code == 200, atualizada.get_json()
++    assert atualizada.get_json()["status"] == "EM_PRODUCAO"
++
++    lista = c.get("/api/producao/solicitacoes")
++    assert lista.status_code == 200
++    assert [s["id"] for s in lista.get_json()] == [solicitacao_id]
++    assert lista.get_json()[0]["status"] == "EM_PRODUCAO"
++
++    detalhe = c.get(f"/api/producao/solicitacoes/{solicitacao_id}")
++    assert detalhe.status_code == 200
++    corpo = detalhe.get_json()
++    assert corpo["solicitacao"]["id"] == solicitacao_id
++    assert corpo["solicitacao"]["status"] == "EM_PRODUCAO"
++
++    assert len(corpo["fases"]) >= 1
++    assert corpo["fases"][0]["tempo_previsto_min"] > 0
++
++    assert len(corpo["componentes"]) >= 1
++    assert corpo["componentes"][0]["quantidade_prevista"] > 0
++    assert corpo["componentes"][0]["quantidade_realizada"] == 0
++
++    assert corpo["lotes_produzidos"] == []
++
++
++def test_transicao_de_status_invalida(seeded_client):
++    c = seeded_client
++    criada = _criar_solicitacao(c)
++
++    # Não é permitido concluir uma produção que ainda está ABERTA.
++    resposta = c.put(
++        f"/api/producao/solicitacoes/{criada['id']}/status",
++        json={"status": "CONCLUIDA"},
++    )
++    assert resposta.status_code == 400
+
+--- NOVO: tests/test_baseline_contracts.py ---
+"""Contratos HTTP que o frontend Cozinha Mais já consome.
+
+Enquanto a integração GAP -> Cozinha Mais estiver em andamento, estes caminhos
+não devem ser renomeados/removidos sem uma migração coordenada do frontend.
+"""
+
+CRITICAL_ROUTES = {
+    ("GET", "/api/auth/me"),
+    ("POST", "/api/auth/login"),
+    ("POST", "/api/auth/logout"),
+    ("GET", "/api/produtos"),
+    ("POST", "/api/produtos"),
+    ("GET", "/api/fichas-tecnicas"),
+    ("POST", "/api/fichas-tecnicas"),
+    ("GET", "/api/fichas-tecnicas/fases"),
+    ("GET", "/api/estoque/inventario"),
+    ("GET", "/api/estoque/lotes"),
+    ("POST", "/api/estoque/lotes"),
+    ("GET", "/api/estoque/localizacoes"),
+    ("GET", "/api/estoque/movimentacoes"),
+    ("POST", "/api/estoque/movimentacoes"),
+    ("GET", "/api/producao/solicitacoes"),
+    ("POST", "/api/producao/solicitacoes"),
+}
+
+
+def _normalize_rule(rule: str) -> str:
+    # Regras parametrizadas continuam sendo verificadas em seus testes de CRUD;
+    # aqui congelamos apenas os endpoints de coleção usados para bootstrap do SPA.
+    return rule
+
+
+def test_rotas_criticas_do_frontend_continuam_registradas(app):
+    registradas: set[tuple[str, str]] = set()
+    for rule in app.url_map.iter_rules():
+        caminho = _normalize_rule(str(rule))
+        for metodo in rule.methods:
+            if metodo not in {"HEAD", "OPTIONS"}:
+                registradas.add((metodo, caminho))
+
+    ausentes = CRITICAL_ROUTES - registradas
+    assert not ausentes, f"Contratos removidos/renomeados sem migração do frontend: {sorted(ausentes)}"
+
+
+def test_health_check_publico(app):
+    client = app.test_client()
+    resposta = client.get("/health")
+    assert resposta.status_code == 200
+    assert resposta.get_json() == {"status": "ok"}
+
+
+def test_api_privada_exige_autenticacao(app):
+    client = app.test_client()
+    resposta = client.get("/api/produtos")
+    assert resposta.status_code == 401
+
+--- NOVO: docs/BASELINE_FASE8.md ---
+# Baseline da Fase 8 — Integração GAP + Cozinha Mais
+
+Este documento congela o ponto de partida usado na Fase 8 do projeto Machry.
+
+## Base escolhida
+
+A estrutura-base é a versão `feature/cozinha-mais` do FTMARCHY. O GAP Flask não
+será mantido como uma segunda API: suas regras de domínio serão incorporadas
+progressivamente aos módulos atuais.
+
+## Arquitetura preservada
+
+```text
+frontend React + TypeScript
+        ↓
+      /api
+        ↓
+Flask (monólito modular)
+├── auth
+├── produtos
+├── fichas_tecnicas
+├── estoque
+└── producao
+        ↓
+   SQLAlchemy
+        ↓
+PostgreSQL / SQLite de desenvolvimento
+```
+
+## Contratos congelados temporariamente
+
+Durante a integração, os seguintes endpoints usados pelo frontend não devem ser
+renomeados/removidos sem migração coordenada do SPA:
+
+- `/api/auth/*`
+- `/api/produtos`
+- `/api/fichas-tecnicas`
+- `/api/fichas-tecnicas/fases`
+- `/api/estoque/inventario`
+- `/api/estoque/lotes`
+- `/api/estoque/localizacoes`
+- `/api/estoque/movimentacoes`
+- `/api/producao/solicitacoes`
+
+`tests/test_baseline_contracts.py` protege os principais endpoints de coleção
+contra regressões acidentais.
+
+## Decisões de integração
+
+- `Item` do GAP será substituído por `Produto`.
+- O `Lote` do GAP não será incorporado; o saldo pertence ao módulo de estoque.
+- Regras úteis de `FichaTecnica` do GAP serão incorporadas à ficha atual.
+- `Processamento` não será criado em paralelo; seus conceitos de execução real
+  serão incorporados em `SolicitacaoProducao`, `SpFase`, `SpComponente` e
+  `MovimentacaoEstoque`.
+- O frontend continua usando os contratos `/api/*` atuais durante a migração.
+
+## Baseline de testes
+
+Antes das alterações desta fase, a suíte existente passou com **23 testes**.
+Após adicionar os testes de contrato e trocar o teste de produção que manipulava
+o banco diretamente pela API pública, a suíte passa a ser a referência para as
+próximas subfases.
+
+## Próxima subfase
+
+Adicionar Flask-Migrate/Alembic e criar uma estratégia de baseline de migrations
+antes de alterar os modelos de produção.

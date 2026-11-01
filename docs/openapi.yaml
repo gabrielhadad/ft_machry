@@ -1,0 +1,900 @@
+openapi: 3.0.3
+info:
+  title: ft_machry API
+  version: "2.0"
+security:
+  - cookieAuth: []
+paths:
+  /api/auth/login:
+    post:
+      summary: Inicia uma sessão
+      tags: [autenticacao]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string}
+                password: {type: string, format: password}
+      responses:
+        "200":
+          description: Usuário autenticado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Usuario"}
+        "401": {description: Usuário ou senha inválidos}
+  /api/auth/logout:
+    post:
+      summary: Encerra a sessão atual
+      tags: [autenticacao]
+      responses:
+        "204": {description: Sessão encerrada}
+  /api/auth/me:
+    get:
+      summary: Retorna o usuário da sessão
+      tags: [autenticacao]
+      responses:
+        "200":
+          description: Usuário autenticado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Usuario"}
+        "401": {description: Autenticação necessária}
+  /api/auth/change-password:
+    post:
+      summary: Altera a senha da própria conta
+      description: Exige a senha atual. Também libera o primeiro acesso quando deve_trocar_senha = 1.
+      tags: [autenticacao]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: {type: string, format: password}
+                new_password: {type: string, format: password, minLength: 8}
+      responses:
+        "200":
+          description: Senha alterada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Usuario"}
+        "400": {description: Senha atual inválida ou nova senha fraca}
+
+  /api/auth/auditoria:
+    get:
+      summary: Lista eventos recentes de segurança e administração
+      description: Exclusivo da proprietária. O limite máximo é 500 registros.
+      tags: [autenticacao]
+      parameters:
+        - {name: limite, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 100}}
+      responses:
+        "200": {description: Eventos de auditoria}
+        "403": {description: Perfil sem permissão}
+
+  /api/auth/responsaveis:
+    get:
+      summary: Lista usuários ativos que podem ser designados para uma produção
+      description: Disponível para OWNER e ADMIN; não expõe operações administrativas.
+      tags: [autenticacao]
+      responses:
+        "200":
+          description: Usuários ativos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/Usuario"}
+        "403": {description: Perfil sem permissão}
+
+  /api/auth/usuarios:
+    get:
+      summary: Lista usuários; exclusivo da proprietária
+      tags: [autenticacao]
+      responses:
+        "200": {description: Lista de usuários}
+    post:
+      summary: Cria usuário; exclusivo da proprietária
+      tags: [autenticacao]
+      responses:
+        "201": {description: Usuário criado}
+
+  /api/produtos:
+    get:
+      summary: Lista produtos ativos (ordenados por nome)
+      tags: [produtos]
+      responses:
+        "200":
+          description: Lista de produtos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/Produto"}
+    post:
+      summary: Cria produto
+      tags: [produtos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ProdutoCriar"}
+      responses:
+        "201":
+          description: Produto criado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Produto"}
+        "400": {$ref: "#/components/responses/Invalido"}
+  /api/produtos/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+    get:
+      summary: Detalha produto ativo
+      tags: [produtos]
+      responses:
+        "200":
+          description: Produto
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Produto"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+    put:
+      summary: Atualiza produto (parcial, só os campos enviados)
+      tags: [produtos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ProdutoCampos"}
+      responses:
+        "200":
+          description: Produto atualizado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Produto"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+    delete:
+      summary: Desativa produto (exclusão lógica, ativo = 0)
+      tags: [produtos]
+      responses:
+        "204": {description: Produto desativado}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+
+  /api/fichas-tecnicas:
+    get:
+      summary: Lista fichas técnicas completas
+      tags: [fichas tecnicas]
+      responses:
+        "200":
+          description: Fichas ordenadas pelo nome do produto resultante
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/FichaTecnica"}
+    post:
+      summary: Cria ficha técnica com fases e componentes
+      tags: [fichas tecnicas]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/FichaTecnicaEntrada"}
+      responses:
+        "201":
+          description: Ficha criada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FichaTecnica"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "409": {description: O produto já possui uma ficha}
+
+  /api/fichas-tecnicas/fases:
+    get:
+      summary: Lista o catálogo de fases de produção
+      tags: [fichas tecnicas]
+      responses:
+        "200":
+          description: Fases disponíveis
+
+  /api/fichas-tecnicas/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+    get:
+      summary: Detalha uma ficha técnica
+      tags: [fichas tecnicas]
+      responses:
+        "200":
+          description: Ficha completa
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FichaTecnica"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+    put:
+      summary: Substitui dados, fases e componentes da ficha em uma transação
+      tags: [fichas tecnicas]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/FichaTecnicaEntrada"}
+      responses:
+        "200":
+          description: Ficha atualizada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FichaTecnica"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+        "409": {description: Conflito com outra ficha}
+    delete:
+      summary: Exclui ficha sem histórico de produção
+      tags: [fichas tecnicas]
+      responses:
+        "204": {description: Ficha excluída}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+        "409": {description: A ficha já possui solicitações de produção}
+
+  /api/estoque/inventario:
+    get:
+      summary: Lista o inventário atual (view vw_inventario, só lotes com saldo > 0)
+      tags: [estoque]
+      parameters:
+        - {name: produto_id, in: query, schema: {type: integer, minimum: 1}}
+        - {name: lote_id, in: query, schema: {type: integer, minimum: 1}}
+      responses:
+        "200":
+          description: Itens em estoque, ordenados por produto, validade e lote
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/ItemInventario"}
+        "400": {$ref: "#/components/responses/Invalido"}
+
+  /api/estoque/movimentacoes:
+    get:
+      summary: Lista as movimentações de estoque mais recentes
+      tags: [estoque]
+      parameters:
+        - {name: limite, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 100}}
+        - {name: lote_id, in: query, schema: {type: integer, minimum: 1}}
+        - {name: usuario_id, in: query, schema: {type: integer, minimum: 1}}
+        - {name: tipo, in: query, schema: {type: string}, description: "Comparado em maiúsculas; sem validação contra o enum"}
+      responses:
+        "200":
+          description: Movimentações, mais recentes primeiro
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/Movimentacao"}
+        "400": {$ref: "#/components/responses/Invalido"}
+    post:
+      summary: Registra uma movimentação e atualiza o saldo na mesma transação
+      tags: [estoque]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/MovimentacaoCriar"}
+      responses:
+        "201":
+          description: Movimentação registrada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Movimentacao"}
+        "400": {$ref: "#/components/responses/Invalido"}
+
+  /api/estoque/transformacoes:
+    get:
+      summary: Lista transformações de produto cadastradas
+      tags: [estoque]
+      parameters:
+        - {name: produto_origem_id, in: query, schema: {type: integer, minimum: 1}}
+      responses:
+        "200":
+          description: Produtos de destino permitidos para transformação
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/TransformacaoDisponivel"}
+        "400": {$ref: "#/components/responses/Invalido"}
+    post:
+      summary: Cadastra uma transformação permitida entre dois produtos
+      tags: [estoque]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/TransformacaoCriar"}
+      responses:
+        "201":
+          description: Transformação cadastrada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TransformacaoDisponivel"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+        "409": {description: Par duplicado ou unidades incompatíveis}
+
+  /api/estoque/transformacoes/{produto_origem_id}/{produto_destino_id}:
+    parameters:
+      - {name: produto_origem_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      - {name: produto_destino_id, in: path, required: true, schema: {type: integer, minimum: 1}}
+    delete:
+      summary: Remove uma transformação permitida
+      tags: [estoque]
+      responses:
+        "204": {description: Transformação removida}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+
+  /api/estoque/localizacoes:
+    get:
+      summary: Lista localizações (ordenadas por nome)
+      tags: [estoque]
+      responses:
+        "200":
+          description: Lista de localizações
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/Localizacao"}
+    post:
+      summary: Cria localização
+      tags: [estoque]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/LocalizacaoCriar"}
+      responses:
+        "201":
+          description: Localização criada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Localizacao"}
+        "400": {$ref: "#/components/responses/Invalido"}
+
+  /api/estoque/localizacoes/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+    put:
+      summary: Atualiza localização (parcial; bloqueia hierarquia circular e troca de tipo incompatível com lotes existentes)
+      tags: [estoque]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/LocalizacaoCampos"}
+      responses:
+        "200":
+          description: Localização atualizada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Localizacao"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+    delete:
+      summary: Remove localização
+      tags: [estoque]
+      responses:
+        "204": {description: Localização removida}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+
+  /api/estoque/lotes:
+    get:
+      summary: Lista lotes (com nome do produto e da localização)
+      tags: [estoque]
+      parameters:
+        - {name: produto_id, in: query, schema: {type: integer, minimum: 1}}
+        - {name: localizacao_id, in: query, schema: {type: integer, minimum: 1}}
+      responses:
+        "200":
+          description: Lotes, ordenados por validade (sem validade por último) e id
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/LoteListado"}
+        "400": {$ref: "#/components/responses/Invalido"}
+    post:
+      summary: Cria lote (quantidade inicia em 0; só é alterada por movimentação)
+      tags: [estoque]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/LoteCriar"}
+      responses:
+        "201":
+          description: Lote criado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Lote"}
+        "400": {$ref: "#/components/responses/Invalido"}
+
+  /api/estoque/lotes/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+    get:
+      summary: Detalha lote
+      tags: [estoque]
+      responses:
+        "200":
+          description: Lote
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Lote"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+    put:
+      summary: Atualiza lote (somente datas e custo; saldo muda só por movimentação)
+      tags: [estoque]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/LoteAtualizarCampos"}
+      responses:
+        "200":
+          description: Lote atualizado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Lote"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+
+  /api/estoque/sugestao-saida/{produto_id}:
+    parameters:
+      - {name: produto_id, in: path, required: true, schema: {type: integer}}
+    get:
+      summary: Sugere lotes para separar uma saída pelo critério FEFO (não movimenta o estoque)
+      tags: [estoque]
+      parameters:
+        - {name: quantidade, in: query, required: true, schema: {type: number, minimum: 0, exclusiveMinimum: true}}
+      responses:
+        "200":
+          description: Sugestão de separação
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SugestaoSaida"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+
+  /api/producao/solicitacoes:
+    get:
+      summary: Lista solicitações de produção (mais recentes primeiro)
+      tags: [producao]
+      responses:
+        "200":
+          description: Lista de solicitações
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/SolicitacaoProducao"}
+    post:
+      summary: Cria um planejamento de produção a partir de uma ficha técnica
+      tags: [producao]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ficha_tecnica_id]
+              properties:
+                ficha_tecnica_id: {type: integer, minimum: 1}
+                quantidade_planejada: {type: number, exclusiveMinimum: 0, nullable: true, description: Se omitida usa o rendimento da ficha}
+                prioridade: {type: string, enum: [BAIXA, NORMAL, ALTA, URGENTE], default: NORMAL}
+                previsto_para: {type: string, format: date-time, nullable: true}
+                responsavel_id: {type: integer, minimum: 1, nullable: true, description: Usuário ativo designado para executar}
+                observacao: {type: string, nullable: true, maxLength: 2000}
+      responses:
+        "201":
+          description: Solicitação criada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SolicitacaoProducao"}
+
+  /api/producao/solicitacoes/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+    get:
+      summary: Detalha solicitação de produção (componentes, fases e lotes produzidos)
+      tags: [producao]
+      responses:
+        "200":
+          description: Solicitação detalhada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SolicitacaoDetalhe"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+
+  /api/producao/solicitacoes/{id}/status:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+    put:
+      summary: Atualiza o estado de uma solicitação
+      description: Ao mudar de EM_PRODUCAO para CONCLUIDA, o backend baixa os componentes por FEFO, cria o lote do produto acabado e registra PRODUCAO na mesma transação.
+      tags: [producao]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [ABERTA, EM_SEPARACAO, EM_PRODUCAO, CONCLUIDA, CANCELADA]}
+                localizacao_destino_id: {type: integer, minimum: 1, nullable: true, description: Opcional e aceito somente ao concluir; se omitido, usa a primeira localização compatível com a conservação do produto}
+      responses:
+        "200":
+          description: Solicitação atualizada; na conclusão, componentes são baixados por FEFO e o produto acabado entra no estoque
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SolicitacaoProducao"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+        "409": {$ref: "#/components/responses/Conflito"}
+
+  /api/producao/solicitacoes/{id}/execucao:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+    put:
+      summary: Registra dados reais da execução de uma produção em andamento
+      tags: [producao]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ExecucaoProducaoInput"}
+      responses:
+        "200":
+          description: Execução registrada; retorna o detalhe atualizado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SolicitacaoDetalhe"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+        "409": {$ref: "#/components/responses/Conflito"}
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+  schemas:
+    Usuario:
+      type: object
+      properties:
+        id: {type: integer}
+        nome: {type: string}
+        username: {type: string}
+        papel: {type: string, enum: [OWNER, ADMIN, USER]}
+        ativo: {type: integer, enum: [0, 1]}
+        deve_trocar_senha: {type: integer, enum: [0, 1]}
+    ProdutoCampos:
+      type: object
+      properties:
+        nome: {type: string, example: Farinha de trigo}
+        tipo: {type: string, enum: [INSUMO, INTERMEDIARIO, FINAL]}
+        unidade_medida: {type: string, example: g}
+        grupo_id: {type: integer, nullable: true, description: FK para grupo_produto}
+        conservacao: {type: string, enum: [CONGELADO, RESFRIADO, SECO], default: SECO}
+        validade_obrigatoria: {type: integer, enum: [0, 1], default: 0}
+        validade_padrao_dias: {type: integer, nullable: true}
+        foto_url: {type: string, nullable: true}
+    ProdutoCriar:
+      allOf:
+        - $ref: "#/components/schemas/ProdutoCampos"
+        - required: [nome, tipo, unidade_medida]
+    Produto:
+      allOf:
+        - $ref: "#/components/schemas/ProdutoCampos"
+        - type: object
+          properties:
+            id: {type: integer}
+            ativo: {type: integer, enum: [0, 1]}
+            criado_em: {type: string, example: "2026-10-16 15:46:39"}
+
+    FichaFaseEntrada:
+      type: object
+      required: [fase_id, ordem, tempo_previsto_min]
+      properties:
+        fase_id: {type: integer, minimum: 1}
+        ordem: {type: integer, minimum: 1}
+        tempo_previsto_min: {type: integer, minimum: 1}
+    FichaComponenteEntrada:
+      type: object
+      required: [produto_id, quantidade]
+      properties:
+        produto_id: {type: integer, minimum: 1}
+        quantidade: {type: number, exclusiveMinimum: 0}
+        fase_ordem: {type: integer, minimum: 1, nullable: true}
+    FichaTecnicaEntrada:
+      type: object
+      required: [produto_id, rendimento, fases, componentes]
+      properties:
+        produto_id: {type: integer, minimum: 1, description: Produto intermediário ou final}
+        rendimento: {type: number, exclusiveMinimum: 0}
+        observacao: {type: string, nullable: true}
+        fases:
+          type: array
+          minItems: 1
+          items: {$ref: "#/components/schemas/FichaFaseEntrada"}
+        componentes:
+          type: array
+          minItems: 1
+          items: {$ref: "#/components/schemas/FichaComponenteEntrada"}
+    FichaTecnica:
+      allOf:
+        - $ref: "#/components/schemas/FichaTecnicaEntrada"
+        - type: object
+          properties:
+            id: {type: integer}
+            produto: {type: string}
+            unidade_rendimento: {type: string}
+
+    LocalizacaoCampos:
+      type: object
+      properties:
+        nome: {type: string, example: "Câmara Fria"}
+        tipo: {type: string, enum: [SECO, RESFRIADO, CONGELADO], default: SECO}
+        parent_id: {type: integer, nullable: true, minimum: 1, description: FK para localizacao (hierarquia não pode ser circular)}
+        foto_url: {type: string, nullable: true}
+    LocalizacaoCriar:
+      allOf:
+        - $ref: "#/components/schemas/LocalizacaoCampos"
+        - required: [nome]
+    Localizacao:
+      allOf:
+        - $ref: "#/components/schemas/LocalizacaoCampos"
+        - type: object
+          properties:
+            id: {type: integer}
+
+    LoteCampos:
+      type: object
+      properties:
+        produto_id: {type: integer, minimum: 1, description: Produto precisa estar ativo}
+        localizacao_id: {type: integer, minimum: 1, description: Conservação do produto precisa ser compatível com o tipo da localização}
+        data_producao: {type: string, format: date, nullable: true, example: "2026-01-01"}
+        data_validade: {type: string, format: date, nullable: true, description: Obrigatória se o produto exigir validade}
+        custo_unitario: {type: number, minimum: 0, nullable: true}
+    LoteCriar:
+      allOf:
+        - $ref: "#/components/schemas/LoteCampos"
+        - required: [produto_id, localizacao_id]
+    LoteAtualizarCampos:
+      type: object
+      description: Somente estes três campos podem ser editados; saldo muda por movimentação
+      properties:
+        data_producao: {type: string, format: date, nullable: true}
+        data_validade: {type: string, format: date, nullable: true}
+        custo_unitario: {type: number, minimum: 0, nullable: true}
+    Lote:
+      allOf:
+        - $ref: "#/components/schemas/LoteCampos"
+        - type: object
+          properties:
+            id: {type: integer}
+            quantidade: {type: number, description: Atualizada na mesma transação da movimentação}
+            criado_em: {type: string, example: "2026-10-16 15:46:39"}
+    LoteListado:
+      description: Lote com o nome do produto e da localização (retornado por GET /api/estoque/lotes)
+      allOf:
+        - $ref: "#/components/schemas/Lote"
+        - type: object
+          properties:
+            produto: {type: string}
+            localizacao: {type: string}
+
+    MovimentacaoCriar:
+      type: object
+      required: [tipo, lote_id, quantidade]
+      properties:
+        tipo:
+          type: string
+          enum: [ENTRADA, SAIDA, AJUSTE_ENTRADA, AJUSTE_SAIDA, TRANSFERENCIA, TRANSFORMACAO, PERDA]
+          description: PRODUCAO e CONSUMO_PRODUCAO são reservados ao módulo de produção; PERDA também pode ser registrada pela execução da produção com vínculo ao componente
+        lote_id: {type: integer, minimum: 1}
+        usuario_id: {type: integer, minimum: 1, deprecated: true, description: Campo legado ignorado; a autoria vem da sessão autenticada}
+        quantidade: {type: number, minimum: 0, exclusiveMinimum: true}
+        lote_destino_id: {type: integer, minimum: 1, nullable: true, description: Compatibilidade legada para TRANSFERENCIA/TRANSFORMACAO; precisa ser diferente de lote_id}
+        produto_destino_id: {type: integer, minimum: 1, nullable: true, description: Forma preferencial de TRANSFORMACAO; deve formar um par cadastrado com o produto de origem}
+        localizacao_destino_id: {type: integer, minimum: 1, nullable: true, description: Forma preferencial de TRANSFERENCIA e TRANSFORMACAO; o backend cria ou reutiliza lote compatível na localização}
+        quantidade_destino: {type: number, minimum: 0, exclusiveMinimum: true, nullable: true, description: Obrigatória apenas para TRANSFORMACAO}
+        motivo: {type: string, nullable: true, description: Obrigatório para SAIDA/AJUSTE_ENTRADA/AJUSTE_SAIDA/PERDA}
+        observacao: {type: string, nullable: true}
+    Movimentacao:
+      type: object
+      properties:
+        id: {type: integer}
+        tipo: {type: string}
+        lote_id: {type: integer}
+        lote_destino_id: {type: integer, nullable: true}
+        quantidade: {type: number}
+        quantidade_destino: {type: number, nullable: true}
+        motivo: {type: string, nullable: true}
+        usuario_id: {type: integer}
+        solicitacao_producao_id: {type: integer, nullable: true}
+        sp_componente_id: {type: integer, nullable: true}
+        observacao: {type: string, nullable: true}
+        perda_transformacao: {type: number, nullable: true, description: Diferença entre quantidade de origem e resultante quando positiva}
+        rendimento_percentual: {type: number, nullable: true, description: quantidade_destino / quantidade * 100}
+        criado_em: {type: string, example: "2026-10-16 15:46:39"}
+
+    TransformacaoCriar:
+      type: object
+      required: [produto_origem_id, produto_destino_id]
+      properties:
+        produto_origem_id: {type: integer, minimum: 1}
+        produto_destino_id: {type: integer, minimum: 1}
+
+    TransformacaoDisponivel:
+      type: object
+      properties:
+        produto_origem_id: {type: integer}
+        produto_destino_id: {type: integer}
+        produto_destino: {type: string}
+        unidade_medida: {type: string}
+        conservacao: {type: string, enum: [SECO, RESFRIADO, CONGELADO]}
+
+    ItemInventario:
+      type: object
+      description: Linha da view vw_inventario (somente lotes com saldo > 0)
+      properties:
+        produto_id: {type: integer}
+        produto: {type: string}
+        tipo_produto: {type: string, enum: [INSUMO, INTERMEDIARIO, FINAL]}
+        unidade_medida: {type: string}
+        lote_id: {type: integer}
+        quantidade: {type: number}
+        data_validade: {type: string, format: date, nullable: true}
+        localizacao: {type: string}
+
+    LoteSugerido:
+      type: object
+      properties:
+        lote_id: {type: integer}
+        quantidade: {type: number, description: Quantidade sugerida deste lote (pode ser menor que o saldo do lote)}
+        data_validade: {type: string, format: date, nullable: true}
+    SugestaoSaida:
+      type: object
+      properties:
+        produto_id: {type: integer}
+        quantidade_solicitada: {type: number}
+        lotes:
+          type: array
+          items: {$ref: "#/components/schemas/LoteSugerido"}
+        quantidade_faltante: {type: number, description: "> 0 se não havia saldo suficiente em lotes não vencidos"}
+        criterio: {type: string, example: "FEFO: menor validade primeiro (somente lotes não vencidos)"}
+        aviso: {type: string, example: "Sugestão de separação: não movimenta o estoque"}
+
+    SolicitacaoProducao:
+      type: object
+      properties:
+        id: {type: integer}
+        ficha_tecnica_id: {type: integer}
+        usuario_id: {type: integer, description: Usuário que criou a solicitação}
+        responsavel_id: {type: integer, nullable: true, description: Usuário designado para executar}
+        quantidade_planejada: {type: number, exclusiveMinimum: 0}
+        quantidade_produzida: {type: number, minimum: 0, nullable: true, description: Quantidade efetivamente produzida}
+        prioridade: {type: string, enum: [BAIXA, NORMAL, ALTA, URGENTE]}
+        previsto_para: {type: string, format: date-time, nullable: true}
+        observacao: {type: string, nullable: true, description: Observação do planejamento}
+        observacao_execucao: {type: string, nullable: true, description: Observação registrada durante a execução}
+        status: {type: string, enum: [ABERTA, EM_SEPARACAO, EM_PRODUCAO, CONCLUIDA, CANCELADA]}
+        criado_em: {type: string, example: "2026-10-16 15:46:39"}
+        iniciado_em: {type: string, nullable: true}
+        concluido_em: {type: string, nullable: true}
+        perda_rendimento: {type: number, nullable: true, minimum: 0, description: max(quantidade_planejada - quantidade_produzida, 0); representa rendimento não produzido e não movimenta estoque}
+    ComponenteSolicitacao:
+      type: object
+      description: Linha da view vw_sp_componente
+      properties:
+        sp_componente_id: {type: integer}
+        solicitacao_producao_id: {type: integer}
+        produto_id: {type: integer}
+        componente: {type: string, description: Nome do produto componente}
+        unidade_medida: {type: string}
+        fase_ordem: {type: integer, nullable: true}
+        fase: {type: string, nullable: true}
+        quantidade_prevista: {type: number}
+        quantidade_realizada: {type: number, description: Somatório de CONSUMO_PRODUCAO e PERDA ligados ao componente}
+        custo_realizado: {type: number, nullable: true}
+    FaseExecucaoInput:
+      type: object
+      required: [sp_fase_id]
+      properties:
+        sp_fase_id: {type: integer, minimum: 1}
+        tempo_realizado_min: {type: integer, minimum: 0, nullable: true}
+        observacao: {type: string, nullable: true, maxLength: 2000}
+        iniciado_em: {type: string, format: date-time, nullable: true}
+        finalizado_em: {type: string, format: date-time, nullable: true}
+    PerdaProducaoInput:
+      type: object
+      required: [sp_componente_id, quantidade, motivo]
+      properties:
+        sp_componente_id: {type: integer, minimum: 1}
+        quantidade: {type: number, exclusiveMinimum: 0}
+        motivo: {type: string, minLength: 1, maxLength: 500}
+      description: Desperdício adicional de um componente. O estoque é baixado por FEFO e registrado como movimentação PERDA.
+    ExecucaoProducaoInput:
+      type: object
+      properties:
+        quantidade_produzida: {type: number, minimum: 0, nullable: true}
+        observacao_execucao: {type: string, nullable: true, maxLength: 2000}
+        fases:
+          type: array
+          items: {$ref: "#/components/schemas/FaseExecucaoInput"}
+        perdas:
+          type: array
+          items: {$ref: "#/components/schemas/PerdaProducaoInput"}
+      description: Pelo menos quantidade_produzida, observacao_execucao, uma fase ou uma perda deve ser informada. A produção precisa estar EM_PRODUCAO.
+    FaseSolicitacao:
+      type: object
+      properties:
+        sp_fase_id: {type: integer}
+        fase_id: {type: integer, description: Referência ao catálogo original}
+        ordem: {type: integer}
+        fase: {type: string, description: Snapshot histórico do nome da fase}
+        tempo_previsto_min: {type: integer}
+        tempo_realizado_min: {type: integer, nullable: true}
+        observacao: {type: string, nullable: true}
+        iniciado_em: {type: string, format: date-time, nullable: true}
+        finalizado_em: {type: string, format: date-time, nullable: true}
+    LoteProduzido:
+      type: object
+      description: Linha da view vw_sp_producao (movimentações do tipo PRODUCAO)
+      properties:
+        solicitacao_producao_id: {type: integer}
+        lote_id: {type: integer}
+        quantidade: {type: number}
+        criado_em: {type: string, example: "2026-10-16 15:46:39"}
+    SolicitacaoDetalhe:
+      type: object
+      properties:
+        solicitacao: {$ref: "#/components/schemas/SolicitacaoProducao"}
+        componentes:
+          type: array
+          items: {$ref: "#/components/schemas/ComponenteSolicitacao"}
+        fases:
+          type: array
+          items: {$ref: "#/components/schemas/FaseSolicitacao"}
+        lotes_produzidos:
+          type: array
+          items: {$ref: "#/components/schemas/LoteProduzido"}
+
+    Erro:
+      type: object
+      properties:
+        erro: {type: string}
+  responses:
+    Invalido:
+      description: Corpo ou parâmetros inválidos, ou violação de regra de negócio
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Erro"}
+    NaoEncontrado:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Erro"}
+    Conflito:
+      description: Conflito de estado ou estoque insuficiente para concluir a operação
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Erro"}

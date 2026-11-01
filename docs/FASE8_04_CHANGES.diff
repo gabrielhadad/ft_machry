@@ -1,0 +1,3121 @@
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/.pytest_cache/.gitignore /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/.pytest_cache/.gitignore
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/.pytest_cache/.gitignore	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/.pytest_cache/.gitignore	2026-11-01 04:26:24.826907450 +0000
+@@ -0,0 +1,2 @@
++# Created by pytest automatically.
++*
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/.pytest_cache/CACHEDIR.TAG /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/.pytest_cache/CACHEDIR.TAG
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/.pytest_cache/CACHEDIR.TAG	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/.pytest_cache/CACHEDIR.TAG	2026-11-01 04:26:24.826930094 +0000
+@@ -0,0 +1,4 @@
++Signature: 8a477f597d28d172789f06886806bc55
++# This file is a cache directory tag created by pytest.
++# For information about cache directory tags, see:
++#	https://bford.info/cachedir/spec.html
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/.pytest_cache/README.md /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/.pytest_cache/README.md
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/.pytest_cache/README.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/.pytest_cache/README.md	2026-11-01 04:26:24.826873610 +0000
+@@ -0,0 +1,8 @@
++# pytest cache directory #
++
++This directory contains data from the pytest's cache plugin,
++which provides the `--lf` and `--ff` options, as well as the `cache` fixture.
++
++**Do not** commit this to version control.
++
++See [the docs](https://docs.pytest.org/en/stable/how-to/cache.html) for more information.
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/.pytest_cache/v/cache/nodeids /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/.pytest_cache/v/cache/nodeids
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/.pytest_cache/v/cache/nodeids	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/.pytest_cache/v/cache/nodeids	2026-11-01 04:28:41.867965782 +0000
+@@ -0,0 +1,47 @@
++[
++  "tests/test_baseline_contracts.py::test_api_privada_exige_autenticacao",
++  "tests/test_baseline_contracts.py::test_health_check_publico",
++  "tests/test_baseline_contracts.py::test_rotas_criticas_do_frontend_continuam_registradas",
++  "tests/test_domain_consolidation.py::test_catalogo_nao_pode_exigir_validade_com_lote_sem_validade",
++  "tests/test_domain_consolidation.py::test_catalogo_nao_pode_invalidar_conservacao_de_lote",
++  "tests/test_domain_consolidation.py::test_dominios_legados_nao_estao_no_metadata",
++  "tests/test_domain_consolidation.py::test_fefo_prioriza_validade_e_deixa_sem_validade_por_ultimo",
++  "tests/test_domain_consolidation.py::test_rotas_legadas_do_gap_nao_estao_expostas",
++  "tests/test_domain_consolidation.py::test_usuario_pertence_ao_dominio_auth",
++  "tests/test_estoque.py::test_atualizar_lote",
++  "tests/test_estoque.py::test_crud_localizacao",
++  "tests/test_estoque.py::test_dados_invalidos_e_rollback",
++  "tests/test_estoque.py::test_estoque_com_seeds",
++  "tests/test_estoque.py::test_inventario",
++  "tests/test_estoque.py::test_localizacao_nao_pode_invalidar_lote",
++  "tests/test_estoque.py::test_localizacao_validacoes",
++  "tests/test_estoque.py::test_lotes_listagem_e_detalhe",
++  "tests/test_estoque.py::test_movimentacoes_listagem_e_filtros",
++  "tests/test_estoque.py::test_sugestao_saida_validacoes",
++  "tests/test_estoque.py::test_transformacao_e_transferencia",
++  "tests/test_estoque.py::test_validacoes",
++  "tests/test_fichas_tecnicas.py::test_crud_ficha_tecnica",
++  "tests/test_fichas_tecnicas.py::test_regras_da_ficha",
++  "tests/test_fichas_tecnicas.py::test_regras_estruturais_da_ficha",
++  "tests/test_migrations.py::test_baseline_alembic_cria_schema_e_views",
++  "tests/test_migrations.py::test_migration_planejamento_preserva_solicitacoes_existentes",
++  "tests/test_producao.py::test_criacao_legada_usa_rendimento_da_ficha",
++  "tests/test_producao.py::test_criar_solicitacao_com_ficha_inexistente",
++  "tests/test_producao.py::test_criar_solicitacao_por_endpoint",
++  "tests/test_producao.py::test_detalhe_inexistente",
++  "tests/test_producao.py::test_iniciar_producao_registra_inicio",
++  "tests/test_producao.py::test_lista_e_detalhe_com_dados",
++  "tests/test_producao.py::test_lista_vazia",
++  "tests/test_producao.py::test_planejamento_escala_componentes_pelo_rendimento",
++  "tests/test_producao.py::test_planejamento_rejeita_data_invalida",
++  "tests/test_producao.py::test_planejamento_rejeita_prioridade_invalida",
++  "tests/test_producao.py::test_planejamento_rejeita_quantidade_invalida",
++  "tests/test_producao.py::test_planejamento_rejeita_responsavel_inexistente",
++  "tests/test_producao.py::test_transicao_de_status_invalida",
++  "tests/test_produtos.py::test_crud_completo",
++  "tests/test_produtos.py::test_docs",
++  "tests/test_produtos.py::test_inexistente",
++  "tests/test_produtos.py::test_lista_ordenada_por_nome",
++  "tests/test_produtos.py::test_seeds",
++  "tests/test_produtos.py::test_validacao"
++]
+\ No newline at end of file
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/COZINHA_MAIS_LEIA-ME.md /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/COZINHA_MAIS_LEIA-ME.md
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/COZINHA_MAIS_LEIA-ME.md	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/COZINHA_MAIS_LEIA-ME.md	2026-11-01 04:28:13.580064274 +0000
+@@ -1,31 +1,36 @@
+-# Cozinha Mais — pacote completo de desenvolvimento
+-
+-Esta pasta contém o projeto inteiro da branch `yuri` fornecida pelo usuário, com as alterações de frontend adicionadas. **Nenhum commit, push ou PR foi criado.**
+-
+-## Executar localmente
+-
+-Windows: execute `run.bat` (ou `run.bat --seed` apenas para dados demonstrativos em um banco novo). Requisitos: Python 3.12+, Node.js 22+ e npm. Aguarde as instalações e abra **http://localhost:8080**. O script abre uma janela para a API Flask (5000) e mantém o Vite na janela principal (8080). Para acesso na rede local, use `http://IP_DO_PC:8080` e libere a porta 8080 no firewall, se necessário. A API Flask fica em loopback; o proxy do Vite encaminha `/api`.
+-
+-Linux/macOS: `./run.sh`. Não execute scripts de desenvolvimento diretamente na OCI de produção.
+-
+-Docker/OCI: `docker-compose.yml`, `frontend/nginx.conf` e os Dockerfiles originais foram preservados. A conexão DBeaver ao PostgreSQL via `127.0.0.1:5432` só funciona no próprio host ou por túnel SSH. PostgreSQL exige o profile `postgres` e configuração do banco; a publicação da porta não significa que o serviço está rodando.
+-
+-## Melhorias de frontend
+-
+-- Nome Cozinha Mais em login, barra lateral, carregamento e título; monograma textual C+ provisório.
+-- Tela de usuários para OWNER (criar, editar, redefinir senha pelo proprietário, ativar/desativar; sem exclusão).
+-- Localizações: criar, editar e excluir, respeitando restrições do backend.
+-- Movimentações: consulta dos últimos 500 registros, com filtros de lote, produto, tipo, usuário e datas.
+-- Estoque: transferência entre lotes do mesmo produto, transformação entre produtos com rendimento e edição de datas/custo de lote.
+-- Ajustes de estoque já disponíveis no formulário de movimentação, com motivo obrigatório quando exigido pela API.
+-- Impressão simplificada da fila de produção.
+-- Correção no formulário de nova entrada: após criar lote, uma falha no movimento não cria outro lote em uma nova tentativa.
+-- Vite proxy para API, execução local integrada por `run.bat` e `run.sh`.
+-
+-## Pendências que dependem de backend/DevOps
+-
+-Planejamento com quantidade, prioridade e horários persistidos; baixa automática FEFO na conclusão de produção; geração de produto acabado; senha própria/primeiro login; rate limit/auditoria; alerta de estoque mínimo; migrações; backup; testes de implantação; TLS e segredos de produção. **Não são anunciados como implementados.** Transformação pela API exige lote de destino preexistente. O histórico está limitado aos 500 registros mais recentes retornados pela API.
+-
+-## Importante para a equipe
+-
+-O nome do repositório e variáveis históricas de banco (`ft_machry`, `machry`) foram preservados para não quebrar infraestrutura. O nome exibido ao usuário é Cozinha Mais. O script local força SQLite e não altera o banco PostgreSQL do Docker.
++# Cozinha Mais — pacote completo de desenvolvimento
++
++Esta pasta contém o projeto inteiro da branch `yuri` fornecida pelo usuário, com as alterações de frontend adicionadas. **Nenhum commit, push ou PR foi criado.**
++
++## Executar localmente
++
++Windows: execute `run.bat` (ou `run.bat --seed` apenas para dados demonstrativos em um banco novo). Requisitos: Python 3.12+, Node.js 22+ e npm. Aguarde as instalações e abra **http://localhost:8080**. O script abre uma janela para a API Flask (5000) e mantém o Vite na janela principal (8080). Para acesso na rede local, use `http://IP_DO_PC:8080` e libere a porta 8080 no firewall, se necessário. A API Flask fica em loopback; o proxy do Vite encaminha `/api`.
++
++Linux/macOS: `./run.sh`. Não execute scripts de desenvolvimento diretamente na OCI de produção.
++
++Docker/OCI: `docker-compose.yml`, `frontend/nginx.conf` e os Dockerfiles originais foram preservados. A conexão DBeaver ao PostgreSQL via `127.0.0.1:5432` só funciona no próprio host ou por túnel SSH. PostgreSQL exige o profile `postgres` e configuração do banco; a publicação da porta não significa que o serviço está rodando.
++
++## Melhorias de frontend
++
++- Nome Cozinha Mais em login, barra lateral, carregamento e título; monograma textual C+ provisório.
++- Tela de usuários para OWNER (criar, editar, redefinir senha pelo proprietário, ativar/desativar; sem exclusão).
++- Localizações: criar, editar e excluir, respeitando restrições do backend.
++- Movimentações: consulta dos últimos 500 registros, com filtros de lote, produto, tipo, usuário e datas.
++- Estoque: transferência entre lotes do mesmo produto, transformação entre produtos com rendimento e edição de datas/custo de lote.
++- Ajustes de estoque já disponíveis no formulário de movimentação, com motivo obrigatório quando exigido pela API.
++- Impressão simplificada da fila de produção.
++- Correção no formulário de nova entrada: após criar lote, uma falha no movimento não cria outro lote em uma nova tentativa.
++- Vite proxy para API, execução local integrada por `run.bat` e `run.sh`.
++
++## Pendências que dependem de backend/DevOps
++
++Baixa automática FEFO na conclusão de produção; geração de produto acabado; senha própria/primeiro login; rate limit/auditoria; alerta de estoque mínimo; backup; testes de implantação; TLS e segredos de produção. **Não são anunciados como implementados.** Transformação pela API exige lote de destino preexistente. O histórico está limitado aos 500 registros mais recentes retornados pela API.
++
++## Importante para a equipe
++
++O nome do repositório e variáveis históricas de banco (`ft_machry`, `machry`) foram preservados para não quebrar infraestrutura. O nome exibido ao usuário é Cozinha Mais. O script local força SQLite e não altera o banco PostgreSQL do Docker.
++
++
++## Evolução — Fase 8.4
++
++O backend agora persiste planejamento de produção com quantidade, prioridade, data/horário, responsável e observação. Componentes da ficha são escalados automaticamente pelo rendimento. A interface React ainda usa o payload legado (somente ficha), que permanece compatível; a experiência visual de planejamento será expandida na fase específica de alinhamento do frontend.
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/README.md /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/README.md
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/README.md	2026-11-01 04:15:05.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/README.md	2026-11-01 04:28:13.579984946 +0000
+@@ -9,7 +9,8 @@
+ - Validações de domínio recuperadas do projeto anterior.
+ - Lotes, localizações, movimentações e sugestão de saída por FEFO.
+ - Estoque geral de insumos, produtos intermediários e produtos finais, com entradas, saídas e ajustes pela interface.
+-- Consulta das solicitações de produção.
++- Planejamento de produção com quantidade, prioridade, horário previsto, responsável e observação.
++- Escala automática dos componentes da ficha técnica conforme a quantidade planejada.
+ - Interface responsiva para produtos e fichas técnicas.
+ - Login por sessão com perfis de proprietária, gestor e cozinha.
+ - Swagger em `/docs`.
+@@ -175,3 +176,14 @@
+ `Usuario` agora pertence ao módulo `auth`, enquanto estoque apenas referencia o responsável pelas movimentações. O catálogo também protege invariantes cruzadas: uma mudança de conservação não pode invalidar localizações de lotes existentes e validade obrigatória não pode ser ativada enquanto houver lote sem validade.
+ 
+ A nomenclatura histórica FIFO foi corrigida para FEFO pela migration `8a3c1d4e5f67`. Veja [`docs/FASE8_03.md`](docs/FASE8_03.md) para as decisões e validações desta etapa.
++
++
++## Fase 8.4 — planejamento de produção
++
++`SolicitacaoProducao` agora representa um planejamento operacional, sem criar uma segunda entidade de processamento. Além da ficha e do usuário solicitante, a solicitação registra quantidade planejada, prioridade, horário previsto, responsável, observação e horário real de início.
++
++O contrato antigo continua compatível: se `quantidade_planejada` não for enviada, o backend usa o rendimento original da ficha. Ao informar uma quantidade diferente, os componentes são escalados pela razão `quantidade_planejada / rendimento_da_ficha`.
++
++Exemplo: uma ficha com rendimento 10 e 5 kg de um componente, quando planejada para 20 unidades, gera 10 kg como `quantidade_prevista` do componente.
++
++A migration `b7d9e2f4a610` adiciona os campos de planejamento e preenche solicitações antigas usando o rendimento da ficha correspondente. Veja [`docs/FASE8_04.md`](docs/FASE8_04.md).
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/app/features/producao/models.py /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/app/features/producao/models.py
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/app/features/producao/models.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/app/features/producao/models.py	2026-11-01 04:25:28.978186714 +0000
+@@ -1,115 +1,137 @@
+-from __future__ import annotations
+-
+-from dataclasses import dataclass
+-from typing import Optional
+-
+-from db.database_config import db
+-
+-
+-class SolicitacaoProducao(db.Model):
+-    __tablename__ = "solicitacao_producao"
+-    __table_args__ = (
+-        db.CheckConstraint(
+-            "status IN ('ABERTA', 'EM_SEPARACAO', 'EM_PRODUCAO', 'CONCLUIDA', 'CANCELADA')",
+-            name="ck_solicitacao_status",
+-        ),
+-    )
+-
+-    id = db.Column(db.Integer, primary_key=True)
+-    ficha_tecnica_id = db.Column(
+-        db.Integer, db.ForeignKey("ficha_tecnica.id"), nullable=False
+-    )
+-    usuario_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
+-    status = db.Column(db.Text, nullable=False, default="ABERTA", server_default="ABERTA")
+-    criado_em = db.Column(
+-        db.String,
+-        nullable=False,
+-        server_default=db.text("(CAST(CURRENT_TIMESTAMP AS TEXT))"),
+-    )
+-    concluido_em = db.Column(db.String)
+-
+-
+-class SpFase(db.Model):
+-    __tablename__ = "sp_fase"
+-    __table_args__ = (
+-        db.UniqueConstraint(
+-            "solicitacao_producao_id", "ordem", name="uq_sp_fase_ordem"
+-        ),
+-    )
+-
+-    id = db.Column(db.Integer, primary_key=True)
+-    solicitacao_producao_id = db.Column(
+-        db.Integer, db.ForeignKey("solicitacao_producao.id"), nullable=False
+-    )
+-    fase_id = db.Column(db.Integer, db.ForeignKey("fase_producao.id"), nullable=False)
+-    ordem = db.Column(db.Integer, nullable=False)
+-    tempo_previsto_min = db.Column(db.Integer, nullable=False)
+-    tempo_realizado_min = db.Column(db.Integer)
+-
+-
+-class SpComponente(db.Model):
+-    __tablename__ = "sp_componente"
+-    __table_args__ = (
+-        db.UniqueConstraint(
+-            "solicitacao_producao_id", "produto_id", name="uq_sp_componente_produto"
+-        ),
+-        db.CheckConstraint("quantidade_prevista > 0", name="ck_sp_quantidade_prevista"),
+-    )
+-
+-    id = db.Column(db.Integer, primary_key=True)
+-    solicitacao_producao_id = db.Column(
+-        db.Integer, db.ForeignKey("solicitacao_producao.id"), nullable=False
+-    )
+-    produto_id = db.Column(db.Integer, db.ForeignKey("produto.id"), nullable=False)
+-    quantidade_prevista = db.Column(db.Numeric(asdecimal=False), nullable=False)
+-    sp_fase_id = db.Column(db.Integer, db.ForeignKey("sp_fase.id"))
+-
+-
+-@dataclass
+-class ComponenteSolicitacao:
+-    sp_componente_id: int
+-    solicitacao_producao_id: int
+-    produto_id: int
+-    componente: str
+-    unidade_medida: str
+-    fase_ordem: Optional[int]
+-    fase: Optional[str]
+-    quantidade_prevista: float
+-    quantidade_realizada: float
+-    custo_realizado: Optional[float]
+-
+-    @classmethod
+-    def from_row(cls, row) -> "ComponenteSolicitacao":
+-        return cls(**{chave: row[chave] for chave in row.keys()})
+-
+-
+-@dataclass
+-class FaseSolicitacao:
+-    ordem: int
+-    fase: str
+-    tempo_previsto_min: int
+-    tempo_realizado_min: Optional[int]
+-
+-    @classmethod
+-    def from_row(cls, row) -> "FaseSolicitacao":
+-        return cls(**{chave: row[chave] for chave in row.keys()})
+-
+-
+-@dataclass
+-class LoteProduzido:
+-    solicitacao_producao_id: int
+-    lote_id: int
+-    quantidade: float
+-    criado_em: str
+-
+-    @classmethod
+-    def from_row(cls, row) -> "LoteProduzido":
+-        return cls(**{chave: row[chave] for chave in row.keys()})
+-
+-
+-@dataclass
+-class SolicitacaoDetalhe:
+-    solicitacao: SolicitacaoProducao
+-    componentes: list[ComponenteSolicitacao]
+-    fases: list[FaseSolicitacao]
+-    lotes_produzidos: list[LoteProduzido]
++from __future__ import annotations
++
++from dataclasses import dataclass
++from typing import Optional
++
++from db.database_config import db
++
++
++class SolicitacaoProducao(db.Model):
++    __tablename__ = "solicitacao_producao"
++    __table_args__ = (
++        db.CheckConstraint(
++            "status IN ('ABERTA', 'EM_SEPARACAO', 'EM_PRODUCAO', 'CONCLUIDA', 'CANCELADA')",
++            name="ck_solicitacao_status",
++        ),
++        db.CheckConstraint(
++            "prioridade IN ('BAIXA', 'NORMAL', 'ALTA', 'URGENTE')",
++            name="ck_solicitacao_prioridade",
++        ),
++        db.CheckConstraint(
++            "quantidade_planejada > 0",
++            name="ck_solicitacao_quantidade_planejada",
++        ),
++        db.Index(
++            "idx_solicitacao_planejamento",
++            "status",
++            "previsto_para",
++            "prioridade",
++        ),
++    )
++
++    id = db.Column(db.Integer, primary_key=True)
++    ficha_tecnica_id = db.Column(
++        db.Integer, db.ForeignKey("ficha_tecnica.id"), nullable=False
++    )
++    usuario_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
++    responsavel_id = db.Column(db.Integer, db.ForeignKey("usuario.id"))
++    quantidade_planejada = db.Column(db.Numeric(18, 3), nullable=False)
++    prioridade = db.Column(
++        db.Text, nullable=False, default="NORMAL", server_default="NORMAL"
++    )
++    previsto_para = db.Column(db.String)
++    observacao = db.Column(db.Text)
++    status = db.Column(db.Text, nullable=False, default="ABERTA", server_default="ABERTA")
++    criado_em = db.Column(
++        db.String,
++        nullable=False,
++        server_default=db.text("(CAST(CURRENT_TIMESTAMP AS TEXT))"),
++    )
++    iniciado_em = db.Column(db.String)
++    concluido_em = db.Column(db.String)
++
++
++class SpFase(db.Model):
++    __tablename__ = "sp_fase"
++    __table_args__ = (
++        db.UniqueConstraint(
++            "solicitacao_producao_id", "ordem", name="uq_sp_fase_ordem"
++        ),
++    )
++
++    id = db.Column(db.Integer, primary_key=True)
++    solicitacao_producao_id = db.Column(
++        db.Integer, db.ForeignKey("solicitacao_producao.id"), nullable=False
++    )
++    fase_id = db.Column(db.Integer, db.ForeignKey("fase_producao.id"), nullable=False)
++    ordem = db.Column(db.Integer, nullable=False)
++    tempo_previsto_min = db.Column(db.Integer, nullable=False)
++    tempo_realizado_min = db.Column(db.Integer)
++
++
++class SpComponente(db.Model):
++    __tablename__ = "sp_componente"
++    __table_args__ = (
++        db.UniqueConstraint(
++            "solicitacao_producao_id", "produto_id", name="uq_sp_componente_produto"
++        ),
++        db.CheckConstraint("quantidade_prevista > 0", name="ck_sp_quantidade_prevista"),
++    )
++
++    id = db.Column(db.Integer, primary_key=True)
++    solicitacao_producao_id = db.Column(
++        db.Integer, db.ForeignKey("solicitacao_producao.id"), nullable=False
++    )
++    produto_id = db.Column(db.Integer, db.ForeignKey("produto.id"), nullable=False)
++    quantidade_prevista = db.Column(db.Numeric(asdecimal=False), nullable=False)
++    sp_fase_id = db.Column(db.Integer, db.ForeignKey("sp_fase.id"))
++
++
++@dataclass
++class ComponenteSolicitacao:
++    sp_componente_id: int
++    solicitacao_producao_id: int
++    produto_id: int
++    componente: str
++    unidade_medida: str
++    fase_ordem: Optional[int]
++    fase: Optional[str]
++    quantidade_prevista: float
++    quantidade_realizada: float
++    custo_realizado: Optional[float]
++
++    @classmethod
++    def from_row(cls, row) -> "ComponenteSolicitacao":
++        return cls(**{chave: row[chave] for chave in row.keys()})
++
++
++@dataclass
++class FaseSolicitacao:
++    ordem: int
++    fase: str
++    tempo_previsto_min: int
++    tempo_realizado_min: Optional[int]
++
++    @classmethod
++    def from_row(cls, row) -> "FaseSolicitacao":
++        return cls(**{chave: row[chave] for chave in row.keys()})
++
++
++@dataclass
++class LoteProduzido:
++    solicitacao_producao_id: int
++    lote_id: int
++    quantidade: float
++    criado_em: str
++
++    @classmethod
++    def from_row(cls, row) -> "LoteProduzido":
++        return cls(**{chave: row[chave] for chave in row.keys()})
++
++
++@dataclass
++class SolicitacaoDetalhe:
++    solicitacao: SolicitacaoProducao
++    componentes: list[ComponenteSolicitacao]
++    fases: list[FaseSolicitacao]
++    lotes_produzidos: list[LoteProduzido]
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/app/features/producao/repository.py /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/app/features/producao/repository.py
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/app/features/producao/repository.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/app/features/producao/repository.py	2026-11-01 04:25:01.282778907 +0000
+@@ -1,82 +1,117 @@
+-from __future__ import annotations
+-
+-from sqlalchemy import text
+-
+-from db.database_config import db
+-
+-from app.features.fichas_tecnicas.models import FichaTecnica
+-
+-from .models import SolicitacaoProducao, SpComponente, SpFase
+-
+-
+-class ProducaoRepository:
+-
+-    def listar_solicitacoes(self) -> list[SolicitacaoProducao]:
+-        return db.session.query(SolicitacaoProducao).order_by(
+-            SolicitacaoProducao.criado_em.desc()
+-        ).all()
+-
+-    def obter_solicitacao(self, sp_id: int):
+-        return db.session.get(SolicitacaoProducao, sp_id)
+-
+-    def criar_solicitacao(self, ficha_id: int, usuario_id: int) -> SolicitacaoProducao:
+-        ficha = db.session.get(FichaTecnica, ficha_id)
+-        if ficha is None:
+-            return None
+-        solicitacao = SolicitacaoProducao(ficha_tecnica_id=ficha_id, usuario_id=usuario_id)
+-        db.session.add(solicitacao)
+-        db.session.flush()
+-        fases_por_id = {}
+-        for fase in ficha.fases:
+-            fase_solicitacao = SpFase(
+-                solicitacao_producao_id=solicitacao.id,
+-                fase_id=fase.fase_id,
+-                ordem=fase.ordem,
+-                tempo_previsto_min=fase.tempo_previsto_min,
+-            )
+-            db.session.add(fase_solicitacao)
+-            db.session.flush()
+-            fases_por_id[fase.id] = fase_solicitacao.id
+-        for componente in ficha.componentes:
+-            db.session.add(SpComponente(
+-                solicitacao_producao_id=solicitacao.id,
+-                produto_id=componente.produto_id,
+-                quantidade_prevista=float(componente.quantidade),
+-                sp_fase_id=fases_por_id.get(componente.ficha_tecnica_fase_id),
+-            ))
+-        db.session.commit()
+-        return solicitacao
+-
+-    def atualizar_status(self, solicitacao: SolicitacaoProducao, status: str) -> SolicitacaoProducao:
+-        solicitacao.status = status
+-        if status == "CONCLUIDA":
+-            solicitacao.concluido_em = db.func.current_timestamp()
+-        elif solicitacao.concluido_em is not None:
+-            solicitacao.concluido_em = None
+-        db.session.commit()
+-        return solicitacao
+-
+-    def listar_componentes(self, sp_id: int):
+-        return db.session.execute(
+-            text(
+-                """SELECT * FROM vw_sp_componente WHERE solicitacao_producao_id = :id
+-                   ORDER BY fase_ordem, componente"""
+-            ),
+-            {"id": sp_id},
+-        ).mappings().all()
+-
+-    def listar_fases(self, sp_id: int):
+-        return db.session.execute(
+-            text(
+-                """SELECT f.ordem, fp.nome AS fase, f.tempo_previsto_min, f.tempo_realizado_min
+-                   FROM sp_fase f JOIN fase_producao fp ON fp.id = f.fase_id
+-                   WHERE f.solicitacao_producao_id = :id ORDER BY f.ordem"""
+-            ),
+-            {"id": sp_id},
+-        ).mappings().all()
+-
+-    def listar_lotes_produzidos(self, sp_id: int):
+-        return db.session.execute(
+-            text("SELECT * FROM vw_sp_producao WHERE solicitacao_producao_id = :id"),
+-            {"id": sp_id},
+-        ).mappings().all()
++from __future__ import annotations
++
++from decimal import Decimal
++
++from sqlalchemy import text
++
++from app.features.auth.models import Usuario
++from app.features.fichas_tecnicas.models import FichaTecnica
++from db.database_config import db
++
++from .models import SolicitacaoProducao, SpComponente, SpFase
++
++
++class ProducaoRepository:
++
++    def listar_solicitacoes(self) -> list[SolicitacaoProducao]:
++        return db.session.query(SolicitacaoProducao).order_by(
++            SolicitacaoProducao.criado_em.desc()
++        ).all()
++
++    def obter_solicitacao(self, sp_id: int):
++        return db.session.get(SolicitacaoProducao, sp_id)
++
++    def obter_ficha(self, ficha_id: int):
++        return db.session.get(FichaTecnica, ficha_id)
++
++    def obter_usuario_ativo(self, usuario_id: int):
++        return db.session.execute(
++            db.select(Usuario).where(Usuario.id == usuario_id, Usuario.ativo == 1)
++        ).scalar_one_or_none()
++
++    def criar_solicitacao(
++        self,
++        ficha: FichaTecnica,
++        usuario_id: int,
++        quantidade_planejada: Decimal,
++        prioridade: str,
++        previsto_para: str | None,
++        responsavel_id: int | None,
++        observacao: str | None,
++    ) -> SolicitacaoProducao:
++        solicitacao = SolicitacaoProducao(
++            ficha_tecnica_id=ficha.id,
++            usuario_id=usuario_id,
++            responsavel_id=responsavel_id,
++            quantidade_planejada=quantidade_planejada,
++            prioridade=prioridade,
++            previsto_para=previsto_para,
++            observacao=observacao,
++        )
++        db.session.add(solicitacao)
++        db.session.flush()
++
++        # A ficha descreve os componentes necessários para o seu rendimento.
++        # Ex.: ficha rende 10 e a solicitação pede 20 -> fator 2.
++        fator = quantidade_planejada / Decimal(str(ficha.rendimento))
++
++        fases_por_id: dict[int, int] = {}
++        for fase in ficha.fases:
++            fase_solicitacao = SpFase(
++                solicitacao_producao_id=solicitacao.id,
++                fase_id=fase.fase_id,
++                ordem=fase.ordem,
++                tempo_previsto_min=fase.tempo_previsto_min,
++            )
++            db.session.add(fase_solicitacao)
++            db.session.flush()
++            fases_por_id[fase.id] = fase_solicitacao.id
++
++        for componente in ficha.componentes:
++            quantidade = Decimal(str(componente.quantidade)) * fator
++            db.session.add(
++                SpComponente(
++                    solicitacao_producao_id=solicitacao.id,
++                    produto_id=componente.produto_id,
++                    quantidade_prevista=float(quantidade),
++                    sp_fase_id=fases_por_id.get(componente.ficha_tecnica_fase_id),
++                )
++            )
++        db.session.commit()
++        return solicitacao
++
++    def atualizar_status(
++        self, solicitacao: SolicitacaoProducao, status: str
++    ) -> SolicitacaoProducao:
++        solicitacao.status = status
++        if status == "EM_PRODUCAO" and solicitacao.iniciado_em is None:
++            solicitacao.iniciado_em = db.func.current_timestamp()
++        if status == "CONCLUIDA":
++            solicitacao.concluido_em = db.func.current_timestamp()
++        db.session.commit()
++        return solicitacao
++
++    def listar_componentes(self, sp_id: int):
++        return db.session.execute(
++            text(
++                """SELECT * FROM vw_sp_componente WHERE solicitacao_producao_id = :id
++                   ORDER BY fase_ordem, componente"""
++            ),
++            {"id": sp_id},
++        ).mappings().all()
++
++    def listar_fases(self, sp_id: int):
++        return db.session.execute(
++            text(
++                """SELECT f.ordem, fp.nome AS fase, f.tempo_previsto_min, f.tempo_realizado_min
++                   FROM sp_fase f JOIN fase_producao fp ON fp.id = f.fase_id
++                   WHERE f.solicitacao_producao_id = :id ORDER BY f.ordem"""
++            ),
++            {"id": sp_id},
++        ).mappings().all()
++
++    def listar_lotes_produzidos(self, sp_id: int):
++        return db.session.execute(
++            text("SELECT * FROM vw_sp_producao WHERE solicitacao_producao_id = :id"),
++            {"id": sp_id},
++        ).mappings().all()
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/app/features/producao/routes.py /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/app/features/producao/routes.py
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/app/features/producao/routes.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/app/features/producao/routes.py	2026-11-01 04:25:01.827742133 +0000
+@@ -1,44 +1,44 @@
+-"""Rotas HTTP de produção.
+-
+-Controller puro: delega a leitura para o service e serializa com schemas.py
+-
+-"""
+-from flask import Blueprint, g
+-
+-from app.utils.parsing import entrada
+-
+-from . import schemas
+-from .repository import ProducaoRepository
+-from .services import ProducaoService
+-
+-bp = Blueprint("producao", __name__)
+-
+-
+-def get_service() -> ProducaoService:
+-    return ProducaoService(ProducaoRepository())
+-
+-
+-@bp.get("/solicitacoes")
+-def listar_solicitacoes():
+-    itens = get_service().listar_solicitacoes()
+-    return [schemas.SolicitacaoProducaoOut.model_validate(i).model_dump() for i in itens]
+-
+-
+-@bp.post("/solicitacoes")
+-def criar_solicitacao():
+-    dados = entrada(schemas.SolicitacaoCreate)
+-    item = get_service().criar_solicitacao(dados.ficha_tecnica_id, g.usuario.id)
+-    return schemas.SolicitacaoProducaoOut.model_validate(item).model_dump(), 201
+-
+-
+-@bp.put("/solicitacoes/<int:sp_id>/status")
+-def atualizar_status(sp_id: int):
+-    dados = entrada(schemas.SolicitacaoStatusUpdate)
+-    item = get_service().atualizar_status(sp_id, dados.status)
+-    return schemas.SolicitacaoProducaoOut.model_validate(item).model_dump()
+-
+-
+-@bp.get("/solicitacoes/<int:sp_id>")
+-def detalhar_solicitacao(sp_id):
+-    detalhe = get_service().obter_detalhe(sp_id)
+-    return schemas.SolicitacaoDetalheOut.model_validate(detalhe).model_dump()
++"""Rotas HTTP de produção.
++
++Controller puro: delega a leitura para o service e serializa com schemas.py
++
++"""
++from flask import Blueprint, g
++
++from app.utils.parsing import entrada
++
++from . import schemas
++from .repository import ProducaoRepository
++from .services import ProducaoService
++
++bp = Blueprint("producao", __name__)
++
++
++def get_service() -> ProducaoService:
++    return ProducaoService(ProducaoRepository())
++
++
++@bp.get("/solicitacoes")
++def listar_solicitacoes():
++    itens = get_service().listar_solicitacoes()
++    return [schemas.SolicitacaoProducaoOut.model_validate(i).model_dump() for i in itens]
++
++
++@bp.post("/solicitacoes")
++def criar_solicitacao():
++    dados = entrada(schemas.SolicitacaoCreate)
++    item = get_service().criar_solicitacao(dados, g.usuario.id)
++    return schemas.SolicitacaoProducaoOut.model_validate(item).model_dump(), 201
++
++
++@bp.put("/solicitacoes/<int:sp_id>/status")
++def atualizar_status(sp_id: int):
++    dados = entrada(schemas.SolicitacaoStatusUpdate)
++    item = get_service().atualizar_status(sp_id, dados.status)
++    return schemas.SolicitacaoProducaoOut.model_validate(item).model_dump()
++
++
++@bp.get("/solicitacoes/<int:sp_id>")
++def detalhar_solicitacao(sp_id):
++    detalhe = get_service().obter_detalhe(sp_id)
++    return schemas.SolicitacaoDetalheOut.model_validate(detalhe).model_dump()
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/app/features/producao/schemas.py /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/app/features/producao/schemas.py
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/app/features/producao/schemas.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/app/features/producao/schemas.py	2026-11-01 04:25:01.281890829 +0000
+@@ -1,73 +1,109 @@
+-"""Schemas Pydantic de saída da API de produção."""
+-from __future__ import annotations
+-
+-from typing import Optional
+-
+-from typing import Literal
+-
+-from pydantic import BaseModel, ConfigDict, Field
+-
+-
+-class SolicitacaoCreate(BaseModel):
+-    model_config = ConfigDict(extra="forbid")
+-
+-    ficha_tecnica_id: int = Field(gt=0)
+-
+-
+-class SolicitacaoStatusUpdate(BaseModel):
+-    model_config = ConfigDict(extra="forbid")
+-
+-    status: Literal["ABERTA", "EM_SEPARACAO", "EM_PRODUCAO", "CONCLUIDA", "CANCELADA"]
+-
+-
+-class SolicitacaoProducaoOut(BaseModel):
+-    model_config = ConfigDict(from_attributes=True)
+-
+-    id: int
+-    ficha_tecnica_id: int
+-    usuario_id: int
+-    status: str
+-    criado_em: str
+-    concluido_em: Optional[str] = None
+-
+-
+-class ComponenteSolicitacaoOut(BaseModel):
+-    model_config = ConfigDict(from_attributes=True)
+-
+-    sp_componente_id: int
+-    solicitacao_producao_id: int
+-    produto_id: int
+-    componente: str
+-    unidade_medida: str
+-    fase_ordem: Optional[int] = None
+-    fase: Optional[str] = None
+-    quantidade_prevista: float
+-    quantidade_realizada: float
+-    custo_realizado: Optional[float] = None
+-
+-
+-class FaseSolicitacaoOut(BaseModel):
+-    model_config = ConfigDict(from_attributes=True)
+-
+-    ordem: int
+-    fase: str
+-    tempo_previsto_min: int
+-    tempo_realizado_min: Optional[int] = None
+-
+-
+-class LoteProduzidoOut(BaseModel):
+-    model_config = ConfigDict(from_attributes=True)
+-
+-    solicitacao_producao_id: int
+-    lote_id: int
+-    quantidade: float
+-    criado_em: str
+-
+-
+-class SolicitacaoDetalheOut(BaseModel):
+-    model_config = ConfigDict(from_attributes=True)
+-
+-    solicitacao: SolicitacaoProducaoOut
+-    componentes: list[ComponenteSolicitacaoOut]
+-    fases: list[FaseSolicitacaoOut]
+-    lotes_produzidos: list[LoteProduzidoOut]
++"""Schemas Pydantic de entrada e saída da API de produção."""
++from __future__ import annotations
++
++from datetime import datetime
++from typing import Literal, Optional
++
++from pydantic import BaseModel, ConfigDict, Field, field_validator
++
++
++PrioridadeProducao = Literal["BAIXA", "NORMAL", "ALTA", "URGENTE"]
++StatusProducao = Literal["ABERTA", "EM_SEPARACAO", "EM_PRODUCAO", "CONCLUIDA", "CANCELADA"]
++
++
++class SolicitacaoCreate(BaseModel):
++    model_config = ConfigDict(extra="forbid")
++
++    ficha_tecnica_id: int = Field(gt=0)
++    quantidade_planejada: Optional[float] = Field(default=None, gt=0, allow_inf_nan=False)
++    prioridade: PrioridadeProducao = "NORMAL"
++    previsto_para: Optional[str] = None
++    responsavel_id: Optional[int] = Field(default=None, gt=0)
++    observacao: Optional[str] = Field(default=None, max_length=2000)
++
++    @field_validator("previsto_para")
++    @classmethod
++    def validar_previsto_para(cls, valor: Optional[str]) -> Optional[str]:
++        if valor is None:
++            return None
++        valor = valor.strip()
++        if not valor:
++            return None
++        try:
++            momento = datetime.fromisoformat(valor)
++        except ValueError as exc:
++            raise ValueError("previsto_para deve estar em formato ISO 8601") from exc
++        return momento.isoformat(timespec="seconds")
++
++    @field_validator("observacao")
++    @classmethod
++    def normalizar_observacao(cls, valor: Optional[str]) -> Optional[str]:
++        if valor is None:
++            return None
++        valor = valor.strip()
++        return valor or None
++
++
++class SolicitacaoStatusUpdate(BaseModel):
++    model_config = ConfigDict(extra="forbid")
++
++    status: StatusProducao
++
++
++class SolicitacaoProducaoOut(BaseModel):
++    model_config = ConfigDict(from_attributes=True)
++
++    id: int
++    ficha_tecnica_id: int
++    usuario_id: int
++    responsavel_id: Optional[int] = None
++    quantidade_planejada: float
++    prioridade: str
++    previsto_para: Optional[str] = None
++    observacao: Optional[str] = None
++    status: str
++    criado_em: str
++    iniciado_em: Optional[str] = None
++    concluido_em: Optional[str] = None
++
++
++class ComponenteSolicitacaoOut(BaseModel):
++    model_config = ConfigDict(from_attributes=True)
++
++    sp_componente_id: int
++    solicitacao_producao_id: int
++    produto_id: int
++    componente: str
++    unidade_medida: str
++    fase_ordem: Optional[int] = None
++    fase: Optional[str] = None
++    quantidade_prevista: float
++    quantidade_realizada: float
++    custo_realizado: Optional[float] = None
++
++
++class FaseSolicitacaoOut(BaseModel):
++    model_config = ConfigDict(from_attributes=True)
++
++    ordem: int
++    fase: str
++    tempo_previsto_min: int
++    tempo_realizado_min: Optional[int] = None
++
++
++class LoteProduzidoOut(BaseModel):
++    model_config = ConfigDict(from_attributes=True)
++
++    solicitacao_producao_id: int
++    lote_id: int
++    quantidade: float
++    criado_em: str
++
++
++class SolicitacaoDetalheOut(BaseModel):
++    model_config = ConfigDict(from_attributes=True)
++
++    solicitacao: SolicitacaoProducaoOut
++    componentes: list[ComponenteSolicitacaoOut]
++    fases: list[FaseSolicitacaoOut]
++    lotes_produzidos: list[LoteProduzidoOut]
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/app/features/producao/services.py /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/app/features/producao/services.py
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/app/features/producao/services.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/app/features/producao/services.py	2026-11-01 04:25:01.283702603 +0000
+@@ -1,57 +1,81 @@
+-"""Regras de negócio de produção, orquestrando o repository."""
+-from __future__ import annotations
+-
+-from app.utils.errors import RegistroNaoEncontrado
+-
+-from . import models
+-from .repository import ProducaoRepository
+-
+-
+-class ProducaoService:
+-    def __init__(self, repository: ProducaoRepository) -> None:
+-        self.repository = repository
+-
+-    def listar_solicitacoes(self) -> list[models.SolicitacaoProducao]:
+-        return self.repository.listar_solicitacoes()
+-
+-    def criar_solicitacao(self, ficha_id: int, usuario_id: int) -> models.SolicitacaoProducao:
+-        solicitacao = self.repository.criar_solicitacao(ficha_id, usuario_id)
+-        if solicitacao is None:
+-            raise RegistroNaoEncontrado("ficha técnica não encontrada")
+-        return solicitacao
+-
+-    def atualizar_status(self, sp_id: int, status: str) -> models.SolicitacaoProducao:
+-        solicitacao = self.repository.obter_solicitacao(sp_id)
+-        if solicitacao is None:
+-            raise RegistroNaoEncontrado("solicitação não encontrada")
+-        permitidos = {
+-            "ABERTA": {"EM_SEPARACAO", "EM_PRODUCAO", "CANCELADA"},
+-            "EM_SEPARACAO": {"EM_PRODUCAO", "CANCELADA"},
+-            "EM_PRODUCAO": {"CONCLUIDA", "CANCELADA"},
+-            "CONCLUIDA": set(),
+-            "CANCELADA": set(),
+-        }
+-        if status not in permitidos[solicitacao.status]:
+-            raise ValueError(f"não é possível alterar de {solicitacao.status} para {status}")
+-        return self.repository.atualizar_status(solicitacao, status)
+-
+-    def obter_detalhe(self, sp_id: int) -> models.SolicitacaoDetalhe:
+-        solicitacao = self.repository.obter_solicitacao(sp_id)
+-        if solicitacao is None:
+-            raise RegistroNaoEncontrado("solicitação não encontrada")
+-
+-        return models.SolicitacaoDetalhe(
+-            solicitacao=solicitacao,
+-            componentes=[
+-                models.ComponenteSolicitacao.from_row(r)
+-                for r in self.repository.listar_componentes(sp_id)
+-            ],
+-            fases=[
+-                models.FaseSolicitacao.from_row(r)
+-                for r in self.repository.listar_fases(sp_id)
+-            ],
+-            lotes_produzidos=[
+-                models.LoteProduzido.from_row(r)
+-                for r in self.repository.listar_lotes_produzidos(sp_id)
+-            ],
+-        )
++"""Regras de negócio de produção, orquestrando o repository."""
++from __future__ import annotations
++
++from decimal import Decimal
++
++from app.utils.errors import RegistroNaoEncontrado
++
++from . import models, schemas
++from .repository import ProducaoRepository
++
++
++class ProducaoService:
++    def __init__(self, repository: ProducaoRepository) -> None:
++        self.repository = repository
++
++    def listar_solicitacoes(self) -> list[models.SolicitacaoProducao]:
++        return self.repository.listar_solicitacoes()
++
++    def criar_solicitacao(
++        self, dados: schemas.SolicitacaoCreate, usuario_id: int
++    ) -> models.SolicitacaoProducao:
++        ficha = self.repository.obter_ficha(dados.ficha_tecnica_id)
++        if ficha is None:
++            raise RegistroNaoEncontrado("ficha técnica não encontrada")
++
++        quantidade_planejada = Decimal(
++            str(dados.quantidade_planejada if dados.quantidade_planejada is not None else ficha.rendimento)
++        )
++        if quantidade_planejada <= 0:
++            raise ValueError("quantidade planejada deve ser maior que zero")
++
++        if dados.responsavel_id is not None:
++            responsavel = self.repository.obter_usuario_ativo(dados.responsavel_id)
++            if responsavel is None:
++                raise RegistroNaoEncontrado("responsável não encontrado ou inativo")
++
++        return self.repository.criar_solicitacao(
++            ficha=ficha,
++            usuario_id=usuario_id,
++            quantidade_planejada=quantidade_planejada,
++            prioridade=dados.prioridade,
++            previsto_para=dados.previsto_para,
++            responsavel_id=dados.responsavel_id,
++            observacao=dados.observacao,
++        )
++
++    def atualizar_status(self, sp_id: int, status: str) -> models.SolicitacaoProducao:
++        solicitacao = self.repository.obter_solicitacao(sp_id)
++        if solicitacao is None:
++            raise RegistroNaoEncontrado("solicitação não encontrada")
++        permitidos = {
++            "ABERTA": {"EM_SEPARACAO", "EM_PRODUCAO", "CANCELADA"},
++            "EM_SEPARACAO": {"EM_PRODUCAO", "CANCELADA"},
++            "EM_PRODUCAO": {"CONCLUIDA", "CANCELADA"},
++            "CONCLUIDA": set(),
++            "CANCELADA": set(),
++        }
++        if status not in permitidos[solicitacao.status]:
++            raise ValueError(f"não é possível alterar de {solicitacao.status} para {status}")
++        return self.repository.atualizar_status(solicitacao, status)
++
++    def obter_detalhe(self, sp_id: int) -> models.SolicitacaoDetalhe:
++        solicitacao = self.repository.obter_solicitacao(sp_id)
++        if solicitacao is None:
++            raise RegistroNaoEncontrado("solicitação não encontrada")
++
++        return models.SolicitacaoDetalhe(
++            solicitacao=solicitacao,
++            componentes=[
++                models.ComponenteSolicitacao.from_row(r)
++                for r in self.repository.listar_componentes(sp_id)
++            ],
++            fases=[
++                models.FaseSolicitacao.from_row(r)
++                for r in self.repository.listar_fases(sp_id)
++            ],
++            lotes_produzidos=[
++                models.LoteProduzido.from_row(r)
++                for r in self.repository.listar_lotes_produzidos(sp_id)
++            ],
++        )
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/docs/FASE8_04.md /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/docs/FASE8_04.md
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/docs/FASE8_04.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/docs/FASE8_04.md	2026-11-01 04:28:13.765989554 +0000
+@@ -0,0 +1,112 @@
++# Fase 8.4 — Planejamento de produção
++
++Esta etapa transforma `SolicitacaoProducao` de uma simples entrada na fila em um planejamento operacional, sem criar uma entidade paralela ao domínio de produção.
++
++## Campos adicionados
++
++`SolicitacaoProducao` passa a registrar:
++
++- `quantidade_planejada`: quantidade do produto final/intermediário na unidade do produto produzido;
++- `prioridade`: `BAIXA`, `NORMAL`, `ALTA` ou `URGENTE`;
++- `previsto_para`: data/hora ISO 8601 planejada;
++- `responsavel_id`: usuário ativo designado para executar a produção;
++- `observacao`: orientação operacional do planejamento;
++- `iniciado_em`: instante em que a solicitação entra em `EM_PRODUCAO`.
++
++`usuario_id` continua sendo o usuário que criou a solicitação. Dessa forma, solicitante e responsável não são confundidos.
++
++## Compatibilidade do contrato
++
++O payload histórico permanece válido:
++
++```json
++{
++  "ficha_tecnica_id": 1
++}
++```
++
++Quando `quantidade_planejada` é omitida, o backend utiliza `FichaTecnica.rendimento`. Portanto os componentes copiados para `SpComponente` permanecem exatamente com as quantidades da ficha original.
++
++O novo payload também aceita:
++
++```json
++{
++  "ficha_tecnica_id": 1,
++  "quantidade_planejada": 20,
++  "prioridade": "ALTA",
++  "previsto_para": "2026-11-03T08:30:00",
++  "responsavel_id": 3,
++  "observacao": "Priorizar para a abertura."
++}
++```
++
++## Escala pelo rendimento
++
++A ficha representa ingredientes para um determinado rendimento. A quantidade de cada componente da solicitação é calculada por:
++
++```text
++fator = quantidade_planejada / rendimento_da_ficha
++quantidade_prevista = quantidade_da_ficha * fator
++```
++
++Exemplo:
++
++```text
++Ficha rende 10 unidades
++Farinha = 5 kg
++
++Planejamento = 20 unidades
++Fator = 20 / 10 = 2
++Farinha planejada = 10 kg
++```
++
++A escala é calculada no backend e persistida em `SpComponente`, congelando o planejamento daquela produção.
++
++## Responsável
++
++`responsavel_id` é opcional, mas, quando informado, precisa identificar um usuário ativo. Um identificador inexistente ou inativo é rejeitado.
++
++## Início da produção
++
++Na primeira transição para `EM_PRODUCAO`, `iniciado_em` é preenchido automaticamente. A máquina de estados existente permanece preservada.
++
++## Migration
++
++A revision `b7d9e2f4a610` adiciona os campos de planejamento, constraints e o índice `idx_solicitacao_planejamento`.
++
++Para solicitações existentes, a migration preenche `quantidade_planejada` com o rendimento da ficha técnica correspondente. Assim, bancos já utilizados não recebem uma quantidade arbitrária.
++
++A migration foi validada em:
++
++```text
++upgrade 8a3c1d4e5f67 -> b7d9e2f4a610
++downgrade b7d9e2f4a610 -> 8a3c1d4e5f67
++upgrade novamente -> b7d9e2f4a610
++alembic check -> nenhuma operação pendente
++```
++
++## Frontend
++
++Os tipos TypeScript já conhecem os novos campos, mas a tela de produção continua enviando somente `ficha_tecnica_id` nesta fase. Isso é intencional: a experiência de planejamento será alterada na fase de alinhamento de frontend, depois que execução real e integração com estoque estabilizarem os contratos.
++
++## Validação
++
++- payload legado preservado;
++- escala de componentes testada;
++- quantidade zero rejeitada;
++- prioridade desconhecida rejeitada;
++- data inválida rejeitada;
++- responsável inexistente rejeitado;
++- `iniciado_em` testado;
++- migration de banco existente testa backfill pelo rendimento;
++- 45 testes passando.
++
++## Próxima etapa
++
++Fase 8.5 — execução real da produção:
++
++- quantidade produzida real;
++- tempo realizado por fase;
++- observação por fase;
++- snapshot histórico suficiente para preservar o planejado;
++- contratos de execução separados do planejamento.
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/docs/openapi.yaml /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/docs/openapi.yaml
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/docs/openapi.yaml	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/docs/openapi.yaml	2026-11-01 04:28:13.579803475 +0000
+@@ -1,701 +1,712 @@
+-openapi: 3.0.3
+-info:
+-  title: ft_machry API
+-  version: "2.0"
+-security:
+-  - cookieAuth: []
+-paths:
+-  /api/auth/login:
+-    post:
+-      summary: Inicia uma sessão
+-      tags: [autenticacao]
+-      security: []
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema:
+-              type: object
+-              required: [username, password]
+-              properties:
+-                username: {type: string}
+-                password: {type: string, format: password}
+-      responses:
+-        "200":
+-          description: Usuário autenticado
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/Usuario"}
+-        "401": {description: Usuário ou senha inválidos}
+-  /api/auth/logout:
+-    post:
+-      summary: Encerra a sessão atual
+-      tags: [autenticacao]
+-      responses:
+-        "204": {description: Sessão encerrada}
+-  /api/auth/me:
+-    get:
+-      summary: Retorna o usuário da sessão
+-      tags: [autenticacao]
+-      responses:
+-        "200":
+-          description: Usuário autenticado
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/Usuario"}
+-        "401": {description: Autenticação necessária}
+-  /api/auth/usuarios:
+-    get:
+-      summary: Lista usuários; exclusivo da proprietária
+-      tags: [autenticacao]
+-      responses:
+-        "200": {description: Lista de usuários}
+-    post:
+-      summary: Cria usuário; exclusivo da proprietária
+-      tags: [autenticacao]
+-      responses:
+-        "201": {description: Usuário criado}
+-
+-  /api/produtos:
+-    get:
+-      summary: Lista produtos ativos (ordenados por nome)
+-      tags: [produtos]
+-      responses:
+-        "200":
+-          description: Lista de produtos
+-          content:
+-            application/json:
+-              schema:
+-                type: array
+-                items: {$ref: "#/components/schemas/Produto"}
+-    post:
+-      summary: Cria produto
+-      tags: [produtos]
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema: {$ref: "#/components/schemas/ProdutoCriar"}
+-      responses:
+-        "201":
+-          description: Produto criado
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/Produto"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-  /api/produtos/{id}:
+-    parameters:
+-      - {name: id, in: path, required: true, schema: {type: integer}}
+-    get:
+-      summary: Detalha produto ativo
+-      tags: [produtos]
+-      responses:
+-        "200":
+-          description: Produto
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/Produto"}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-    put:
+-      summary: Atualiza produto (parcial, só os campos enviados)
+-      tags: [produtos]
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema: {$ref: "#/components/schemas/ProdutoCampos"}
+-      responses:
+-        "200":
+-          description: Produto atualizado
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/Produto"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-    delete:
+-      summary: Desativa produto (exclusão lógica, ativo = 0)
+-      tags: [produtos]
+-      responses:
+-        "204": {description: Produto desativado}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-
+-  /api/fichas-tecnicas:
+-    get:
+-      summary: Lista fichas técnicas completas
+-      tags: [fichas tecnicas]
+-      responses:
+-        "200":
+-          description: Fichas ordenadas pelo nome do produto resultante
+-          content:
+-            application/json:
+-              schema:
+-                type: array
+-                items: {$ref: "#/components/schemas/FichaTecnica"}
+-    post:
+-      summary: Cria ficha técnica com fases e componentes
+-      tags: [fichas tecnicas]
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema: {$ref: "#/components/schemas/FichaTecnicaEntrada"}
+-      responses:
+-        "201":
+-          description: Ficha criada
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/FichaTecnica"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-        "409": {description: O produto já possui uma ficha}
+-
+-  /api/fichas-tecnicas/fases:
+-    get:
+-      summary: Lista o catálogo de fases de produção
+-      tags: [fichas tecnicas]
+-      responses:
+-        "200":
+-          description: Fases disponíveis
+-
+-  /api/fichas-tecnicas/{id}:
+-    parameters:
+-      - {name: id, in: path, required: true, schema: {type: integer}}
+-    get:
+-      summary: Detalha uma ficha técnica
+-      tags: [fichas tecnicas]
+-      responses:
+-        "200":
+-          description: Ficha completa
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/FichaTecnica"}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-    put:
+-      summary: Substitui dados, fases e componentes da ficha em uma transação
+-      tags: [fichas tecnicas]
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema: {$ref: "#/components/schemas/FichaTecnicaEntrada"}
+-      responses:
+-        "200":
+-          description: Ficha atualizada
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/FichaTecnica"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-        "409": {description: Conflito com outra ficha}
+-    delete:
+-      summary: Exclui ficha sem histórico de produção
+-      tags: [fichas tecnicas]
+-      responses:
+-        "204": {description: Ficha excluída}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-        "409": {description: A ficha já possui solicitações de produção}
+-
+-  /api/estoque/inventario:
+-    get:
+-      summary: Lista o inventário atual (view vw_inventario, só lotes com saldo > 0)
+-      tags: [estoque]
+-      parameters:
+-        - {name: produto_id, in: query, schema: {type: integer, minimum: 1}}
+-        - {name: lote_id, in: query, schema: {type: integer, minimum: 1}}
+-      responses:
+-        "200":
+-          description: Itens em estoque, ordenados por produto, validade e lote
+-          content:
+-            application/json:
+-              schema:
+-                type: array
+-                items: {$ref: "#/components/schemas/ItemInventario"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-
+-  /api/estoque/movimentacoes:
+-    get:
+-      summary: Lista as movimentações de estoque mais recentes
+-      tags: [estoque]
+-      parameters:
+-        - {name: limite, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 100}}
+-        - {name: lote_id, in: query, schema: {type: integer, minimum: 1}}
+-        - {name: usuario_id, in: query, schema: {type: integer, minimum: 1}}
+-        - {name: tipo, in: query, schema: {type: string}, description: "Comparado em maiúsculas; sem validação contra o enum"}
+-      responses:
+-        "200":
+-          description: Movimentações, mais recentes primeiro
+-          content:
+-            application/json:
+-              schema:
+-                type: array
+-                items: {$ref: "#/components/schemas/Movimentacao"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-    post:
+-      summary: Registra uma movimentação e atualiza o saldo na mesma transação
+-      tags: [estoque]
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema: {$ref: "#/components/schemas/MovimentacaoCriar"}
+-      responses:
+-        "201":
+-          description: Movimentação registrada
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/Movimentacao"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-
+-  /api/estoque/localizacoes:
+-    get:
+-      summary: Lista localizações (ordenadas por nome)
+-      tags: [estoque]
+-      responses:
+-        "200":
+-          description: Lista de localizações
+-          content:
+-            application/json:
+-              schema:
+-                type: array
+-                items: {$ref: "#/components/schemas/Localizacao"}
+-    post:
+-      summary: Cria localização
+-      tags: [estoque]
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema: {$ref: "#/components/schemas/LocalizacaoCriar"}
+-      responses:
+-        "201":
+-          description: Localização criada
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/Localizacao"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-
+-  /api/estoque/localizacoes/{id}:
+-    parameters:
+-      - {name: id, in: path, required: true, schema: {type: integer}}
+-    put:
+-      summary: Atualiza localização (parcial; bloqueia hierarquia circular e troca de tipo incompatível com lotes existentes)
+-      tags: [estoque]
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema: {$ref: "#/components/schemas/LocalizacaoCampos"}
+-      responses:
+-        "200":
+-          description: Localização atualizada
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/Localizacao"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-    delete:
+-      summary: Remove localização
+-      tags: [estoque]
+-      responses:
+-        "204": {description: Localização removida}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-
+-  /api/estoque/lotes:
+-    get:
+-      summary: Lista lotes (com nome do produto e da localização)
+-      tags: [estoque]
+-      parameters:
+-        - {name: produto_id, in: query, schema: {type: integer, minimum: 1}}
+-        - {name: localizacao_id, in: query, schema: {type: integer, minimum: 1}}
+-      responses:
+-        "200":
+-          description: Lotes, ordenados por validade (sem validade por último) e id
+-          content:
+-            application/json:
+-              schema:
+-                type: array
+-                items: {$ref: "#/components/schemas/LoteListado"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-    post:
+-      summary: Cria lote (quantidade inicia em 0; só é alterada por movimentação)
+-      tags: [estoque]
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema: {$ref: "#/components/schemas/LoteCriar"}
+-      responses:
+-        "201":
+-          description: Lote criado
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/Lote"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-
+-  /api/estoque/lotes/{id}:
+-    parameters:
+-      - {name: id, in: path, required: true, schema: {type: integer}}
+-    get:
+-      summary: Detalha lote
+-      tags: [estoque]
+-      responses:
+-        "200":
+-          description: Lote
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/Lote"}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-    put:
+-      summary: Atualiza lote (somente datas e custo; saldo muda só por movimentação)
+-      tags: [estoque]
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema: {$ref: "#/components/schemas/LoteAtualizarCampos"}
+-      responses:
+-        "200":
+-          description: Lote atualizado
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/Lote"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-
+-  /api/estoque/sugestao-saida/{produto_id}:
+-    parameters:
+-      - {name: produto_id, in: path, required: true, schema: {type: integer}}
+-    get:
+-      summary: Sugere lotes para separar uma saída pelo critério FEFO (não movimenta o estoque)
+-      tags: [estoque]
+-      parameters:
+-        - {name: quantidade, in: query, required: true, schema: {type: number, minimum: 0, exclusiveMinimum: true}}
+-      responses:
+-        "200":
+-          description: Sugestão de separação
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/SugestaoSaida"}
+-        "400": {$ref: "#/components/responses/Invalido"}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-
+-  /api/producao/solicitacoes:
+-    get:
+-      summary: Lista solicitações de produção (mais recentes primeiro)
+-      tags: [producao]
+-      responses:
+-        "200":
+-          description: Lista de solicitações
+-          content:
+-            application/json:
+-              schema:
+-                type: array
+-                items: {$ref: "#/components/schemas/SolicitacaoProducao"}
+-    post:
+-      summary: Adiciona uma ficha técnica à fila de produção
+-      tags: [producao]
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema:
+-              type: object
+-              required: [ficha_tecnica_id]
+-              properties:
+-                ficha_tecnica_id: {type: integer, minimum: 1}
+-      responses:
+-        "201":
+-          description: Solicitação criada
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/SolicitacaoProducao"}
+-
+-  /api/producao/solicitacoes/{id}:
+-    parameters:
+-      - {name: id, in: path, required: true, schema: {type: integer}}
+-    get:
+-      summary: Detalha solicitação de produção (componentes, fases e lotes produzidos)
+-      tags: [producao]
+-      responses:
+-        "200":
+-          description: Solicitação detalhada
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/SolicitacaoDetalhe"}
+-        "404": {$ref: "#/components/responses/NaoEncontrado"}
+-
+-  /api/producao/solicitacoes/{id}/status:
+-    parameters:
+-      - {name: id, in: path, required: true, schema: {type: integer}}
+-    put:
+-      summary: Atualiza o estado de uma solicitação
+-      tags: [producao]
+-      requestBody:
+-        required: true
+-        content:
+-          application/json:
+-            schema:
+-              type: object
+-              required: [status]
+-              properties:
+-                status: {type: string, enum: [ABERTA, EM_SEPARACAO, EM_PRODUCAO, CONCLUIDA, CANCELADA]}
+-      responses:
+-        "200":
+-          description: Solicitação atualizada
+-          content:
+-            application/json:
+-              schema: {$ref: "#/components/schemas/SolicitacaoProducao"}
+-
+-components:
+-  securitySchemes:
+-    cookieAuth:
+-      type: apiKey
+-      in: cookie
+-      name: session
+-  schemas:
+-    Usuario:
+-      type: object
+-      properties:
+-        id: {type: integer}
+-        nome: {type: string}
+-        username: {type: string}
+-        papel: {type: string, enum: [OWNER, ADMIN, USER]}
+-        ativo: {type: integer, enum: [0, 1]}
+-    ProdutoCampos:
+-      type: object
+-      properties:
+-        nome: {type: string, example: Farinha de trigo}
+-        tipo: {type: string, enum: [INSUMO, INTERMEDIARIO, FINAL]}
+-        unidade_medida: {type: string, example: g}
+-        grupo_id: {type: integer, nullable: true, description: FK para grupo_produto}
+-        conservacao: {type: string, enum: [CONGELADO, RESFRIADO, SECO], default: SECO}
+-        validade_obrigatoria: {type: integer, enum: [0, 1], default: 0}
+-        validade_padrao_dias: {type: integer, nullable: true}
+-        foto_url: {type: string, nullable: true}
+-    ProdutoCriar:
+-      allOf:
+-        - $ref: "#/components/schemas/ProdutoCampos"
+-        - required: [nome, tipo, unidade_medida]
+-    Produto:
+-      allOf:
+-        - $ref: "#/components/schemas/ProdutoCampos"
+-        - type: object
+-          properties:
+-            id: {type: integer}
+-            ativo: {type: integer, enum: [0, 1]}
+-            criado_em: {type: string, example: "2026-10-16 15:46:39"}
+-
+-    FichaFaseEntrada:
+-      type: object
+-      required: [fase_id, ordem, tempo_previsto_min]
+-      properties:
+-        fase_id: {type: integer, minimum: 1}
+-        ordem: {type: integer, minimum: 1}
+-        tempo_previsto_min: {type: integer, minimum: 1}
+-    FichaComponenteEntrada:
+-      type: object
+-      required: [produto_id, quantidade]
+-      properties:
+-        produto_id: {type: integer, minimum: 1}
+-        quantidade: {type: number, exclusiveMinimum: 0}
+-        fase_ordem: {type: integer, minimum: 1, nullable: true}
+-    FichaTecnicaEntrada:
+-      type: object
+-      required: [produto_id, rendimento, fases, componentes]
+-      properties:
+-        produto_id: {type: integer, minimum: 1, description: Produto intermediário ou final}
+-        rendimento: {type: number, exclusiveMinimum: 0}
+-        observacao: {type: string, nullable: true}
+-        fases:
+-          type: array
+-          minItems: 1
+-          items: {$ref: "#/components/schemas/FichaFaseEntrada"}
+-        componentes:
+-          type: array
+-          minItems: 1
+-          items: {$ref: "#/components/schemas/FichaComponenteEntrada"}
+-    FichaTecnica:
+-      allOf:
+-        - $ref: "#/components/schemas/FichaTecnicaEntrada"
+-        - type: object
+-          properties:
+-            id: {type: integer}
+-            produto: {type: string}
+-            unidade_rendimento: {type: string}
+-
+-    LocalizacaoCampos:
+-      type: object
+-      properties:
+-        nome: {type: string, example: "Câmara Fria"}
+-        tipo: {type: string, enum: [SECO, RESFRIADO, CONGELADO], default: SECO}
+-        parent_id: {type: integer, nullable: true, minimum: 1, description: FK para localizacao (hierarquia não pode ser circular)}
+-        foto_url: {type: string, nullable: true}
+-    LocalizacaoCriar:
+-      allOf:
+-        - $ref: "#/components/schemas/LocalizacaoCampos"
+-        - required: [nome]
+-    Localizacao:
+-      allOf:
+-        - $ref: "#/components/schemas/LocalizacaoCampos"
+-        - type: object
+-          properties:
+-            id: {type: integer}
+-
+-    LoteCampos:
+-      type: object
+-      properties:
+-        produto_id: {type: integer, minimum: 1, description: Produto precisa estar ativo}
+-        localizacao_id: {type: integer, minimum: 1, description: Conservação do produto precisa ser compatível com o tipo da localização}
+-        data_producao: {type: string, format: date, nullable: true, example: "2026-01-01"}
+-        data_validade: {type: string, format: date, nullable: true, description: Obrigatória se o produto exigir validade}
+-        custo_unitario: {type: number, minimum: 0, nullable: true}
+-    LoteCriar:
+-      allOf:
+-        - $ref: "#/components/schemas/LoteCampos"
+-        - required: [produto_id, localizacao_id]
+-    LoteAtualizarCampos:
+-      type: object
+-      description: Somente estes três campos podem ser editados; saldo muda por movimentação
+-      properties:
+-        data_producao: {type: string, format: date, nullable: true}
+-        data_validade: {type: string, format: date, nullable: true}
+-        custo_unitario: {type: number, minimum: 0, nullable: true}
+-    Lote:
+-      allOf:
+-        - $ref: "#/components/schemas/LoteCampos"
+-        - type: object
+-          properties:
+-            id: {type: integer}
+-            quantidade: {type: number, description: Atualizada na mesma transação da movimentação}
+-            criado_em: {type: string, example: "2026-10-16 15:46:39"}
+-    LoteListado:
+-      description: Lote com o nome do produto e da localização (retornado por GET /api/estoque/lotes)
+-      allOf:
+-        - $ref: "#/components/schemas/Lote"
+-        - type: object
+-          properties:
+-            produto: {type: string}
+-            localizacao: {type: string}
+-
+-    MovimentacaoCriar:
+-      type: object
+-      required: [tipo, lote_id, usuario_id, quantidade]
+-      properties:
+-        tipo:
+-          type: string
+-          enum: [ENTRADA, SAIDA, AJUSTE_ENTRADA, AJUSTE_SAIDA, TRANSFERENCIA, TRANSFORMACAO]
+-          description: PRODUCAO e CONSUMO_PRODUCAO são reservados ao módulo de produção
+-        lote_id: {type: integer, minimum: 1}
+-        usuario_id: {type: integer, minimum: 1, description: Usuário precisa estar ativo}
+-        quantidade: {type: number, minimum: 0, exclusiveMinimum: true}
+-        lote_destino_id: {type: integer, minimum: 1, nullable: true, description: Obrigatório para TRANSFERENCIA/TRANSFORMACAO; precisa ser diferente de lote_id}
+-        quantidade_destino: {type: number, minimum: 0, exclusiveMinimum: true, nullable: true, description: Obrigatória apenas para TRANSFORMACAO}
+-        motivo: {type: string, nullable: true, description: Obrigatório para SAIDA/AJUSTE_ENTRADA/AJUSTE_SAIDA}
+-        observacao: {type: string, nullable: true}
+-    Movimentacao:
+-      allOf:
+-        - $ref: "#/components/schemas/MovimentacaoCriar"
+-        - type: object
+-          properties:
+-            id: {type: integer}
+-            solicitacao_producao_id: {type: integer, nullable: true}
+-            sp_componente_id: {type: integer, nullable: true}
+-            criado_em: {type: string, example: "2026-10-16 15:46:39"}
+-
+-    ItemInventario:
+-      type: object
+-      description: Linha da view vw_inventario (somente lotes com saldo > 0)
+-      properties:
+-        produto_id: {type: integer}
+-        produto: {type: string}
+-        tipo_produto: {type: string, enum: [INSUMO, INTERMEDIARIO, FINAL]}
+-        unidade_medida: {type: string}
+-        lote_id: {type: integer}
+-        quantidade: {type: number}
+-        data_validade: {type: string, format: date, nullable: true}
+-        localizacao: {type: string}
+-
+-    LoteSugerido:
+-      type: object
+-      properties:
+-        lote_id: {type: integer}
+-        quantidade: {type: number, description: Quantidade sugerida deste lote (pode ser menor que o saldo do lote)}
+-        data_validade: {type: string, format: date, nullable: true}
+-    SugestaoSaida:
+-      type: object
+-      properties:
+-        produto_id: {type: integer}
+-        quantidade_solicitada: {type: number}
+-        lotes:
+-          type: array
+-          items: {$ref: "#/components/schemas/LoteSugerido"}
+-        quantidade_faltante: {type: number, description: "> 0 se não havia saldo suficiente em lotes não vencidos"}
+-        criterio: {type: string, example: "FEFO: menor validade primeiro (somente lotes não vencidos)"}
+-        aviso: {type: string, example: "Sugestão de separação: não movimenta o estoque"}
+-
+-    SolicitacaoProducao:
+-      type: object
+-      properties:
+-        id: {type: integer}
+-        ficha_tecnica_id: {type: integer}
+-        usuario_id: {type: integer}
+-        status: {type: string, enum: [ABERTA, EM_SEPARACAO, EM_PRODUCAO, CONCLUIDA, CANCELADA]}
+-        criado_em: {type: string, example: "2026-10-16 15:46:39"}
+-        concluido_em: {type: string, nullable: true}
+-    ComponenteSolicitacao:
+-      type: object
+-      description: Linha da view vw_sp_componente
+-      properties:
+-        sp_componente_id: {type: integer}
+-        solicitacao_producao_id: {type: integer}
+-        produto_id: {type: integer}
+-        componente: {type: string, description: Nome do produto componente}
+-        unidade_medida: {type: string}
+-        fase_ordem: {type: integer, nullable: true}
+-        fase: {type: string, nullable: true}
+-        quantidade_prevista: {type: number}
+-        quantidade_realizada: {type: number, description: Somatório das movimentações CONSUMO_PRODUCAO ligadas ao componente}
+-        custo_realizado: {type: number, nullable: true}
+-    FaseSolicitacao:
+-      type: object
+-      properties:
+-        ordem: {type: integer}
+-        fase: {type: string}
+-        tempo_previsto_min: {type: integer}
+-        tempo_realizado_min: {type: integer, nullable: true}
+-    LoteProduzido:
+-      type: object
+-      description: Linha da view vw_sp_producao (movimentações do tipo PRODUCAO)
+-      properties:
+-        solicitacao_producao_id: {type: integer}
+-        lote_id: {type: integer}
+-        quantidade: {type: number}
+-        criado_em: {type: string, example: "2026-10-16 15:46:39"}
+-    SolicitacaoDetalhe:
+-      type: object
+-      properties:
+-        solicitacao: {$ref: "#/components/schemas/SolicitacaoProducao"}
+-        componentes:
+-          type: array
+-          items: {$ref: "#/components/schemas/ComponenteSolicitacao"}
+-        fases:
+-          type: array
+-          items: {$ref: "#/components/schemas/FaseSolicitacao"}
+-        lotes_produzidos:
+-          type: array
+-          items: {$ref: "#/components/schemas/LoteProduzido"}
+-
+-    Erro:
+-      type: object
+-      properties:
+-        erro: {type: string}
+-  responses:
+-    Invalido:
+-      description: Corpo ou parâmetros inválidos, ou violação de regra de negócio
+-      content:
+-        application/json:
+-          schema: {$ref: "#/components/schemas/Erro"}
+-    NaoEncontrado:
+-      description: Recurso não encontrado
+-      content:
+-        application/json:
+-          schema: {$ref: "#/components/schemas/Erro"}
++openapi: 3.0.3
++info:
++  title: ft_machry API
++  version: "2.0"
++security:
++  - cookieAuth: []
++paths:
++  /api/auth/login:
++    post:
++      summary: Inicia uma sessão
++      tags: [autenticacao]
++      security: []
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema:
++              type: object
++              required: [username, password]
++              properties:
++                username: {type: string}
++                password: {type: string, format: password}
++      responses:
++        "200":
++          description: Usuário autenticado
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/Usuario"}
++        "401": {description: Usuário ou senha inválidos}
++  /api/auth/logout:
++    post:
++      summary: Encerra a sessão atual
++      tags: [autenticacao]
++      responses:
++        "204": {description: Sessão encerrada}
++  /api/auth/me:
++    get:
++      summary: Retorna o usuário da sessão
++      tags: [autenticacao]
++      responses:
++        "200":
++          description: Usuário autenticado
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/Usuario"}
++        "401": {description: Autenticação necessária}
++  /api/auth/usuarios:
++    get:
++      summary: Lista usuários; exclusivo da proprietária
++      tags: [autenticacao]
++      responses:
++        "200": {description: Lista de usuários}
++    post:
++      summary: Cria usuário; exclusivo da proprietária
++      tags: [autenticacao]
++      responses:
++        "201": {description: Usuário criado}
++
++  /api/produtos:
++    get:
++      summary: Lista produtos ativos (ordenados por nome)
++      tags: [produtos]
++      responses:
++        "200":
++          description: Lista de produtos
++          content:
++            application/json:
++              schema:
++                type: array
++                items: {$ref: "#/components/schemas/Produto"}
++    post:
++      summary: Cria produto
++      tags: [produtos]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/ProdutoCriar"}
++      responses:
++        "201":
++          description: Produto criado
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/Produto"}
++        "400": {$ref: "#/components/responses/Invalido"}
++  /api/produtos/{id}:
++    parameters:
++      - {name: id, in: path, required: true, schema: {type: integer}}
++    get:
++      summary: Detalha produto ativo
++      tags: [produtos]
++      responses:
++        "200":
++          description: Produto
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/Produto"}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++    put:
++      summary: Atualiza produto (parcial, só os campos enviados)
++      tags: [produtos]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/ProdutoCampos"}
++      responses:
++        "200":
++          description: Produto atualizado
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/Produto"}
++        "400": {$ref: "#/components/responses/Invalido"}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++    delete:
++      summary: Desativa produto (exclusão lógica, ativo = 0)
++      tags: [produtos]
++      responses:
++        "204": {description: Produto desativado}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++
++  /api/fichas-tecnicas:
++    get:
++      summary: Lista fichas técnicas completas
++      tags: [fichas tecnicas]
++      responses:
++        "200":
++          description: Fichas ordenadas pelo nome do produto resultante
++          content:
++            application/json:
++              schema:
++                type: array
++                items: {$ref: "#/components/schemas/FichaTecnica"}
++    post:
++      summary: Cria ficha técnica com fases e componentes
++      tags: [fichas tecnicas]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/FichaTecnicaEntrada"}
++      responses:
++        "201":
++          description: Ficha criada
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/FichaTecnica"}
++        "400": {$ref: "#/components/responses/Invalido"}
++        "409": {description: O produto já possui uma ficha}
++
++  /api/fichas-tecnicas/fases:
++    get:
++      summary: Lista o catálogo de fases de produção
++      tags: [fichas tecnicas]
++      responses:
++        "200":
++          description: Fases disponíveis
++
++  /api/fichas-tecnicas/{id}:
++    parameters:
++      - {name: id, in: path, required: true, schema: {type: integer}}
++    get:
++      summary: Detalha uma ficha técnica
++      tags: [fichas tecnicas]
++      responses:
++        "200":
++          description: Ficha completa
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/FichaTecnica"}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++    put:
++      summary: Substitui dados, fases e componentes da ficha em uma transação
++      tags: [fichas tecnicas]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/FichaTecnicaEntrada"}
++      responses:
++        "200":
++          description: Ficha atualizada
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/FichaTecnica"}
++        "400": {$ref: "#/components/responses/Invalido"}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++        "409": {description: Conflito com outra ficha}
++    delete:
++      summary: Exclui ficha sem histórico de produção
++      tags: [fichas tecnicas]
++      responses:
++        "204": {description: Ficha excluída}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++        "409": {description: A ficha já possui solicitações de produção}
++
++  /api/estoque/inventario:
++    get:
++      summary: Lista o inventário atual (view vw_inventario, só lotes com saldo > 0)
++      tags: [estoque]
++      parameters:
++        - {name: produto_id, in: query, schema: {type: integer, minimum: 1}}
++        - {name: lote_id, in: query, schema: {type: integer, minimum: 1}}
++      responses:
++        "200":
++          description: Itens em estoque, ordenados por produto, validade e lote
++          content:
++            application/json:
++              schema:
++                type: array
++                items: {$ref: "#/components/schemas/ItemInventario"}
++        "400": {$ref: "#/components/responses/Invalido"}
++
++  /api/estoque/movimentacoes:
++    get:
++      summary: Lista as movimentações de estoque mais recentes
++      tags: [estoque]
++      parameters:
++        - {name: limite, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 100}}
++        - {name: lote_id, in: query, schema: {type: integer, minimum: 1}}
++        - {name: usuario_id, in: query, schema: {type: integer, minimum: 1}}
++        - {name: tipo, in: query, schema: {type: string}, description: "Comparado em maiúsculas; sem validação contra o enum"}
++      responses:
++        "200":
++          description: Movimentações, mais recentes primeiro
++          content:
++            application/json:
++              schema:
++                type: array
++                items: {$ref: "#/components/schemas/Movimentacao"}
++        "400": {$ref: "#/components/responses/Invalido"}
++    post:
++      summary: Registra uma movimentação e atualiza o saldo na mesma transação
++      tags: [estoque]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/MovimentacaoCriar"}
++      responses:
++        "201":
++          description: Movimentação registrada
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/Movimentacao"}
++        "400": {$ref: "#/components/responses/Invalido"}
++
++  /api/estoque/localizacoes:
++    get:
++      summary: Lista localizações (ordenadas por nome)
++      tags: [estoque]
++      responses:
++        "200":
++          description: Lista de localizações
++          content:
++            application/json:
++              schema:
++                type: array
++                items: {$ref: "#/components/schemas/Localizacao"}
++    post:
++      summary: Cria localização
++      tags: [estoque]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/LocalizacaoCriar"}
++      responses:
++        "201":
++          description: Localização criada
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/Localizacao"}
++        "400": {$ref: "#/components/responses/Invalido"}
++
++  /api/estoque/localizacoes/{id}:
++    parameters:
++      - {name: id, in: path, required: true, schema: {type: integer}}
++    put:
++      summary: Atualiza localização (parcial; bloqueia hierarquia circular e troca de tipo incompatível com lotes existentes)
++      tags: [estoque]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/LocalizacaoCampos"}
++      responses:
++        "200":
++          description: Localização atualizada
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/Localizacao"}
++        "400": {$ref: "#/components/responses/Invalido"}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++    delete:
++      summary: Remove localização
++      tags: [estoque]
++      responses:
++        "204": {description: Localização removida}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++
++  /api/estoque/lotes:
++    get:
++      summary: Lista lotes (com nome do produto e da localização)
++      tags: [estoque]
++      parameters:
++        - {name: produto_id, in: query, schema: {type: integer, minimum: 1}}
++        - {name: localizacao_id, in: query, schema: {type: integer, minimum: 1}}
++      responses:
++        "200":
++          description: Lotes, ordenados por validade (sem validade por último) e id
++          content:
++            application/json:
++              schema:
++                type: array
++                items: {$ref: "#/components/schemas/LoteListado"}
++        "400": {$ref: "#/components/responses/Invalido"}
++    post:
++      summary: Cria lote (quantidade inicia em 0; só é alterada por movimentação)
++      tags: [estoque]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/LoteCriar"}
++      responses:
++        "201":
++          description: Lote criado
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/Lote"}
++        "400": {$ref: "#/components/responses/Invalido"}
++
++  /api/estoque/lotes/{id}:
++    parameters:
++      - {name: id, in: path, required: true, schema: {type: integer}}
++    get:
++      summary: Detalha lote
++      tags: [estoque]
++      responses:
++        "200":
++          description: Lote
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/Lote"}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++    put:
++      summary: Atualiza lote (somente datas e custo; saldo muda só por movimentação)
++      tags: [estoque]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema: {$ref: "#/components/schemas/LoteAtualizarCampos"}
++      responses:
++        "200":
++          description: Lote atualizado
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/Lote"}
++        "400": {$ref: "#/components/responses/Invalido"}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++
++  /api/estoque/sugestao-saida/{produto_id}:
++    parameters:
++      - {name: produto_id, in: path, required: true, schema: {type: integer}}
++    get:
++      summary: Sugere lotes para separar uma saída pelo critério FEFO (não movimenta o estoque)
++      tags: [estoque]
++      parameters:
++        - {name: quantidade, in: query, required: true, schema: {type: number, minimum: 0, exclusiveMinimum: true}}
++      responses:
++        "200":
++          description: Sugestão de separação
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/SugestaoSaida"}
++        "400": {$ref: "#/components/responses/Invalido"}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++
++  /api/producao/solicitacoes:
++    get:
++      summary: Lista solicitações de produção (mais recentes primeiro)
++      tags: [producao]
++      responses:
++        "200":
++          description: Lista de solicitações
++          content:
++            application/json:
++              schema:
++                type: array
++                items: {$ref: "#/components/schemas/SolicitacaoProducao"}
++    post:
++      summary: Cria um planejamento de produção a partir de uma ficha técnica
++      tags: [producao]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema:
++              type: object
++              required: [ficha_tecnica_id]
++              properties:
++                ficha_tecnica_id: {type: integer, minimum: 1}
++                quantidade_planejada: {type: number, exclusiveMinimum: 0, nullable: true, description: Se omitida usa o rendimento da ficha}
++                prioridade: {type: string, enum: [BAIXA, NORMAL, ALTA, URGENTE], default: NORMAL}
++                previsto_para: {type: string, format: date-time, nullable: true}
++                responsavel_id: {type: integer, minimum: 1, nullable: true, description: Usuário ativo designado para executar}
++                observacao: {type: string, nullable: true, maxLength: 2000}
++      responses:
++        "201":
++          description: Solicitação criada
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/SolicitacaoProducao"}
++
++  /api/producao/solicitacoes/{id}:
++    parameters:
++      - {name: id, in: path, required: true, schema: {type: integer}}
++    get:
++      summary: Detalha solicitação de produção (componentes, fases e lotes produzidos)
++      tags: [producao]
++      responses:
++        "200":
++          description: Solicitação detalhada
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/SolicitacaoDetalhe"}
++        "404": {$ref: "#/components/responses/NaoEncontrado"}
++
++  /api/producao/solicitacoes/{id}/status:
++    parameters:
++      - {name: id, in: path, required: true, schema: {type: integer}}
++    put:
++      summary: Atualiza o estado de uma solicitação
++      tags: [producao]
++      requestBody:
++        required: true
++        content:
++          application/json:
++            schema:
++              type: object
++              required: [status]
++              properties:
++                status: {type: string, enum: [ABERTA, EM_SEPARACAO, EM_PRODUCAO, CONCLUIDA, CANCELADA]}
++      responses:
++        "200":
++          description: Solicitação atualizada
++          content:
++            application/json:
++              schema: {$ref: "#/components/schemas/SolicitacaoProducao"}
++
++components:
++  securitySchemes:
++    cookieAuth:
++      type: apiKey
++      in: cookie
++      name: session
++  schemas:
++    Usuario:
++      type: object
++      properties:
++        id: {type: integer}
++        nome: {type: string}
++        username: {type: string}
++        papel: {type: string, enum: [OWNER, ADMIN, USER]}
++        ativo: {type: integer, enum: [0, 1]}
++    ProdutoCampos:
++      type: object
++      properties:
++        nome: {type: string, example: Farinha de trigo}
++        tipo: {type: string, enum: [INSUMO, INTERMEDIARIO, FINAL]}
++        unidade_medida: {type: string, example: g}
++        grupo_id: {type: integer, nullable: true, description: FK para grupo_produto}
++        conservacao: {type: string, enum: [CONGELADO, RESFRIADO, SECO], default: SECO}
++        validade_obrigatoria: {type: integer, enum: [0, 1], default: 0}
++        validade_padrao_dias: {type: integer, nullable: true}
++        foto_url: {type: string, nullable: true}
++    ProdutoCriar:
++      allOf:
++        - $ref: "#/components/schemas/ProdutoCampos"
++        - required: [nome, tipo, unidade_medida]
++    Produto:
++      allOf:
++        - $ref: "#/components/schemas/ProdutoCampos"
++        - type: object
++          properties:
++            id: {type: integer}
++            ativo: {type: integer, enum: [0, 1]}
++            criado_em: {type: string, example: "2026-10-16 15:46:39"}
++
++    FichaFaseEntrada:
++      type: object
++      required: [fase_id, ordem, tempo_previsto_min]
++      properties:
++        fase_id: {type: integer, minimum: 1}
++        ordem: {type: integer, minimum: 1}
++        tempo_previsto_min: {type: integer, minimum: 1}
++    FichaComponenteEntrada:
++      type: object
++      required: [produto_id, quantidade]
++      properties:
++        produto_id: {type: integer, minimum: 1}
++        quantidade: {type: number, exclusiveMinimum: 0}
++        fase_ordem: {type: integer, minimum: 1, nullable: true}
++    FichaTecnicaEntrada:
++      type: object
++      required: [produto_id, rendimento, fases, componentes]
++      properties:
++        produto_id: {type: integer, minimum: 1, description: Produto intermediário ou final}
++        rendimento: {type: number, exclusiveMinimum: 0}
++        observacao: {type: string, nullable: true}
++        fases:
++          type: array
++          minItems: 1
++          items: {$ref: "#/components/schemas/FichaFaseEntrada"}
++        componentes:
++          type: array
++          minItems: 1
++          items: {$ref: "#/components/schemas/FichaComponenteEntrada"}
++    FichaTecnica:
++      allOf:
++        - $ref: "#/components/schemas/FichaTecnicaEntrada"
++        - type: object
++          properties:
++            id: {type: integer}
++            produto: {type: string}
++            unidade_rendimento: {type: string}
++
++    LocalizacaoCampos:
++      type: object
++      properties:
++        nome: {type: string, example: "Câmara Fria"}
++        tipo: {type: string, enum: [SECO, RESFRIADO, CONGELADO], default: SECO}
++        parent_id: {type: integer, nullable: true, minimum: 1, description: FK para localizacao (hierarquia não pode ser circular)}
++        foto_url: {type: string, nullable: true}
++    LocalizacaoCriar:
++      allOf:
++        - $ref: "#/components/schemas/LocalizacaoCampos"
++        - required: [nome]
++    Localizacao:
++      allOf:
++        - $ref: "#/components/schemas/LocalizacaoCampos"
++        - type: object
++          properties:
++            id: {type: integer}
++
++    LoteCampos:
++      type: object
++      properties:
++        produto_id: {type: integer, minimum: 1, description: Produto precisa estar ativo}
++        localizacao_id: {type: integer, minimum: 1, description: Conservação do produto precisa ser compatível com o tipo da localização}
++        data_producao: {type: string, format: date, nullable: true, example: "2026-01-01"}
++        data_validade: {type: string, format: date, nullable: true, description: Obrigatória se o produto exigir validade}
++        custo_unitario: {type: number, minimum: 0, nullable: true}
++    LoteCriar:
++      allOf:
++        - $ref: "#/components/schemas/LoteCampos"
++        - required: [produto_id, localizacao_id]
++    LoteAtualizarCampos:
++      type: object
++      description: Somente estes três campos podem ser editados; saldo muda por movimentação
++      properties:
++        data_producao: {type: string, format: date, nullable: true}
++        data_validade: {type: string, format: date, nullable: true}
++        custo_unitario: {type: number, minimum: 0, nullable: true}
++    Lote:
++      allOf:
++        - $ref: "#/components/schemas/LoteCampos"
++        - type: object
++          properties:
++            id: {type: integer}
++            quantidade: {type: number, description: Atualizada na mesma transação da movimentação}
++            criado_em: {type: string, example: "2026-10-16 15:46:39"}
++    LoteListado:
++      description: Lote com o nome do produto e da localização (retornado por GET /api/estoque/lotes)
++      allOf:
++        - $ref: "#/components/schemas/Lote"
++        - type: object
++          properties:
++            produto: {type: string}
++            localizacao: {type: string}
++
++    MovimentacaoCriar:
++      type: object
++      required: [tipo, lote_id, usuario_id, quantidade]
++      properties:
++        tipo:
++          type: string
++          enum: [ENTRADA, SAIDA, AJUSTE_ENTRADA, AJUSTE_SAIDA, TRANSFERENCIA, TRANSFORMACAO]
++          description: PRODUCAO e CONSUMO_PRODUCAO são reservados ao módulo de produção
++        lote_id: {type: integer, minimum: 1}
++        usuario_id: {type: integer, minimum: 1, description: Usuário precisa estar ativo}
++        quantidade: {type: number, minimum: 0, exclusiveMinimum: true}
++        lote_destino_id: {type: integer, minimum: 1, nullable: true, description: Obrigatório para TRANSFERENCIA/TRANSFORMACAO; precisa ser diferente de lote_id}
++        quantidade_destino: {type: number, minimum: 0, exclusiveMinimum: true, nullable: true, description: Obrigatória apenas para TRANSFORMACAO}
++        motivo: {type: string, nullable: true, description: Obrigatório para SAIDA/AJUSTE_ENTRADA/AJUSTE_SAIDA}
++        observacao: {type: string, nullable: true}
++    Movimentacao:
++      allOf:
++        - $ref: "#/components/schemas/MovimentacaoCriar"
++        - type: object
++          properties:
++            id: {type: integer}
++            solicitacao_producao_id: {type: integer, nullable: true}
++            sp_componente_id: {type: integer, nullable: true}
++            criado_em: {type: string, example: "2026-10-16 15:46:39"}
++
++    ItemInventario:
++      type: object
++      description: Linha da view vw_inventario (somente lotes com saldo > 0)
++      properties:
++        produto_id: {type: integer}
++        produto: {type: string}
++        tipo_produto: {type: string, enum: [INSUMO, INTERMEDIARIO, FINAL]}
++        unidade_medida: {type: string}
++        lote_id: {type: integer}
++        quantidade: {type: number}
++        data_validade: {type: string, format: date, nullable: true}
++        localizacao: {type: string}
++
++    LoteSugerido:
++      type: object
++      properties:
++        lote_id: {type: integer}
++        quantidade: {type: number, description: Quantidade sugerida deste lote (pode ser menor que o saldo do lote)}
++        data_validade: {type: string, format: date, nullable: true}
++    SugestaoSaida:
++      type: object
++      properties:
++        produto_id: {type: integer}
++        quantidade_solicitada: {type: number}
++        lotes:
++          type: array
++          items: {$ref: "#/components/schemas/LoteSugerido"}
++        quantidade_faltante: {type: number, description: "> 0 se não havia saldo suficiente em lotes não vencidos"}
++        criterio: {type: string, example: "FEFO: menor validade primeiro (somente lotes não vencidos)"}
++        aviso: {type: string, example: "Sugestão de separação: não movimenta o estoque"}
++
++    SolicitacaoProducao:
++      type: object
++      properties:
++        id: {type: integer}
++        ficha_tecnica_id: {type: integer}
++        usuario_id: {type: integer, description: Usuário que criou a solicitação}
++        responsavel_id: {type: integer, nullable: true, description: Usuário designado para executar}
++        quantidade_planejada: {type: number, exclusiveMinimum: 0}
++        prioridade: {type: string, enum: [BAIXA, NORMAL, ALTA, URGENTE]}
++        previsto_para: {type: string, format: date-time, nullable: true}
++        observacao: {type: string, nullable: true}
++        status: {type: string, enum: [ABERTA, EM_SEPARACAO, EM_PRODUCAO, CONCLUIDA, CANCELADA]}
++        criado_em: {type: string, example: "2026-10-16 15:46:39"}
++        iniciado_em: {type: string, nullable: true}
++        concluido_em: {type: string, nullable: true}
++    ComponenteSolicitacao:
++      type: object
++      description: Linha da view vw_sp_componente
++      properties:
++        sp_componente_id: {type: integer}
++        solicitacao_producao_id: {type: integer}
++        produto_id: {type: integer}
++        componente: {type: string, description: Nome do produto componente}
++        unidade_medida: {type: string}
++        fase_ordem: {type: integer, nullable: true}
++        fase: {type: string, nullable: true}
++        quantidade_prevista: {type: number}
++        quantidade_realizada: {type: number, description: Somatório das movimentações CONSUMO_PRODUCAO ligadas ao componente}
++        custo_realizado: {type: number, nullable: true}
++    FaseSolicitacao:
++      type: object
++      properties:
++        ordem: {type: integer}
++        fase: {type: string}
++        tempo_previsto_min: {type: integer}
++        tempo_realizado_min: {type: integer, nullable: true}
++    LoteProduzido:
++      type: object
++      description: Linha da view vw_sp_producao (movimentações do tipo PRODUCAO)
++      properties:
++        solicitacao_producao_id: {type: integer}
++        lote_id: {type: integer}
++        quantidade: {type: number}
++        criado_em: {type: string, example: "2026-10-16 15:46:39"}
++    SolicitacaoDetalhe:
++      type: object
++      properties:
++        solicitacao: {$ref: "#/components/schemas/SolicitacaoProducao"}
++        componentes:
++          type: array
++          items: {$ref: "#/components/schemas/ComponenteSolicitacao"}
++        fases:
++          type: array
++          items: {$ref: "#/components/schemas/FaseSolicitacao"}
++        lotes_produzidos:
++          type: array
++          items: {$ref: "#/components/schemas/LoteProduzido"}
++
++    Erro:
++      type: object
++      properties:
++        erro: {type: string}
++  responses:
++    Invalido:
++      description: Corpo ou parâmetros inválidos, ou violação de regra de negócio
++      content:
++        application/json:
++          schema: {$ref: "#/components/schemas/Erro"}
++    NaoEncontrado:
++      description: Recurso não encontrado
++      content:
++        application/json:
++          schema: {$ref: "#/components/schemas/Erro"}
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/frontend/src/types.ts /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/frontend/src/types.ts
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/frontend/src/types.ts	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/frontend/src/types.ts	2026-11-01 04:25:49.472246306 +0000
+@@ -1,110 +1,116 @@
+-export type TipoProduto = 'INSUMO' | 'INTERMEDIARIO' | 'FINAL'
+-export type Conservacao = 'SECO' | 'RESFRIADO' | 'CONGELADO'
+-export type PapelUsuario = 'OWNER' | 'ADMIN' | 'USER'
+-
+-export interface Usuario {
+-  id: number
+-  nome: string
+-  username: string
+-  papel: PapelUsuario
+-  ativo: number
+-}
+-
+-export interface Produto {
+-  id: number
+-  nome: string
+-  tipo: TipoProduto
+-  unidade_medida: string
+-  grupo_id: number | null
+-  conservacao: Conservacao
+-  validade_obrigatoria: number
+-  validade_padrao_dias: number | null
+-  foto_url: string | null
+-  ativo: number
+-  criado_em: string
+-}
+-
+-export interface FaseCatalogo {
+-  id: number
+-  nome: string
+-}
+-
+-export interface FichaFase {
+-  id: number
+-  fase_id: number
+-  fase: string
+-  ordem: number
+-  tempo_previsto_min: number
+-}
+-
+-export interface FichaComponente {
+-  id: number
+-  produto_id: number
+-  produto: string
+-  unidade_medida: string
+-  quantidade: number
+-  ficha_tecnica_fase_id: number | null
+-  fase_ordem: number | null
+-}
+-
+-export interface FichaTecnica {
+-  id: number
+-  produto_id: number
+-  produto: string
+-  unidade_rendimento: string
+-  rendimento: number
+-  observacao: string | null
+-  fases: FichaFase[]
+-  componentes: FichaComponente[]
+-}
+-
+-export interface ItemInventario {
+-  produto_id: number
+-  produto: string
+-  tipo_produto: TipoProduto
+-  unidade_medida: string
+-  lote_id: number
+-  quantidade: number
+-  data_validade: string | null
+-  localizacao: string
+-}
+-
+-export interface Localizacao {
+-  id: number
+-  nome: string
+-  tipo: Conservacao
+-  parent_id: number | null
+-  foto_url: string | null
+-}
+-
+-export interface Lote {
+-  id: number
+-  produto_id: number
+-  produto: string
+-  localizacao_id: number
+-  localizacao: string
+-  quantidade: number
+-  data_producao: string | null
+-  data_validade: string | null
+-  custo_unitario: number | null
+-  criado_em: string
+-}
+-
+-export interface SolicitacaoProducao {
+-  id: number
+-  ficha_tecnica_id: number
+-  usuario_id: number
+-  status: string
+-  criado_em: string
+-  concluido_em: string | null
+-}
+-
+-export type View =
+-  | 'inicio'
+-  | 'produtos'
+-  | 'fichas'
+-  | 'estoque'
+-  | 'producao'
+-  | 'historico'
+-  | 'locais'
+-  | 'usuarios'
++export type TipoProduto = 'INSUMO' | 'INTERMEDIARIO' | 'FINAL'
++export type Conservacao = 'SECO' | 'RESFRIADO' | 'CONGELADO'
++export type PapelUsuario = 'OWNER' | 'ADMIN' | 'USER'
++
++export interface Usuario {
++  id: number
++  nome: string
++  username: string
++  papel: PapelUsuario
++  ativo: number
++}
++
++export interface Produto {
++  id: number
++  nome: string
++  tipo: TipoProduto
++  unidade_medida: string
++  grupo_id: number | null
++  conservacao: Conservacao
++  validade_obrigatoria: number
++  validade_padrao_dias: number | null
++  foto_url: string | null
++  ativo: number
++  criado_em: string
++}
++
++export interface FaseCatalogo {
++  id: number
++  nome: string
++}
++
++export interface FichaFase {
++  id: number
++  fase_id: number
++  fase: string
++  ordem: number
++  tempo_previsto_min: number
++}
++
++export interface FichaComponente {
++  id: number
++  produto_id: number
++  produto: string
++  unidade_medida: string
++  quantidade: number
++  ficha_tecnica_fase_id: number | null
++  fase_ordem: number | null
++}
++
++export interface FichaTecnica {
++  id: number
++  produto_id: number
++  produto: string
++  unidade_rendimento: string
++  rendimento: number
++  observacao: string | null
++  fases: FichaFase[]
++  componentes: FichaComponente[]
++}
++
++export interface ItemInventario {
++  produto_id: number
++  produto: string
++  tipo_produto: TipoProduto
++  unidade_medida: string
++  lote_id: number
++  quantidade: number
++  data_validade: string | null
++  localizacao: string
++}
++
++export interface Localizacao {
++  id: number
++  nome: string
++  tipo: Conservacao
++  parent_id: number | null
++  foto_url: string | null
++}
++
++export interface Lote {
++  id: number
++  produto_id: number
++  produto: string
++  localizacao_id: number
++  localizacao: string
++  quantidade: number
++  data_producao: string | null
++  data_validade: string | null
++  custo_unitario: number | null
++  criado_em: string
++}
++
++export interface SolicitacaoProducao {
++  id: number
++  ficha_tecnica_id: number
++  usuario_id: number
++  responsavel_id: number | null
++  quantidade_planejada: number
++  prioridade: 'BAIXA' | 'NORMAL' | 'ALTA' | 'URGENTE'
++  previsto_para: string | null
++  observacao: string | null
++  status: string
++  criado_em: string
++  iniciado_em: string | null
++  concluido_em: string | null
++}
++
++export type View =
++  | 'inicio'
++  | 'produtos'
++  | 'fichas'
++  | 'estoque'
++  | 'producao'
++  | 'historico'
++  | 'locais'
++  | 'usuarios'
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/migrations/versions/b7d9e2f4a610_planejamento_producao.py /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/migrations/versions/b7d9e2f4a610_planejamento_producao.py
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/migrations/versions/b7d9e2f4a610_planejamento_producao.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/migrations/versions/b7d9e2f4a610_planejamento_producao.py	2026-11-01 04:25:29.131082252 +0000
+@@ -0,0 +1,90 @@
++"""adiciona planejamento de produção
++
++Revision ID: b7d9e2f4a610
++Revises: 8a3c1d4e5f67
++Create Date: 2026-11-01 04:45:00
++
++"""
++from typing import Sequence, Union
++
++from alembic import op
++import sqlalchemy as sa
++
++
++revision: str = "b7d9e2f4a610"
++down_revision: Union[str, Sequence[str], None] = "8a3c1d4e5f67"
++branch_labels: Union[str, Sequence[str], None] = None
++depends_on: Union[str, Sequence[str], None] = None
++
++
++def upgrade() -> None:
++    # Primeiro adicionamos a quantidade como nullable para conseguir preencher
++    # solicitações já existentes a partir do rendimento de sua ficha técnica.
++    with op.batch_alter_table("solicitacao_producao") as batch_op:
++        batch_op.add_column(sa.Column("responsavel_id", sa.Integer(), nullable=True))
++        batch_op.add_column(
++            sa.Column("quantidade_planejada", sa.Numeric(18, 3), nullable=True)
++        )
++        batch_op.add_column(
++            sa.Column(
++                "prioridade",
++                sa.Text(),
++                server_default="NORMAL",
++                nullable=False,
++            )
++        )
++        batch_op.add_column(sa.Column("previsto_para", sa.String(), nullable=True))
++        batch_op.add_column(sa.Column("observacao", sa.Text(), nullable=True))
++        batch_op.add_column(sa.Column("iniciado_em", sa.String(), nullable=True))
++        batch_op.create_foreign_key(
++            "fk_solicitacao_responsavel",
++            "usuario",
++            ["responsavel_id"],
++            ["id"],
++        )
++
++    op.execute(
++        """
++        UPDATE solicitacao_producao
++           SET quantidade_planejada = (
++               SELECT ficha_tecnica.rendimento
++                 FROM ficha_tecnica
++                WHERE ficha_tecnica.id = solicitacao_producao.ficha_tecnica_id
++           )
++         WHERE quantidade_planejada IS NULL
++        """
++    )
++
++    with op.batch_alter_table("solicitacao_producao") as batch_op:
++        batch_op.alter_column(
++            "quantidade_planejada",
++            existing_type=sa.Numeric(18, 3),
++            nullable=False,
++        )
++        batch_op.create_check_constraint(
++            "ck_solicitacao_quantidade_planejada",
++            "quantidade_planejada > 0",
++        )
++        batch_op.create_check_constraint(
++            "ck_solicitacao_prioridade",
++            "prioridade IN ('BAIXA', 'NORMAL', 'ALTA', 'URGENTE')",
++        )
++        batch_op.create_index(
++            "idx_solicitacao_planejamento",
++            ["status", "previsto_para", "prioridade"],
++            unique=False,
++        )
++
++
++def downgrade() -> None:
++    with op.batch_alter_table("solicitacao_producao") as batch_op:
++        batch_op.drop_index("idx_solicitacao_planejamento")
++        batch_op.drop_constraint("ck_solicitacao_prioridade", type_="check")
++        batch_op.drop_constraint("ck_solicitacao_quantidade_planejada", type_="check")
++        batch_op.drop_constraint("fk_solicitacao_responsavel", type_="foreignkey")
++        batch_op.drop_column("iniciado_em")
++        batch_op.drop_column("observacao")
++        batch_op.drop_column("previsto_para")
++        batch_op.drop_column("prioridade")
++        batch_op.drop_column("quantidade_planejada")
++        batch_op.drop_column("responsavel_id")
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/tests/test_migrations.py /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/tests/test_migrations.py
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/tests/test_migrations.py	2026-11-01 04:12:19.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/tests/test_migrations.py	2026-11-01 04:27:51.313241363 +0000
+@@ -43,8 +43,14 @@
+             )
+         }
+         revisao = conexao.execute("SELECT version_num FROM alembic_version").fetchone()
++        colunas_solicitacao = {
++            linha[1] for linha in conexao.execute("PRAGMA table_info(solicitacao_producao)")
++        }
++        indices_solicitacao = {
++            linha[1] for linha in conexao.execute("PRAGMA index_list(solicitacao_producao)")
++        }
+ 
+-    assert revisao == ("8a3c1d4e5f67",)
++    assert revisao == ("b7d9e2f4a610",)
+     assert ("table", "produto") in objetos
+     assert ("table", "solicitacao_producao") in objetos
+     assert ("table", "movimentacao_estoque") in objetos
+@@ -53,3 +59,89 @@
+     assert ("view", "vw_fifo") not in objetos
+     assert ("view", "vw_sp_componente") in objetos
+     assert ("view", "vw_sp_producao") in objetos
++    assert {
++        "responsavel_id",
++        "quantidade_planejada",
++        "prioridade",
++        "previsto_para",
++        "observacao",
++        "iniciado_em",
++    }.issubset(colunas_solicitacao)
++    assert "idx_solicitacao_planejamento" in indices_solicitacao
++
++
++def test_migration_planejamento_preserva_solicitacoes_existentes(tmp_path):
++    root = Path(__file__).resolve().parents[1]
++    database = tmp_path / "migration-existing.db"
++    env = os.environ.copy()
++    env.update(
++        {
++            "DB_CONNECTION": "sqlite",
++            "DATABASE_PATH": str(database),
++            "SECRET_KEY": "migration-existing-secret",
++        }
++    )
++
++    anterior = subprocess.run(
++        [
++            sys.executable,
++            "-m",
++            "alembic",
++            "-c",
++            "migrations/alembic.ini",
++            "upgrade",
++            "8a3c1d4e5f67",
++        ],
++        cwd=root,
++        env=env,
++        text=True,
++        capture_output=True,
++        check=False,
++    )
++    assert anterior.returncode == 0, anterior.stdout + anterior.stderr
++
++    with sqlite3.connect(database) as conexao:
++        conexao.execute(
++            "INSERT INTO usuario (id, nome, username, senha_hash, papel, ativo) "
++            "VALUES (1, 'Gestor', 'gestor', 'hash', 'ADMIN', 1)"
++        )
++        conexao.execute(
++            "INSERT INTO produto (id, nome, tipo, unidade_medida, conservacao, validade_obrigatoria, ativo) "
++            "VALUES (1, 'Produto final', 'FINAL', 'un', 'SECO', 0, 1)"
++        )
++        conexao.execute(
++            "INSERT INTO ficha_tecnica (id, produto_id, rendimento) VALUES (1, 1, 10)"
++        )
++        conexao.execute(
++            "INSERT INTO solicitacao_producao (id, ficha_tecnica_id, usuario_id, status) "
++            "VALUES (1, 1, 1, 'ABERTA')"
++        )
++        conexao.commit()
++
++    atual = subprocess.run(
++        [
++            sys.executable,
++            "-m",
++            "alembic",
++            "-c",
++            "migrations/alembic.ini",
++            "upgrade",
++            "head",
++        ],
++        cwd=root,
++        env=env,
++        text=True,
++        capture_output=True,
++        check=False,
++    )
++    assert atual.returncode == 0, atual.stdout + atual.stderr
++
++    with sqlite3.connect(database) as conexao:
++        linha = conexao.execute(
++            "SELECT quantidade_planejada, prioridade, responsavel_id "
++            "FROM solicitacao_producao WHERE id = 1"
++        ).fetchone()
++        revisao = conexao.execute("SELECT version_num FROM alembic_version").fetchone()
++
++    assert linha == (10, "NORMAL", None)
++    assert revisao == ("b7d9e2f4a610",)
+diff -ruN '--exclude=FASE8_04_CHANGES.diff' /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/tests/test_producao.py /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/tests/test_producao.py
+--- /mnt/data/_fase803_original/Machry_Fase8_03_Dominio/tests/test_producao.py	2026-11-01 03:40:19.000000000 +0000
++++ /mnt/data/Machry_Fase8_04_Planejamento/Machry_Fase8_03_Dominio/tests/test_producao.py	2026-11-01 04:25:48.949700835 +0000
+@@ -83,3 +83,95 @@
+         json={"status": "CONCLUIDA"},
+     )
+     assert resposta.status_code == 400
++
++
++def test_criacao_legada_usa_rendimento_da_ficha(seeded_client):
++    """O payload antigo deve continuar funcionando sem quantidade explícita."""
++    criada = _criar_solicitacao(seeded_client)
++    assert criada["quantidade_planejada"] == 1.0
++    assert criada["prioridade"] == "NORMAL"
++    assert criada["previsto_para"] is None
++    assert criada["responsavel_id"] is None
++
++    detalhe = seeded_client.get(
++        f"/api/producao/solicitacoes/{criada['id']}"
++    ).get_json()
++    quantidades = {
++        item["produto_id"]: item["quantidade_prevista"]
++        for item in detalhe["componentes"]
++    }
++    assert quantidades == {8: 400.0, 3: 300.0, 7: 500.0, 9: 50.0, 4: 100.0}
++
++
++def test_planejamento_escala_componentes_pelo_rendimento(seeded_client):
++    resposta = seeded_client.post(
++        "/api/producao/solicitacoes",
++        json={
++            "ficha_tecnica_id": 1,
++            "quantidade_planejada": 2,
++            "prioridade": "ALTA",
++            "previsto_para": "2026-11-03T08:30:00",
++            "responsavel_id": 3,
++            "observacao": "  Priorizar para a abertura.  ",
++        },
++    )
++    assert resposta.status_code == 201, resposta.get_json()
++    criada = resposta.get_json()
++    assert criada["quantidade_planejada"] == 2.0
++    assert criada["prioridade"] == "ALTA"
++    assert criada["previsto_para"] == "2026-11-03T08:30:00"
++    assert criada["responsavel_id"] == 3
++    assert criada["observacao"] == "Priorizar para a abertura."
++
++    detalhe = seeded_client.get(
++        f"/api/producao/solicitacoes/{criada['id']}"
++    ).get_json()
++    quantidades = {
++        item["produto_id"]: item["quantidade_prevista"]
++        for item in detalhe["componentes"]
++    }
++    assert quantidades == {8: 800.0, 3: 600.0, 7: 1000.0, 9: 100.0, 4: 200.0}
++
++
++def test_planejamento_rejeita_quantidade_invalida(seeded_client):
++    resposta = seeded_client.post(
++        "/api/producao/solicitacoes",
++        json={"ficha_tecnica_id": 1, "quantidade_planejada": 0},
++    )
++    assert resposta.status_code == 400
++
++
++def test_planejamento_rejeita_prioridade_invalida(seeded_client):
++    resposta = seeded_client.post(
++        "/api/producao/solicitacoes",
++        json={"ficha_tecnica_id": 1, "prioridade": "SUPER_IMPORTANTE"},
++    )
++    assert resposta.status_code == 400
++
++
++def test_planejamento_rejeita_data_invalida(seeded_client):
++    resposta = seeded_client.post(
++        "/api/producao/solicitacoes",
++        json={"ficha_tecnica_id": 1, "previsto_para": "amanhã cedo"},
++    )
++    assert resposta.status_code == 400
++
++
++def test_planejamento_rejeita_responsavel_inexistente(seeded_client):
++    resposta = seeded_client.post(
++        "/api/producao/solicitacoes",
++        json={"ficha_tecnica_id": 1, "responsavel_id": 9999},
++    )
++    assert resposta.status_code == 404
++
++
++def test_iniciar_producao_registra_inicio(seeded_client):
++    criada = _criar_solicitacao(seeded_client)
++    assert criada["iniciado_em"] is None
++
++    resposta = seeded_client.put(
++        f"/api/producao/solicitacoes/{criada['id']}/status",
++        json={"status": "EM_PRODUCAO"},
++    )
++    assert resposta.status_code == 200, resposta.get_json()
++    assert resposta.get_json()["iniciado_em"] is not None

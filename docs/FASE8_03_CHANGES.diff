@@ -1,0 +1,2094 @@
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/README.md /mnt/data/Machry_Fase8_03_Dominio/README.md
+--- /mnt/data/Machry_Fase8_02_Migrations/README.md	2026-11-01 04:10:39.330774529 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/README.md	2026-11-01 04:15:05.434558150 +0000
+@@ -167,3 +167,11 @@
+ ```
+ 
+ Cada teste cria um SQLite temporário. O arquivo `data/app.db` não é alterado.
++
++## Fase 8.3 — domínio consolidado
++
++A aplicação usa uma única representação para cada conceito central: `Produto`, `estoque.Lote`, `FichaTecnica` e `SolicitacaoProducao`. As entidades antigas do GAP (`Item`, `Processamento` e seus filhos) permanecem apenas como referência histórica e não fazem parte do runtime.
++
++`Usuario` agora pertence ao módulo `auth`, enquanto estoque apenas referencia o responsável pelas movimentações. O catálogo também protege invariantes cruzadas: uma mudança de conservação não pode invalidar localizações de lotes existentes e validade obrigatória não pode ser ativada enquanto houver lote sem validade.
++
++A nomenclatura histórica FIFO foi corrigida para FEFO pela migration `8a3c1d4e5f67`. Veja [`docs/FASE8_03.md`](docs/FASE8_03.md) para as decisões e validações desta etapa.
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/app/__init__.py /mnt/data/Machry_Fase8_03_Dominio/app/__init__.py
+--- /mnt/data/Machry_Fase8_02_Migrations/app/__init__.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/app/__init__.py	2026-11-01 04:10:48.310352091 +0000
+@@ -1,74 +1,74 @@
+-import os
+-
+-from flask import Flask, g, request, send_from_directory, session
+-
+-from app.utils.config import config as app_config
+-from app.features import auth, estoque, fichas_tecnicas, producao, produtos
+-from app.features.estoque.models import Usuario
+-from db.database_config import db, init_app as init_db
+-
+-ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+-DOCS_PATH = os.path.join(ROOT_PATH, "docs")
+-
+-def create_app(config: dict | None = None) -> Flask:
+-    app = Flask(__name__)
+-    prefixo_api = "/api"
+-    
+-    app.config.from_object(app_config)
+-    if config:
+-        app.config.update(config)
+-
+-    init_db(app)
+-
+-    @app.before_request
+-    def carregar_usuario_e_proteger_api():
+-        usuario_id = session.get("usuario_id")
+-        g.usuario = db.session.get(Usuario, usuario_id) if usuario_id else None
+-        if g.usuario is not None and not g.usuario.ativo:
+-            session.clear()
+-            g.usuario = None
+-        if not request.path.startswith("/api/") or request.path == "/api/auth/login":
+-            return None
+-        if g.usuario is None:
+-            return {"erro": "autenticação necessária"}, 401
+-
+-        papel = g.usuario.papel
+-        metodo = request.method
+-        caminho = request.path
+-        if caminho in {"/api/auth/me", "/api/auth/logout"}:
+-            return None
+-        if papel == "OWNER":
+-            return None
+-        if papel == "ADMIN":
+-            if caminho.startswith("/api/auth/usuarios"):
+-                return {"erro": "você não tem permissão para esta ação"}, 403
+-            if caminho.startswith(("/api/produtos", "/api/fichas-tecnicas")) and metodo != "GET":
+-                return {"erro": "somente a proprietária pode alterar produtos e fichas"}, 403
+-            return None
+-        if papel == "USER" and metodo == "GET" and caminho.startswith(("/api/producao", "/api/fichas-tecnicas")):
+-            return None
+-        if papel == "USER" and metodo == "PUT" and caminho.startswith("/api/producao/solicitacoes/") and caminho.endswith("/status"):
+-            return None
+-        return {"erro": "você não tem permissão para acessar este recurso"}, 403
+-
+-    app.register_blueprint(auth.bp, url_prefix=f"{prefixo_api}/auth")
+-    app.register_blueprint(produtos.bp, url_prefix=f"{prefixo_api}/produtos")
+-    app.register_blueprint(
+-        fichas_tecnicas.bp, url_prefix=f"{prefixo_api}/fichas-tecnicas"
+-    )
+-    app.register_blueprint(estoque.bp, url_prefix=f"{prefixo_api}/estoque")
+-    app.register_blueprint(producao.bp, url_prefix=f"{prefixo_api}/producao")
+-
+-    @app.get("/health")
+-    def health():
+-        return {"status": "ok"}
+-
+-    @app.get("/openapi.yaml")
+-    def openapi():
+-        return send_from_directory(DOCS_PATH, "openapi.yaml")
+-
+-    @app.get("/docs")
+-    def docs():
+-        return send_from_directory(DOCS_PATH, "swagger-ui.html")
+-
+-    return app
++import os
++
++from flask import Flask, g, request, send_from_directory, session
++
++from app.utils.config import config as app_config
++from app.features import auth, estoque, fichas_tecnicas, producao, produtos
++from app.features.auth.models import Usuario
++from db.database_config import db, init_app as init_db
++
++ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++DOCS_PATH = os.path.join(ROOT_PATH, "docs")
++
++def create_app(config: dict | None = None) -> Flask:
++    app = Flask(__name__)
++    prefixo_api = "/api"
++    
++    app.config.from_object(app_config)
++    if config:
++        app.config.update(config)
++
++    init_db(app)
++
++    @app.before_request
++    def carregar_usuario_e_proteger_api():
++        usuario_id = session.get("usuario_id")
++        g.usuario = db.session.get(Usuario, usuario_id) if usuario_id else None
++        if g.usuario is not None and not g.usuario.ativo:
++            session.clear()
++            g.usuario = None
++        if not request.path.startswith("/api/") or request.path == "/api/auth/login":
++            return None
++        if g.usuario is None:
++            return {"erro": "autenticação necessária"}, 401
++
++        papel = g.usuario.papel
++        metodo = request.method
++        caminho = request.path
++        if caminho in {"/api/auth/me", "/api/auth/logout"}:
++            return None
++        if papel == "OWNER":
++            return None
++        if papel == "ADMIN":
++            if caminho.startswith("/api/auth/usuarios"):
++                return {"erro": "você não tem permissão para esta ação"}, 403
++            if caminho.startswith(("/api/produtos", "/api/fichas-tecnicas")) and metodo != "GET":
++                return {"erro": "somente a proprietária pode alterar produtos e fichas"}, 403
++            return None
++        if papel == "USER" and metodo == "GET" and caminho.startswith(("/api/producao", "/api/fichas-tecnicas")):
++            return None
++        if papel == "USER" and metodo == "PUT" and caminho.startswith("/api/producao/solicitacoes/") and caminho.endswith("/status"):
++            return None
++        return {"erro": "você não tem permissão para acessar este recurso"}, 403
++
++    app.register_blueprint(auth.bp, url_prefix=f"{prefixo_api}/auth")
++    app.register_blueprint(produtos.bp, url_prefix=f"{prefixo_api}/produtos")
++    app.register_blueprint(
++        fichas_tecnicas.bp, url_prefix=f"{prefixo_api}/fichas-tecnicas"
++    )
++    app.register_blueprint(estoque.bp, url_prefix=f"{prefixo_api}/estoque")
++    app.register_blueprint(producao.bp, url_prefix=f"{prefixo_api}/producao")
++
++    @app.get("/health")
++    def health():
++        return {"status": "ok"}
++
++    @app.get("/openapi.yaml")
++    def openapi():
++        return send_from_directory(DOCS_PATH, "openapi.yaml")
++
++    @app.get("/docs")
++    def docs():
++        return send_from_directory(DOCS_PATH, "swagger-ui.html")
++
++    return app
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/app/features/auth/models.py /mnt/data/Machry_Fase8_03_Dominio/app/features/auth/models.py
+--- /mnt/data/Machry_Fase8_02_Migrations/app/features/auth/models.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/app/features/auth/models.py	2026-11-01 04:10:48.309064832 +0000
+@@ -0,0 +1,30 @@
++from db.database_config import db
++
++
++class Usuario(db.Model):
++    """Usuário autenticável do sistema.
++
++    O modelo vive no domínio de autenticação. Estoque apenas referencia o usuário
++    responsável pelas movimentações por chave estrangeira.
++    """
++
++    __tablename__ = "usuario"
++    __table_args__ = (
++        db.CheckConstraint(
++            "papel IN ('ADMIN', 'OWNER', 'USER')",
++            name="ck_usuario_papel",
++        ),
++    )
++
++    id = db.Column(db.Integer, primary_key=True)
++    nome = db.Column(db.Text, nullable=False)
++    username = db.Column(db.String(80), unique=True, nullable=False)
++    senha_hash = db.Column(db.String(255), nullable=False)
++    papel = db.Column(db.Text, nullable=False, default="USER", server_default="USER")
++    foto_url = db.Column(db.Text)
++    ativo = db.Column(db.Integer, nullable=False, default=1, server_default="1")
++    criado_em = db.Column(
++        db.Text,
++        nullable=False,
++        server_default=db.text("(CAST(CURRENT_TIMESTAMP AS TEXT))"),
++    )
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/app/features/auth/routes.py /mnt/data/Machry_Fase8_03_Dominio/app/features/auth/routes.py
+--- /mnt/data/Machry_Fase8_02_Migrations/app/features/auth/routes.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/app/features/auth/routes.py	2026-11-01 04:10:48.310430338 +0000
+@@ -1,105 +1,105 @@
+-from functools import wraps
+-
+-from flask import Blueprint, g, session
+-from werkzeug.security import check_password_hash, generate_password_hash
+-
+-from app.features.estoque.models import Usuario
+-from app.utils.errors import Conflito, RegistroNaoEncontrado
+-from app.utils.parsing import entrada
+-from db.database_config import db
+-
+-from .schemas import LoginInput, UsuarioCreate, UsuarioUpdate
+-
+-bp = Blueprint("auth", __name__)
+-
+-
+-def serializar(usuario: Usuario) -> dict:
+-    return {
+-        "id": usuario.id,
+-        "nome": usuario.nome,
+-        "username": usuario.username,
+-        "papel": usuario.papel,
+-        "ativo": usuario.ativo,
+-    }
+-
+-
+-def exigir_papeis(*papeis):
+-    def decorator(funcao):
+-        @wraps(funcao)
+-        def protegida(*args, **kwargs):
+-            if not getattr(g, "usuario", None):
+-                return {"erro": "autenticação necessária"}, 401
+-            if g.usuario.papel not in papeis:
+-                return {"erro": "você não tem permissão para esta ação"}, 403
+-            return funcao(*args, **kwargs)
+-        return protegida
+-    return decorator
+-
+-
+-@bp.post("/login")
+-def login():
+-    dados = entrada(LoginInput)
+-    usuario = db.session.execute(
+-        db.select(Usuario).where(db.func.lower(Usuario.username) == dados.username)
+-    ).scalar_one_or_none()
+-    if usuario is None or not usuario.ativo or not check_password_hash(usuario.senha_hash, dados.password):
+-        return {"erro": "usuário ou senha inválidos"}, 401
+-    session.clear()
+-    session["usuario_id"] = usuario.id
+-    session.permanent = True
+-    return serializar(usuario)
+-
+-
+-@bp.post("/logout")
+-def logout():
+-    session.clear()
+-    return "", 204
+-
+-
+-@bp.get("/me")
+-def me():
+-    if not getattr(g, "usuario", None):
+-        return {"erro": "autenticação necessária"}, 401
+-    return serializar(g.usuario)
+-
+-
+-@bp.get("/usuarios")
+-@exigir_papeis("OWNER")
+-def listar_usuarios():
+-    usuarios = db.session.execute(db.select(Usuario).order_by(Usuario.nome)).scalars()
+-    return [serializar(usuario) for usuario in usuarios]
+-
+-
+-@bp.post("/usuarios")
+-@exigir_papeis("OWNER")
+-def criar_usuario():
+-    dados = entrada(UsuarioCreate)
+-    username = dados.username.lower()
+-    existente = db.session.execute(db.select(Usuario).where(db.func.lower(Usuario.username) == username)).scalar_one_or_none()
+-    if existente:
+-        raise Conflito("nome de usuário já cadastrado")
+-    usuario = Usuario(nome=dados.nome, username=username, senha_hash=generate_password_hash(dados.password), papel=dados.papel)
+-    db.session.add(usuario)
+-    db.session.commit()
+-    return serializar(usuario), 201
+-
+-
+-@bp.put("/usuarios/<int:usuario_id>")
+-@exigir_papeis("OWNER")
+-def atualizar_usuario(usuario_id: int):
+-    usuario = db.session.get(Usuario, usuario_id)
+-    if usuario is None:
+-        raise RegistroNaoEncontrado("usuário não encontrado")
+-    dados = entrada(UsuarioUpdate)
+-    if dados.nome is not None:
+-        usuario.nome = dados.nome.strip()
+-    if dados.password is not None:
+-        usuario.senha_hash = generate_password_hash(dados.password)
+-    if dados.papel is not None:
+-        usuario.papel = dados.papel
+-    if dados.ativo is not None:
+-        if usuario.id == g.usuario.id and not dados.ativo:
+-            raise Conflito("a conta em uso não pode ser desativada")
+-        usuario.ativo = dados.ativo
+-    db.session.commit()
+-    return serializar(usuario)
++from functools import wraps
++
++from flask import Blueprint, g, session
++from werkzeug.security import check_password_hash, generate_password_hash
++
++from .models import Usuario
++from app.utils.errors import Conflito, RegistroNaoEncontrado
++from app.utils.parsing import entrada
++from db.database_config import db
++
++from .schemas import LoginInput, UsuarioCreate, UsuarioUpdate
++
++bp = Blueprint("auth", __name__)
++
++
++def serializar(usuario: Usuario) -> dict:
++    return {
++        "id": usuario.id,
++        "nome": usuario.nome,
++        "username": usuario.username,
++        "papel": usuario.papel,
++        "ativo": usuario.ativo,
++    }
++
++
++def exigir_papeis(*papeis):
++    def decorator(funcao):
++        @wraps(funcao)
++        def protegida(*args, **kwargs):
++            if not getattr(g, "usuario", None):
++                return {"erro": "autenticação necessária"}, 401
++            if g.usuario.papel not in papeis:
++                return {"erro": "você não tem permissão para esta ação"}, 403
++            return funcao(*args, **kwargs)
++        return protegida
++    return decorator
++
++
++@bp.post("/login")
++def login():
++    dados = entrada(LoginInput)
++    usuario = db.session.execute(
++        db.select(Usuario).where(db.func.lower(Usuario.username) == dados.username)
++    ).scalar_one_or_none()
++    if usuario is None or not usuario.ativo or not check_password_hash(usuario.senha_hash, dados.password):
++        return {"erro": "usuário ou senha inválidos"}, 401
++    session.clear()
++    session["usuario_id"] = usuario.id
++    session.permanent = True
++    return serializar(usuario)
++
++
++@bp.post("/logout")
++def logout():
++    session.clear()
++    return "", 204
++
++
++@bp.get("/me")
++def me():
++    if not getattr(g, "usuario", None):
++        return {"erro": "autenticação necessária"}, 401
++    return serializar(g.usuario)
++
++
++@bp.get("/usuarios")
++@exigir_papeis("OWNER")
++def listar_usuarios():
++    usuarios = db.session.execute(db.select(Usuario).order_by(Usuario.nome)).scalars()
++    return [serializar(usuario) for usuario in usuarios]
++
++
++@bp.post("/usuarios")
++@exigir_papeis("OWNER")
++def criar_usuario():
++    dados = entrada(UsuarioCreate)
++    username = dados.username.lower()
++    existente = db.session.execute(db.select(Usuario).where(db.func.lower(Usuario.username) == username)).scalar_one_or_none()
++    if existente:
++        raise Conflito("nome de usuário já cadastrado")
++    usuario = Usuario(nome=dados.nome, username=username, senha_hash=generate_password_hash(dados.password), papel=dados.papel)
++    db.session.add(usuario)
++    db.session.commit()
++    return serializar(usuario), 201
++
++
++@bp.put("/usuarios/<int:usuario_id>")
++@exigir_papeis("OWNER")
++def atualizar_usuario(usuario_id: int):
++    usuario = db.session.get(Usuario, usuario_id)
++    if usuario is None:
++        raise RegistroNaoEncontrado("usuário não encontrado")
++    dados = entrada(UsuarioUpdate)
++    if dados.nome is not None:
++        usuario.nome = dados.nome.strip()
++    if dados.password is not None:
++        usuario.senha_hash = generate_password_hash(dados.password)
++    if dados.papel is not None:
++        usuario.papel = dados.papel
++    if dados.ativo is not None:
++        if usuario.id == g.usuario.id and not dados.ativo:
++            raise Conflito("a conta em uso não pode ser desativada")
++        usuario.ativo = dados.ativo
++    db.session.commit()
++    return serializar(usuario)
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/app/features/estoque/models.py /mnt/data/Machry_Fase8_03_Dominio/app/features/estoque/models.py
+--- /mnt/data/Machry_Fase8_02_Migrations/app/features/estoque/models.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/app/features/estoque/models.py	2026-11-01 04:10:48.309634205 +0000
+@@ -1,176 +1,157 @@
+-from __future__ import annotations
+-
+-from dataclasses import dataclass
+-from typing import Optional
+-
+-from db.database_config import db
+-from app.features.produtos.models import Produto
+-
+-
+-class Localizacao(db.Model):
+-    __tablename__ = "localizacao"
+-    __table_args__ = (
+-        db.CheckConstraint(
+-            "tipo IN ('CONGELADO', 'RESFRIADO', 'SECO')",
+-            name="ck_localizacao_tipo",
+-        ),
+-    )
+-
+-    id = db.Column(db.Integer, primary_key=True)
+-    nome = db.Column(db.Text, nullable=False, unique=True)
+-    tipo = db.Column(db.Text, nullable=False, default="SECO", server_default="SECO")
+-    parent_id = db.Column(db.Integer, db.ForeignKey("localizacao.id"))
+-    foto_url = db.Column(db.Text)
+-
+-
+-class Lote(db.Model):
+-    __tablename__ = "lote"
+-    __table_args__ = (
+-        db.CheckConstraint("quantidade >= 0", name="ck_lote_quantidade"),
+-        db.Index("idx_lote_fifo", "produto_id", "data_validade", "localizacao_id"),
+-    )
+-
+-    id = db.Column(db.Integer, primary_key=True)
+-    produto_id = db.Column(db.Integer, db.ForeignKey("produto.id"), nullable=False)
+-    localizacao_id = db.Column(db.Integer, db.ForeignKey("localizacao.id"), nullable=False)
+-    quantidade = db.Column(db.Numeric(asdecimal=False), nullable=False, default=0, server_default="0")
+-    data_producao = db.Column(db.String)
+-    data_validade = db.Column(db.String)
+-    custo_unitario = db.Column(db.Numeric(asdecimal=False))
+-    criado_em = db.Column(
+-        db.String,
+-        nullable=False,
+-        server_default=db.text("(CAST(CURRENT_TIMESTAMP AS TEXT))"),
+-    )
+-
+-
+-class MovimentacaoEstoque(db.Model):
+-    __tablename__ = "movimentacao_estoque"
+-    __table_args__ = (
+-        db.CheckConstraint(
+-            "tipo IN ('ENTRADA', 'PRODUCAO', 'SAIDA', 'CONSUMO_PRODUCAO', "
+-            "'TRANSFERENCIA', 'TRANSFORMACAO', 'AJUSTE_ENTRADA', 'AJUSTE_SAIDA')",
+-            name="ck_movimentacao_tipo",
+-        ),
+-        db.CheckConstraint("quantidade > 0", name="ck_movimentacao_quantidade"),
+-        db.CheckConstraint(
+-            "quantidade_destino IS NULL OR quantidade_destino > 0",
+-            name="ck_movimentacao_quantidade_destino",
+-        ),
+-        db.CheckConstraint(
+-            "lote_destino_id IS NULL OR lote_destino_id <> lote_id",
+-            name="ck_movimentacao_lotes_diferentes",
+-        ),
+-        db.Index("idx_mov_lote", "lote_id", "criado_em"),
+-        db.Index("idx_mov_sp", "solicitacao_producao_id"),
+-        db.Index("idx_mov_sp_componente", "sp_componente_id"),
+-    )
+-
+-    id = db.Column(db.Integer, primary_key=True)
+-    tipo = db.Column(db.Text, nullable=False)
+-    lote_id = db.Column(db.Integer, db.ForeignKey("lote.id"), nullable=False)
+-    lote_destino_id = db.Column(db.Integer, db.ForeignKey("lote.id"))
+-    quantidade = db.Column(db.Numeric(asdecimal=False), nullable=False)
+-    quantidade_destino = db.Column(db.Numeric(asdecimal=False))
+-    motivo = db.Column(db.Text)
+-    usuario_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
+-    solicitacao_producao_id = db.Column(
+-        db.Integer, db.ForeignKey("solicitacao_producao.id")
+-    )
+-    sp_componente_id = db.Column(db.Integer, db.ForeignKey("sp_componente.id"))
+-    observacao = db.Column(db.Text)
+-    criado_em = db.Column(
+-        db.String,
+-        nullable=False,
+-        server_default=db.text("(CAST(CURRENT_TIMESTAMP AS TEXT))"),
+-    )
+-
+-    @classmethod
+-    def from_row(cls, row) -> "MovimentacaoEstoque":
+-        return cls(**{chave: row[chave] for chave in row.keys()})
+-
+-
+-class Usuario(db.Model):
+-    __tablename__ = "usuario"
+-    __table_args__ = (
+-        db.CheckConstraint("papel IN ('ADMIN', 'OWNER', 'USER')", name="ck_usuario_papel"),
+-    )
+-
+-    id = db.Column(db.Integer, primary_key=True)
+-    nome = db.Column(db.Text, nullable=False)
+-    username = db.Column(db.String(80), unique=True, nullable=False)
+-    senha_hash = db.Column(db.String(255), nullable=False)
+-    papel = db.Column(db.Text, nullable=False, default="USER", server_default="USER")
+-    foto_url = db.Column(db.Text)
+-    ativo = db.Column(db.Integer, nullable=False, default=1, server_default="1")
+-    criado_em = db.Column(
+-        db.Text,
+-        nullable=False,
+-        server_default=db.text("(CAST(CURRENT_TIMESTAMP AS TEXT))"),
+-    )
+-
+-
+-class ProdutoTransformacao(db.Model):
+-    __tablename__ = "produto_transformacao"
+-    __table_args__ = (
+-        db.CheckConstraint(
+-            "produto_origem_id <> produto_destino_id",
+-            name="ck_transformacao_produtos_diferentes",
+-        ),
+-    )
+-
+-    produto_origem_id = db.Column(
+-        db.Integer, db.ForeignKey("produto.id"), primary_key=True
+-    )
+-    produto_destino_id = db.Column(
+-        db.Integer, db.ForeignKey("produto.id"), primary_key=True
+-    )
+-
+-
+-@dataclass
+-class ItemInventario:
+-    produto_id: int
+-    produto: str
+-    tipo_produto: str
+-    unidade_medida: str
+-    lote_id: int
+-    quantidade: float
+-    data_validade: Optional[str]
+-    localizacao: str
+-
+-    @classmethod
+-    def from_row(cls, row) -> "ItemInventario":
+-        return cls(**{chave: row[chave] for chave in row.keys()})
+-
+-
+-@dataclass
+-class LoteListado:
+-    id: int
+-    produto_id: int
+-    localizacao_id: int
+-    quantidade: float
+-    data_producao: Optional[str]
+-    data_validade: Optional[str]
+-    custo_unitario: Optional[float]
+-    criado_em: str
+-    produto: str
+-    localizacao: str
+-
+-    @classmethod
+-    def from_row(cls, row) -> "LoteListado":
+-        return cls(**{chave: row[chave] for chave in row.keys()})
+-
+-
+-@dataclass
+-class LoteSugerido:
+-    lote_id: int
+-    quantidade: float
+-    data_validade: Optional[str]
+-
+-
+-@dataclass
+-class SugestaoSaida:
+-    produto_id: int
+-    quantidade_solicitada: float
+-    lotes: list[LoteSugerido]
+-    quantidade_faltante: float
++from __future__ import annotations
++
++from dataclasses import dataclass
++from typing import Optional
++
++from db.database_config import db
++from app.features.produtos.models import Produto
++
++
++class Localizacao(db.Model):
++    __tablename__ = "localizacao"
++    __table_args__ = (
++        db.CheckConstraint(
++            "tipo IN ('CONGELADO', 'RESFRIADO', 'SECO')",
++            name="ck_localizacao_tipo",
++        ),
++    )
++
++    id = db.Column(db.Integer, primary_key=True)
++    nome = db.Column(db.Text, nullable=False, unique=True)
++    tipo = db.Column(db.Text, nullable=False, default="SECO", server_default="SECO")
++    parent_id = db.Column(db.Integer, db.ForeignKey("localizacao.id"))
++    foto_url = db.Column(db.Text)
++
++
++class Lote(db.Model):
++    __tablename__ = "lote"
++    __table_args__ = (
++        db.CheckConstraint("quantidade >= 0", name="ck_lote_quantidade"),
++        db.Index("idx_lote_fefo", "produto_id", "data_validade", "localizacao_id"),
++    )
++
++    id = db.Column(db.Integer, primary_key=True)
++    produto_id = db.Column(db.Integer, db.ForeignKey("produto.id"), nullable=False)
++    localizacao_id = db.Column(db.Integer, db.ForeignKey("localizacao.id"), nullable=False)
++    quantidade = db.Column(db.Numeric(asdecimal=False), nullable=False, default=0, server_default="0")
++    data_producao = db.Column(db.String)
++    data_validade = db.Column(db.String)
++    custo_unitario = db.Column(db.Numeric(asdecimal=False))
++    criado_em = db.Column(
++        db.String,
++        nullable=False,
++        server_default=db.text("(CAST(CURRENT_TIMESTAMP AS TEXT))"),
++    )
++
++
++class MovimentacaoEstoque(db.Model):
++    __tablename__ = "movimentacao_estoque"
++    __table_args__ = (
++        db.CheckConstraint(
++            "tipo IN ('ENTRADA', 'PRODUCAO', 'SAIDA', 'CONSUMO_PRODUCAO', "
++            "'TRANSFERENCIA', 'TRANSFORMACAO', 'AJUSTE_ENTRADA', 'AJUSTE_SAIDA')",
++            name="ck_movimentacao_tipo",
++        ),
++        db.CheckConstraint("quantidade > 0", name="ck_movimentacao_quantidade"),
++        db.CheckConstraint(
++            "quantidade_destino IS NULL OR quantidade_destino > 0",
++            name="ck_movimentacao_quantidade_destino",
++        ),
++        db.CheckConstraint(
++            "lote_destino_id IS NULL OR lote_destino_id <> lote_id",
++            name="ck_movimentacao_lotes_diferentes",
++        ),
++        db.Index("idx_mov_lote", "lote_id", "criado_em"),
++        db.Index("idx_mov_sp", "solicitacao_producao_id"),
++        db.Index("idx_mov_sp_componente", "sp_componente_id"),
++    )
++
++    id = db.Column(db.Integer, primary_key=True)
++    tipo = db.Column(db.Text, nullable=False)
++    lote_id = db.Column(db.Integer, db.ForeignKey("lote.id"), nullable=False)
++    lote_destino_id = db.Column(db.Integer, db.ForeignKey("lote.id"))
++    quantidade = db.Column(db.Numeric(asdecimal=False), nullable=False)
++    quantidade_destino = db.Column(db.Numeric(asdecimal=False))
++    motivo = db.Column(db.Text)
++    usuario_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
++    solicitacao_producao_id = db.Column(
++        db.Integer, db.ForeignKey("solicitacao_producao.id")
++    )
++    sp_componente_id = db.Column(db.Integer, db.ForeignKey("sp_componente.id"))
++    observacao = db.Column(db.Text)
++    criado_em = db.Column(
++        db.String,
++        nullable=False,
++        server_default=db.text("(CAST(CURRENT_TIMESTAMP AS TEXT))"),
++    )
++
++    @classmethod
++    def from_row(cls, row) -> "MovimentacaoEstoque":
++        return cls(**{chave: row[chave] for chave in row.keys()})
++
++
++
++class ProdutoTransformacao(db.Model):
++    __tablename__ = "produto_transformacao"
++    __table_args__ = (
++        db.CheckConstraint(
++            "produto_origem_id <> produto_destino_id",
++            name="ck_transformacao_produtos_diferentes",
++        ),
++    )
++
++    produto_origem_id = db.Column(
++        db.Integer, db.ForeignKey("produto.id"), primary_key=True
++    )
++    produto_destino_id = db.Column(
++        db.Integer, db.ForeignKey("produto.id"), primary_key=True
++    )
++
++
++@dataclass
++class ItemInventario:
++    produto_id: int
++    produto: str
++    tipo_produto: str
++    unidade_medida: str
++    lote_id: int
++    quantidade: float
++    data_validade: Optional[str]
++    localizacao: str
++
++    @classmethod
++    def from_row(cls, row) -> "ItemInventario":
++        return cls(**{chave: row[chave] for chave in row.keys()})
++
++
++@dataclass
++class LoteListado:
++    id: int
++    produto_id: int
++    localizacao_id: int
++    quantidade: float
++    data_producao: Optional[str]
++    data_validade: Optional[str]
++    custo_unitario: Optional[float]
++    criado_em: str
++    produto: str
++    localizacao: str
++
++    @classmethod
++    def from_row(cls, row) -> "LoteListado":
++        return cls(**{chave: row[chave] for chave in row.keys()})
++
++
++@dataclass
++class LoteSugerido:
++    lote_id: int
++    quantidade: float
++    data_validade: Optional[str]
++
++
++@dataclass
++class SugestaoSaida:
++    produto_id: int
++    quantidade_solicitada: float
++    lotes: list[LoteSugerido]
++    quantidade_faltante: float
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/app/features/estoque/repository.py /mnt/data/Machry_Fase8_03_Dominio/app/features/estoque/repository.py
+--- /mnt/data/Machry_Fase8_02_Migrations/app/features/estoque/repository.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/app/features/estoque/repository.py	2026-11-01 04:10:48.310593573 +0000
+@@ -1,201 +1,202 @@
+-from __future__ import annotations
+-
+-from contextlib import contextmanager
+-from datetime import date
+-from typing import Optional
+-
+-from sqlalchemy import text
+-
+-from db.database_config import db
+-
+-from .models import Localizacao, Lote, MovimentacaoEstoque, Produto, ProdutoTransformacao, Usuario
+-
+-_TIPOS_SOMAM_NA_ORIGEM = {"ENTRADA", "PRODUCAO", "AJUSTE_ENTRADA"}
+-_TIPOS_SUBTRAEM_DA_ORIGEM = {"SAIDA", "CONSUMO_PRODUCAO", "TRANSFERENCIA",
+-                             "TRANSFORMACAO", "AJUSTE_SAIDA"}
+-_TIPOS_COM_DESTINO = {"TRANSFERENCIA", "TRANSFORMACAO"}
+-
+-
+-class EstoqueRepository:
+-
+-    @contextmanager
+-    def transacao(self):
+-        try:
+-            yield db.session
+-        except Exception:
+-            db.session.rollback()
+-            raise
+-        else:
+-            db.session.commit()
+-
+-    # -- inventário / movimentações -----------------------------------------
+-
+-    def listar_inventario(self, produto_id: Optional[int] = None, lote_id: Optional[int] = None):
+-        sql = "SELECT * FROM vw_inventario WHERE 1=1"
+-        params: dict = {}
+-        if produto_id is not None:
+-            sql += " AND produto_id = :produto_id"
+-            params["produto_id"] = produto_id
+-        if lote_id is not None:
+-            sql += " AND lote_id = :lote_id"
+-            params["lote_id"] = lote_id
+-        sql += " ORDER BY produto, data_validade, lote_id"
+-        return db.session.execute(text(sql), params).mappings().all()
+-
+-    def listar_movimentacoes(
+-        self,
+-        limite: int = 100,
+-        lote_id: Optional[int] = None,
+-        usuario_id: Optional[int] = None,
+-        tipo: Optional[str] = None,
+-    ):
+-        sql = "SELECT * FROM movimentacao_estoque WHERE 1=1"
+-        params: dict = {"limite": limite}
+-        if lote_id is not None:
+-            sql += " AND lote_id = :lote_id"
+-            params["lote_id"] = lote_id
+-        if usuario_id is not None:
+-            sql += " AND usuario_id = :usuario_id"
+-            params["usuario_id"] = usuario_id
+-        if tipo is not None:
+-            sql += " AND tipo = :tipo"
+-            params["tipo"] = tipo
+-        sql += " ORDER BY id DESC LIMIT :limite"
+-        return db.session.execute(text(sql), params).mappings().all()
+-
+-    def obter_movimentacao(self, mov_id: int) -> Optional[MovimentacaoEstoque]:
+-        return db.session.get(MovimentacaoEstoque, mov_id)
+-
+-    def inserir_movimentacao(
+-        self, *, tipo, lote_origem: Lote, lote_destino: Optional[Lote], quantidade,
+-        quantidade_destino, motivo, usuario_id, observacao,
+-    ) -> MovimentacaoEstoque:
+-        mov = MovimentacaoEstoque(
+-            tipo=tipo,
+-            lote_id=lote_origem.id,
+-            lote_destino_id=lote_destino.id if lote_destino is not None else None,
+-            quantidade=quantidade,
+-            quantidade_destino=quantidade_destino,
+-            motivo=motivo,
+-            usuario_id=usuario_id,
+-            observacao=observacao,
+-        )
+-        db.session.add(mov)
+-        self._aplicar_saldo(
+-            tipo=tipo, lote_origem=lote_origem, lote_destino=lote_destino,
+-            quantidade=quantidade, quantidade_destino=quantidade_destino,
+-        )
+-        db.session.flush()
+-        db.session.refresh(mov)
+-        return mov
+-
+-    def _aplicar_saldo(self, *, tipo, lote_origem: Lote, lote_destino: Optional[Lote],
+-                        quantidade, quantidade_destino) -> None:
+-        if tipo in _TIPOS_SOMAM_NA_ORIGEM:
+-            lote_origem.quantidade += quantidade
+-        elif tipo in _TIPOS_SUBTRAEM_DA_ORIGEM:
+-            lote_origem.quantidade -= quantidade
+-
+-        if tipo in _TIPOS_COM_DESTINO:
+-            lote_destino.quantidade += quantidade_destino if quantidade_destino is not None else quantidade
+-
+-    def transformacao_cadastrada(self, produto_origem_id: int, produto_destino_id: int) -> bool:
+-        return db.session.get(ProdutoTransformacao, (produto_origem_id, produto_destino_id)) is not None
+-
+-    # -- localização -----------------------------------------------------------
+-
+-    def listar_localizacoes(self) -> list[Localizacao]:
+-        return db.session.query(Localizacao).order_by(Localizacao.nome).all()
+-
+-    def obter_localizacao(self, loc_id: int) -> Optional[Localizacao]:
+-        return db.session.get(Localizacao, loc_id)
+-
+-    def inserir_localizacao(self, *, nome, tipo, parent_id, foto_url) -> Localizacao:
+-        localizacao = Localizacao(nome=nome, tipo=tipo, parent_id=parent_id, foto_url=foto_url)
+-        db.session.add(localizacao)
+-        db.session.flush()
+-        return localizacao
+-
+-    def atualizar_localizacao(self, loc_id: int, campos: dict) -> None:
+-        localizacao = db.session.get(Localizacao, loc_id)
+-        for campo, valor in campos.items():
+-            setattr(localizacao, campo, valor)
+-
+-    def remover_localizacao(self, loc_id: int) -> bool:
+-        localizacao = db.session.get(Localizacao, loc_id)
+-        if localizacao is None:
+-            return False
+-        db.session.delete(localizacao)
+-        return True
+-
+-    def existe_incompatibilidade_tipo(self, loc_id: int, novo_tipo: str) -> bool:
+-        return (
+-            db.session.query(Lote)
+-            .join(Produto, Produto.id == Lote.produto_id)
+-            .filter(Lote.localizacao_id == loc_id, Produto.conservacao != novo_tipo)
+-            .first()
+-            is not None
+-        )
+-
+-    # -- lote --------------------------------------------------------------------
+-
+-    def listar_lotes(self, produto_id: Optional[int] = None, localizacao_id: Optional[int] = None):
+-        sql = """SELECT l.*, p.nome AS produto, loc.nome AS localizacao FROM lote l
+-                 JOIN produto p ON p.id = l.produto_id
+-                 JOIN localizacao loc ON loc.id = l.localizacao_id WHERE 1=1"""
+-        params: dict = {}
+-        if produto_id is not None:
+-            sql += " AND l.produto_id = :produto_id"
+-            params["produto_id"] = produto_id
+-        if localizacao_id is not None:
+-            sql += " AND l.localizacao_id = :localizacao_id"
+-            params["localizacao_id"] = localizacao_id
+-        sql += " ORDER BY l.data_validade IS NULL, l.data_validade, l.id"
+-        return db.session.execute(text(sql), params).mappings().all()
+-
+-    def obter_lote(self, lote_id: int, para_atualizacao: bool = False) -> Optional[Lote]:
+-        return db.session.get(Lote, lote_id, with_for_update=para_atualizacao)
+-
+-    def inserir_lote(
+-        self, *, produto_id, localizacao_id, data_producao, data_validade, custo_unitario
+-    ) -> Lote:
+-        lote = Lote(
+-            produto_id=produto_id,
+-            localizacao_id=localizacao_id,
+-            quantidade=0,
+-            data_producao=data_producao,
+-            data_validade=data_validade,
+-            custo_unitario=custo_unitario,
+-        )
+-        db.session.add(lote)
+-        db.session.flush()
+-        db.session.refresh(lote)
+-        return lote
+-
+-    def atualizar_lote(self, lote_id: int, campos: dict) -> None:
+-        lote = db.session.get(Lote, lote_id)
+-        for campo, valor in campos.items():
+-            setattr(lote, campo, valor)
+-
+-    def lotes_fefo_disponiveis(self, produto_id: int):
+-        return db.session.execute(
+-            text(
+-                """SELECT * FROM lote WHERE produto_id = :produto_id AND quantidade > 0
+-                   AND (data_validade IS NULL OR data_validade >= :hoje)
+-                   ORDER BY data_validade IS NULL, data_validade, criado_em, id"""
+-            ),
+-            {"produto_id": produto_id, "hoje": date.today().isoformat()},
+-        ).mappings().all()
+-
+-    # -- entidades de outras features, lidas só para validação cruzada --------
+-
+-    def obter_produto(self, produto_id: int) -> Optional[Produto]:
+-        return db.session.get(Produto, produto_id)
+-
+-    def obter_produto_ativo(self, produto_id: int) -> Optional[Produto]:
+-        produto = db.session.get(Produto, produto_id)
+-        return produto if produto is not None and produto.ativo else None
+-
+-    def obter_usuario_ativo(self, usuario_id: int) -> Optional[Usuario]:
+-        usuario = db.session.get(Usuario, usuario_id)
+-        return usuario if usuario is not None and usuario.ativo else None
++from __future__ import annotations
++
++from contextlib import contextmanager
++from datetime import date
++from typing import Optional
++
++from sqlalchemy import text
++
++from db.database_config import db
++
++from app.features.auth.models import Usuario
++from .models import Localizacao, Lote, MovimentacaoEstoque, Produto, ProdutoTransformacao
++
++_TIPOS_SOMAM_NA_ORIGEM = {"ENTRADA", "PRODUCAO", "AJUSTE_ENTRADA"}
++_TIPOS_SUBTRAEM_DA_ORIGEM = {"SAIDA", "CONSUMO_PRODUCAO", "TRANSFERENCIA",
++                             "TRANSFORMACAO", "AJUSTE_SAIDA"}
++_TIPOS_COM_DESTINO = {"TRANSFERENCIA", "TRANSFORMACAO"}
++
++
++class EstoqueRepository:
++
++    @contextmanager
++    def transacao(self):
++        try:
++            yield db.session
++        except Exception:
++            db.session.rollback()
++            raise
++        else:
++            db.session.commit()
++
++    # -- inventário / movimentações -----------------------------------------
++
++    def listar_inventario(self, produto_id: Optional[int] = None, lote_id: Optional[int] = None):
++        sql = "SELECT * FROM vw_inventario WHERE 1=1"
++        params: dict = {}
++        if produto_id is not None:
++            sql += " AND produto_id = :produto_id"
++            params["produto_id"] = produto_id
++        if lote_id is not None:
++            sql += " AND lote_id = :lote_id"
++            params["lote_id"] = lote_id
++        sql += " ORDER BY produto, data_validade, lote_id"
++        return db.session.execute(text(sql), params).mappings().all()
++
++    def listar_movimentacoes(
++        self,
++        limite: int = 100,
++        lote_id: Optional[int] = None,
++        usuario_id: Optional[int] = None,
++        tipo: Optional[str] = None,
++    ):
++        sql = "SELECT * FROM movimentacao_estoque WHERE 1=1"
++        params: dict = {"limite": limite}
++        if lote_id is not None:
++            sql += " AND lote_id = :lote_id"
++            params["lote_id"] = lote_id
++        if usuario_id is not None:
++            sql += " AND usuario_id = :usuario_id"
++            params["usuario_id"] = usuario_id
++        if tipo is not None:
++            sql += " AND tipo = :tipo"
++            params["tipo"] = tipo
++        sql += " ORDER BY id DESC LIMIT :limite"
++        return db.session.execute(text(sql), params).mappings().all()
++
++    def obter_movimentacao(self, mov_id: int) -> Optional[MovimentacaoEstoque]:
++        return db.session.get(MovimentacaoEstoque, mov_id)
++
++    def inserir_movimentacao(
++        self, *, tipo, lote_origem: Lote, lote_destino: Optional[Lote], quantidade,
++        quantidade_destino, motivo, usuario_id, observacao,
++    ) -> MovimentacaoEstoque:
++        mov = MovimentacaoEstoque(
++            tipo=tipo,
++            lote_id=lote_origem.id,
++            lote_destino_id=lote_destino.id if lote_destino is not None else None,
++            quantidade=quantidade,
++            quantidade_destino=quantidade_destino,
++            motivo=motivo,
++            usuario_id=usuario_id,
++            observacao=observacao,
++        )
++        db.session.add(mov)
++        self._aplicar_saldo(
++            tipo=tipo, lote_origem=lote_origem, lote_destino=lote_destino,
++            quantidade=quantidade, quantidade_destino=quantidade_destino,
++        )
++        db.session.flush()
++        db.session.refresh(mov)
++        return mov
++
++    def _aplicar_saldo(self, *, tipo, lote_origem: Lote, lote_destino: Optional[Lote],
++                        quantidade, quantidade_destino) -> None:
++        if tipo in _TIPOS_SOMAM_NA_ORIGEM:
++            lote_origem.quantidade += quantidade
++        elif tipo in _TIPOS_SUBTRAEM_DA_ORIGEM:
++            lote_origem.quantidade -= quantidade
++
++        if tipo in _TIPOS_COM_DESTINO:
++            lote_destino.quantidade += quantidade_destino if quantidade_destino is not None else quantidade
++
++    def transformacao_cadastrada(self, produto_origem_id: int, produto_destino_id: int) -> bool:
++        return db.session.get(ProdutoTransformacao, (produto_origem_id, produto_destino_id)) is not None
++
++    # -- localização -----------------------------------------------------------
++
++    def listar_localizacoes(self) -> list[Localizacao]:
++        return db.session.query(Localizacao).order_by(Localizacao.nome).all()
++
++    def obter_localizacao(self, loc_id: int) -> Optional[Localizacao]:
++        return db.session.get(Localizacao, loc_id)
++
++    def inserir_localizacao(self, *, nome, tipo, parent_id, foto_url) -> Localizacao:
++        localizacao = Localizacao(nome=nome, tipo=tipo, parent_id=parent_id, foto_url=foto_url)
++        db.session.add(localizacao)
++        db.session.flush()
++        return localizacao
++
++    def atualizar_localizacao(self, loc_id: int, campos: dict) -> None:
++        localizacao = db.session.get(Localizacao, loc_id)
++        for campo, valor in campos.items():
++            setattr(localizacao, campo, valor)
++
++    def remover_localizacao(self, loc_id: int) -> bool:
++        localizacao = db.session.get(Localizacao, loc_id)
++        if localizacao is None:
++            return False
++        db.session.delete(localizacao)
++        return True
++
++    def existe_incompatibilidade_tipo(self, loc_id: int, novo_tipo: str) -> bool:
++        return (
++            db.session.query(Lote)
++            .join(Produto, Produto.id == Lote.produto_id)
++            .filter(Lote.localizacao_id == loc_id, Produto.conservacao != novo_tipo)
++            .first()
++            is not None
++        )
++
++    # -- lote --------------------------------------------------------------------
++
++    def listar_lotes(self, produto_id: Optional[int] = None, localizacao_id: Optional[int] = None):
++        sql = """SELECT l.*, p.nome AS produto, loc.nome AS localizacao FROM lote l
++                 JOIN produto p ON p.id = l.produto_id
++                 JOIN localizacao loc ON loc.id = l.localizacao_id WHERE 1=1"""
++        params: dict = {}
++        if produto_id is not None:
++            sql += " AND l.produto_id = :produto_id"
++            params["produto_id"] = produto_id
++        if localizacao_id is not None:
++            sql += " AND l.localizacao_id = :localizacao_id"
++            params["localizacao_id"] = localizacao_id
++        sql += " ORDER BY l.data_validade IS NULL, l.data_validade, l.id"
++        return db.session.execute(text(sql), params).mappings().all()
++
++    def obter_lote(self, lote_id: int, para_atualizacao: bool = False) -> Optional[Lote]:
++        return db.session.get(Lote, lote_id, with_for_update=para_atualizacao)
++
++    def inserir_lote(
++        self, *, produto_id, localizacao_id, data_producao, data_validade, custo_unitario
++    ) -> Lote:
++        lote = Lote(
++            produto_id=produto_id,
++            localizacao_id=localizacao_id,
++            quantidade=0,
++            data_producao=data_producao,
++            data_validade=data_validade,
++            custo_unitario=custo_unitario,
++        )
++        db.session.add(lote)
++        db.session.flush()
++        db.session.refresh(lote)
++        return lote
++
++    def atualizar_lote(self, lote_id: int, campos: dict) -> None:
++        lote = db.session.get(Lote, lote_id)
++        for campo, valor in campos.items():
++            setattr(lote, campo, valor)
++
++    def lotes_fefo_disponiveis(self, produto_id: int):
++        return db.session.execute(
++            text(
++                """SELECT * FROM lote WHERE produto_id = :produto_id AND quantidade > 0
++                   AND (data_validade IS NULL OR data_validade >= :hoje)
++                   ORDER BY data_validade IS NULL, data_validade, criado_em, id"""
++            ),
++            {"produto_id": produto_id, "hoje": date.today().isoformat()},
++        ).mappings().all()
++
++    # -- entidades de outras features, lidas só para validação cruzada --------
++
++    def obter_produto(self, produto_id: int) -> Optional[Produto]:
++        return db.session.get(Produto, produto_id)
++
++    def obter_produto_ativo(self, produto_id: int) -> Optional[Produto]:
++        produto = db.session.get(Produto, produto_id)
++        return produto if produto is not None and produto.ativo else None
++
++    def obter_usuario_ativo(self, usuario_id: int) -> Optional[Usuario]:
++        usuario = db.session.get(Usuario, usuario_id)
++        return usuario if usuario is not None and usuario.ativo else None
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/app/features/produtos/repository.py /mnt/data/Machry_Fase8_03_Dominio/app/features/produtos/repository.py
+--- /mnt/data/Machry_Fase8_02_Migrations/app/features/produtos/repository.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/app/features/produtos/repository.py	2026-11-01 04:11:10.242035523 +0000
+@@ -1,57 +1,89 @@
+-from contextlib import contextmanager
+-
+-from db.database_config import db
+-
+-from .models import GrupoProduto, Produto
+-
+-
+-class ProdutoRepository:
+-    @contextmanager
+-    def transacao(self):
+-        try:
+-            yield db.session
+-        except Exception:
+-            db.session.rollback()
+-            raise
+-        else:
+-            db.session.commit()
+-
+-    def listar_ativos(self) -> list[Produto]:
+-        return (
+-            db.session.query(Produto)
+-            .filter(Produto.ativo == 1)
+-            .order_by(Produto.nome)
+-            .all()
+-        )
+-
+-    def obter_ativo(self, produto_id: int) -> Produto | None:
+-        return db.session.query(Produto).filter_by(id=produto_id, ativo=1).first()
+-
+-    def grupo_existe(self, grupo_id: int) -> bool:
+-        return db.session.get(GrupoProduto, grupo_id) is not None
+-
+-    def possui_ficha(self, produto_id: int) -> bool:
+-        from app.features.fichas_tecnicas.models import FichaTecnica
+-
+-        return (
+-            db.session.query(FichaTecnica.id)
+-            .filter(FichaTecnica.produto_id == produto_id)
+-            .first()
+-            is not None
+-        )
+-
+-    def inserir(self, campos: dict) -> Produto:
+-        produto = Produto(**campos)
+-        db.session.add(produto)
+-        db.session.flush()
+-        return produto
+-
+-    def atualizar(self, produto: Produto, campos: dict) -> Produto:
+-        for campo, valor in campos.items():
+-            setattr(produto, campo, valor)
+-        db.session.flush()
+-        return produto
+-
+-    def desativar(self, produto: Produto) -> None:
+-        produto.ativo = 0
+-        db.session.flush()
++from contextlib import contextmanager
++
++from db.database_config import db
++
++from .models import GrupoProduto, Produto
++
++
++class ProdutoRepository:
++    @contextmanager
++    def transacao(self):
++        try:
++            yield db.session
++        except Exception:
++            db.session.rollback()
++            raise
++        else:
++            db.session.commit()
++
++    def listar_ativos(self) -> list[Produto]:
++        return (
++            db.session.query(Produto)
++            .filter(Produto.ativo == 1)
++            .order_by(Produto.nome)
++            .all()
++        )
++
++    def obter_ativo(self, produto_id: int) -> Produto | None:
++        return db.session.query(Produto).filter_by(id=produto_id, ativo=1).first()
++
++    def grupo_existe(self, grupo_id: int) -> bool:
++        return db.session.get(GrupoProduto, grupo_id) is not None
++
++    def possui_ficha(self, produto_id: int) -> bool:
++        from app.features.fichas_tecnicas.models import FichaTecnica
++
++        return (
++            db.session.query(FichaTecnica.id)
++            .filter(FichaTecnica.produto_id == produto_id)
++            .first()
++            is not None
++        )
++
++
++    def possui_lote_com_conservacao_incompativel(
++        self, produto_id: int, nova_conservacao: str
++    ) -> bool:
++        """Impede que uma alteração no catálogo invalide lotes já armazenados."""
++        from app.features.estoque.models import Localizacao, Lote
++
++        return (
++            db.session.query(Lote.id)
++            .join(Localizacao, Localizacao.id == Lote.localizacao_id)
++            .filter(
++                Lote.produto_id == produto_id,
++                Localizacao.tipo != nova_conservacao,
++            )
++            .first()
++            is not None
++        )
++
++    def possui_lote_sem_validade(self, produto_id: int) -> bool:
++        """Detecta lotes históricos incompatíveis com validade obrigatória."""
++        from app.features.estoque.models import Lote
++
++        return (
++            db.session.query(Lote.id)
++            .filter(
++                Lote.produto_id == produto_id,
++                Lote.data_validade.is_(None),
++            )
++            .first()
++            is not None
++        )
++
++    def inserir(self, campos: dict) -> Produto:
++        produto = Produto(**campos)
++        db.session.add(produto)
++        db.session.flush()
++        return produto
++
++    def atualizar(self, produto: Produto, campos: dict) -> Produto:
++        for campo, valor in campos.items():
++            setattr(produto, campo, valor)
++        db.session.flush()
++        return produto
++
++    def desativar(self, produto: Produto) -> None:
++        produto.ativo = 0
++        db.session.flush()
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/app/features/produtos/services.py /mnt/data/Machry_Fase8_03_Dominio/app/features/produtos/services.py
+--- /mnt/data/Machry_Fase8_02_Migrations/app/features/produtos/services.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/app/features/produtos/services.py	2026-11-01 04:11:10.242928742 +0000
+@@ -1,42 +1,65 @@
+-from app.utils.errors import RegistroNaoEncontrado
+-
+-from .models import Produto
+-from .repository import ProdutoRepository
+-from .schemas import ProdutoCreate, ProdutoUpdate
+-
+-
+-class ProdutoService:
+-    def __init__(self, repository: ProdutoRepository) -> None:
+-        self.repository = repository
+-
+-    def listar(self) -> list[Produto]:
+-        return self.repository.listar_ativos()
+-
+-    def obter(self, produto_id: int) -> Produto:
+-        produto = self.repository.obter_ativo(produto_id)
+-        if produto is None:
+-            raise RegistroNaoEncontrado("produto não encontrado")
+-        return produto
+-
+-    def criar(self, dados: ProdutoCreate) -> Produto:
+-        with self.repository.transacao():
+-            self._validar_grupo(dados.grupo_id)
+-            return self.repository.inserir(dados.model_dump())
+-
+-    def atualizar(self, produto_id: int, dados: ProdutoUpdate) -> Produto:
+-        with self.repository.transacao():
+-            produto = self.obter(produto_id)
+-            campos = dados.model_dump(exclude_unset=True)
+-            if "grupo_id" in campos:
+-                self._validar_grupo(campos["grupo_id"])
+-            if campos.get("tipo") == "INSUMO" and self.repository.possui_ficha(produto_id):
+-                raise ValueError("produto com ficha técnica não pode se tornar insumo")
+-            return self.repository.atualizar(produto, campos)
+-
+-    def remover(self, produto_id: int) -> None:
+-        with self.repository.transacao():
+-            self.repository.desativar(self.obter(produto_id))
+-
+-    def _validar_grupo(self, grupo_id: int | None) -> None:
+-        if grupo_id is not None and not self.repository.grupo_existe(grupo_id):
+-            raise ValueError("grupo de produto não encontrado")
++from app.utils.errors import RegistroNaoEncontrado
++
++from .models import Produto
++from .repository import ProdutoRepository
++from .schemas import ProdutoCreate, ProdutoUpdate
++
++
++class ProdutoService:
++    def __init__(self, repository: ProdutoRepository) -> None:
++        self.repository = repository
++
++    def listar(self) -> list[Produto]:
++        return self.repository.listar_ativos()
++
++    def obter(self, produto_id: int) -> Produto:
++        produto = self.repository.obter_ativo(produto_id)
++        if produto is None:
++            raise RegistroNaoEncontrado("produto não encontrado")
++        return produto
++
++    def criar(self, dados: ProdutoCreate) -> Produto:
++        with self.repository.transacao():
++            self._validar_grupo(dados.grupo_id)
++            return self.repository.inserir(dados.model_dump())
++
++    def atualizar(self, produto_id: int, dados: ProdutoUpdate) -> Produto:
++        with self.repository.transacao():
++            produto = self.obter(produto_id)
++            campos = dados.model_dump(exclude_unset=True)
++            if "grupo_id" in campos:
++                self._validar_grupo(campos["grupo_id"])
++            if campos.get("tipo") == "INSUMO" and self.repository.possui_ficha(produto_id):
++                raise ValueError("produto com ficha técnica não pode se tornar insumo")
++
++            nova_conservacao = campos.get("conservacao")
++            if (
++                nova_conservacao is not None
++                and nova_conservacao != produto.conservacao
++                and self.repository.possui_lote_com_conservacao_incompativel(
++                    produto_id, nova_conservacao
++                )
++            ):
++                raise ValueError(
++                    "conservação incompatível com a localização de lotes existentes"
++                )
++
++            exige_validade = campos.get("validade_obrigatoria")
++            if (
++                exige_validade == 1
++                and not produto.validade_obrigatoria
++                and self.repository.possui_lote_sem_validade(produto_id)
++            ):
++                raise ValueError(
++                    "produto possui lotes sem validade; regularize os lotes antes de exigir validade"
++                )
++
++            return self.repository.atualizar(produto, campos)
++
++    def remover(self, produto_id: int) -> None:
++        with self.repository.transacao():
++            self.repository.desativar(self.obter(produto_id))
++
++    def _validar_grupo(self, grupo_id: int | None) -> None:
++        if grupo_id is not None and not self.repository.grupo_existe(grupo_id):
++            raise ValueError("grupo de produto não encontrado")
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/db/database_config.py /mnt/data/Machry_Fase8_03_Dominio/db/database_config.py
+--- /mnt/data/Machry_Fase8_02_Migrations/db/database_config.py	2026-11-01 03:53:23.338272046 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/db/database_config.py	2026-11-01 04:11:31.353918861 +0000
+@@ -50,7 +50,7 @@
+ 
+ 
+ def _provisionar_usuarios_iniciais() -> None:
+-    from app.features.estoque.models import Usuario
++    from app.features.auth.models import Usuario
+     from flask import current_app
+ 
+     configuracoes = [
+@@ -92,9 +92,11 @@
+           JOIN localizacao loc ON loc.id = l.localizacao_id
+          WHERE l.quantidade > 0
+     """,
+-    "vw_fifo": """
++    "vw_fefo": """
+         SELECT l.* FROM lote l WHERE l.quantidade > 0
+-         ORDER BY l.produto_id, l.data_validade ASC, l.criado_em ASC
++         ORDER BY l.produto_id,
++                  CASE WHEN l.data_validade IS NULL THEN 1 ELSE 0 END,
++                  l.data_validade ASC, l.criado_em ASC, l.id ASC
+     """,
+     "vw_sp_componente": """
+         SELECT c.id AS sp_componente_id, c.solicitacao_producao_id,
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/db/seed.py /mnt/data/Machry_Fase8_03_Dominio/db/seed.py
+--- /mnt/data/Machry_Fase8_02_Migrations/db/seed.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/db/seed.py	2026-11-01 04:10:48.310536758 +0000
+@@ -1,91 +1,92 @@
+-"""Dados mínimos de demonstração, inseridos via ORM em qualquer banco suportado."""
+-
+-from app.features.estoque.models import Localizacao, ProdutoTransformacao, Usuario
+-from app.features.fichas_tecnicas.models import (
+-    FaseProducao,
+-    FichaTecnica,
+-    FichaTecnicaComponente,
+-    FichaTecnicaFase,
+-)
+-from app.features.produtos.models import GrupoProduto, Produto
+-from db.database_config import db
+-from sqlalchemy import text
+-
+-
+-def carregar_seeds() -> None:
+-    fases = [
+-        FaseProducao(id=1, nome="Bater/Misturar"),
+-        FaseProducao(id=2, nome="Cozir"),
+-        FaseProducao(id=3, nome="Confeitar"),
+-        FaseProducao(id=4, nome="Fritar"),
+-        FaseProducao(id=5, nome="Montar"),
+-    ]
+-    grupos = [
+-        GrupoProduto(id=1, nome="Insumos secos"),
+-        GrupoProduto(id=2, nome="Laticínios"),
+-        GrupoProduto(id=3, nome="Semiacabados"),
+-        GrupoProduto(id=4, nome="Confeitaria"),
+-    ]
+-    localizacoes = [
+-        Localizacao(id=1, nome="Estoque Seco", tipo="SECO"),
+-        Localizacao(id=2, nome="Câmara Fria", tipo="RESFRIADO"),
+-        Localizacao(id=3, nome="Câmara Fria - Congelados", tipo="CONGELADO", parent_id=2),
+-        Localizacao(id=4, nome="Câmara Fria - Resfriados", tipo="RESFRIADO", parent_id=2),
+-        Localizacao(id=5, nome="Cozinha", tipo="SECO"),
+-        Localizacao(id=6, nome="Geladeira da Cozinha", tipo="RESFRIADO", parent_id=5),
+-        Localizacao(id=7, nome="Padaria", tipo="SECO"),
+-    ]
+-    produtos = [
+-        Produto(id=1, nome="Farinha de trigo", tipo="INSUMO", unidade_medida="g", grupo_id=1, conservacao="SECO", validade_obrigatoria=0, validade_padrao_dias=180),
+-        Produto(id=2, nome="Ovo", tipo="INSUMO", unidade_medida="un", grupo_id=2, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=20),
+-        Produto(id=3, nome="Leite", tipo="INSUMO", unidade_medida="ml", grupo_id=2, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=7),
+-        Produto(id=4, nome="Nozes", tipo="INSUMO", unidade_medida="g", grupo_id=1, conservacao="SECO", validade_obrigatoria=0, validade_padrao_dias=90),
+-        Produto(id=5, nome="Queijo (bloco)", tipo="INSUMO", unidade_medida="g", grupo_id=2, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=30),
+-        Produto(id=6, nome="Queijo ralado", tipo="INTERMEDIARIO", unidade_medida="g", grupo_id=2, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=7),
+-        Produto(id=7, nome="Creme de nozes", tipo="INTERMEDIARIO", unidade_medida="g", grupo_id=3, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=3),
+-        Produto(id=8, nome="Massa de bolo", tipo="INTERMEDIARIO", unidade_medida="g", grupo_id=3, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=2),
+-        Produto(id=9, nome="Chantili", tipo="INTERMEDIARIO", unidade_medida="g", grupo_id=3, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=2),
+-        Produto(id=10, nome="Bolo de Nozes - Médio", tipo="FINAL", unidade_medida="un", grupo_id=4, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=4),
+-    ]
+-    db.session.add_all(fases + grupos + localizacoes)
+-    db.session.flush()
+-    db.session.add_all(produtos)
+-    db.session.flush()
+-    db.session.add(ProdutoTransformacao(produto_origem_id=5, produto_destino_id=6))
+-
+-    ficha = FichaTecnica(id=1, produto_id=10, rendimento=1)
+-    fase_1 = FichaTecnicaFase(id=1, fase_id=1, ordem=1, tempo_previsto_min=10)
+-    fase_2 = FichaTecnicaFase(id=2, fase_id=2, ordem=2, tempo_previsto_min=30)
+-    fase_3 = FichaTecnicaFase(id=3, fase_id=3, ordem=3, tempo_previsto_min=15)
+-    ficha.fases.extend([fase_1, fase_2, fase_3])
+-    ficha.componentes.extend(
+-        [
+-            FichaTecnicaComponente(produto_id=8, quantidade=400, fase=fase_1),
+-            FichaTecnicaComponente(produto_id=3, quantidade=300, fase=fase_1),
+-            FichaTecnicaComponente(produto_id=7, quantidade=500, fase=fase_3),
+-            FichaTecnicaComponente(produto_id=9, quantidade=50, fase=fase_3),
+-            FichaTecnicaComponente(produto_id=4, quantidade=100, fase=fase_3),
+-        ]
+-    )
+-    db.session.add(ficha)
+-    db.session.flush()
+-
+-    if db.engine.dialect.name == "postgresql":
+-        for tabela in (
+-            "usuario",
+-            "fase_producao",
+-            "grupo_produto",
+-            "localizacao",
+-            "produto",
+-            "ficha_tecnica",
+-            "ficha_tecnica_fase",
+-            "ficha_tecnica_componente",
+-        ):
+-            db.session.execute(
+-                text(
+-                    "SELECT setval(pg_get_serial_sequence(:tabela, 'id'), "
+-                    f"COALESCE((SELECT MAX(id) FROM {tabela}), 1), true)"
+-                ),
+-                {"tabela": tabela},
+-            )
+-    db.session.commit()
++"""Dados mínimos de demonstração, inseridos via ORM em qualquer banco suportado."""
++
++from app.features.auth.models import Usuario
++from app.features.estoque.models import Localizacao, ProdutoTransformacao
++from app.features.fichas_tecnicas.models import (
++    FaseProducao,
++    FichaTecnica,
++    FichaTecnicaComponente,
++    FichaTecnicaFase,
++)
++from app.features.produtos.models import GrupoProduto, Produto
++from db.database_config import db
++from sqlalchemy import text
++
++
++def carregar_seeds() -> None:
++    fases = [
++        FaseProducao(id=1, nome="Bater/Misturar"),
++        FaseProducao(id=2, nome="Cozir"),
++        FaseProducao(id=3, nome="Confeitar"),
++        FaseProducao(id=4, nome="Fritar"),
++        FaseProducao(id=5, nome="Montar"),
++    ]
++    grupos = [
++        GrupoProduto(id=1, nome="Insumos secos"),
++        GrupoProduto(id=2, nome="Laticínios"),
++        GrupoProduto(id=3, nome="Semiacabados"),
++        GrupoProduto(id=4, nome="Confeitaria"),
++    ]
++    localizacoes = [
++        Localizacao(id=1, nome="Estoque Seco", tipo="SECO"),
++        Localizacao(id=2, nome="Câmara Fria", tipo="RESFRIADO"),
++        Localizacao(id=3, nome="Câmara Fria - Congelados", tipo="CONGELADO", parent_id=2),
++        Localizacao(id=4, nome="Câmara Fria - Resfriados", tipo="RESFRIADO", parent_id=2),
++        Localizacao(id=5, nome="Cozinha", tipo="SECO"),
++        Localizacao(id=6, nome="Geladeira da Cozinha", tipo="RESFRIADO", parent_id=5),
++        Localizacao(id=7, nome="Padaria", tipo="SECO"),
++    ]
++    produtos = [
++        Produto(id=1, nome="Farinha de trigo", tipo="INSUMO", unidade_medida="g", grupo_id=1, conservacao="SECO", validade_obrigatoria=0, validade_padrao_dias=180),
++        Produto(id=2, nome="Ovo", tipo="INSUMO", unidade_medida="un", grupo_id=2, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=20),
++        Produto(id=3, nome="Leite", tipo="INSUMO", unidade_medida="ml", grupo_id=2, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=7),
++        Produto(id=4, nome="Nozes", tipo="INSUMO", unidade_medida="g", grupo_id=1, conservacao="SECO", validade_obrigatoria=0, validade_padrao_dias=90),
++        Produto(id=5, nome="Queijo (bloco)", tipo="INSUMO", unidade_medida="g", grupo_id=2, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=30),
++        Produto(id=6, nome="Queijo ralado", tipo="INTERMEDIARIO", unidade_medida="g", grupo_id=2, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=7),
++        Produto(id=7, nome="Creme de nozes", tipo="INTERMEDIARIO", unidade_medida="g", grupo_id=3, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=3),
++        Produto(id=8, nome="Massa de bolo", tipo="INTERMEDIARIO", unidade_medida="g", grupo_id=3, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=2),
++        Produto(id=9, nome="Chantili", tipo="INTERMEDIARIO", unidade_medida="g", grupo_id=3, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=2),
++        Produto(id=10, nome="Bolo de Nozes - Médio", tipo="FINAL", unidade_medida="un", grupo_id=4, conservacao="RESFRIADO", validade_obrigatoria=1, validade_padrao_dias=4),
++    ]
++    db.session.add_all(fases + grupos + localizacoes)
++    db.session.flush()
++    db.session.add_all(produtos)
++    db.session.flush()
++    db.session.add(ProdutoTransformacao(produto_origem_id=5, produto_destino_id=6))
++
++    ficha = FichaTecnica(id=1, produto_id=10, rendimento=1)
++    fase_1 = FichaTecnicaFase(id=1, fase_id=1, ordem=1, tempo_previsto_min=10)
++    fase_2 = FichaTecnicaFase(id=2, fase_id=2, ordem=2, tempo_previsto_min=30)
++    fase_3 = FichaTecnicaFase(id=3, fase_id=3, ordem=3, tempo_previsto_min=15)
++    ficha.fases.extend([fase_1, fase_2, fase_3])
++    ficha.componentes.extend(
++        [
++            FichaTecnicaComponente(produto_id=8, quantidade=400, fase=fase_1),
++            FichaTecnicaComponente(produto_id=3, quantidade=300, fase=fase_1),
++            FichaTecnicaComponente(produto_id=7, quantidade=500, fase=fase_3),
++            FichaTecnicaComponente(produto_id=9, quantidade=50, fase=fase_3),
++            FichaTecnicaComponente(produto_id=4, quantidade=100, fase=fase_3),
++        ]
++    )
++    db.session.add(ficha)
++    db.session.flush()
++
++    if db.engine.dialect.name == "postgresql":
++        for tabela in (
++            "usuario",
++            "fase_producao",
++            "grupo_produto",
++            "localizacao",
++            "produto",
++            "ficha_tecnica",
++            "ficha_tecnica_fase",
++            "ficha_tecnica_componente",
++        ):
++            db.session.execute(
++                text(
++                    "SELECT setval(pg_get_serial_sequence(:tabela, 'id'), "
++                    f"COALESCE((SELECT MAX(id) FROM {tabela}), 1), true)"
++                ),
++                {"tabela": tabela},
++            )
++    db.session.commit()
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/docs/FASE8_03.md /mnt/data/Machry_Fase8_03_Dominio/docs/FASE8_03.md
+--- /mnt/data/Machry_Fase8_02_Migrations/docs/FASE8_03.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/docs/FASE8_03.md	2026-11-01 04:14:49.934074063 +0000
+@@ -0,0 +1,74 @@
++# Fase 8.3 — Consolidação de domínio
++
++Esta etapa consolida os limites definidos nas Fases 5–7 sem introduzir ainda o novo planejamento de produção.
++
++## Fonte única por domínio
++
++- `Produto` é a entidade oficial de catálogo. Não existem tabelas ou rotas legadas `Item`.
++- `estoque.Lote` é o único lote do sistema; o saldo continua sendo alterado somente por `MovimentacaoEstoque`.
++- `FichaTecnica`, `FichaTecnicaFase` e `FichaTecnicaComponente` são a única representação de ficha.
++- `SolicitacaoProducao` permanece como raiz do agregado de produção; `Processamento` não é reintroduzido.
++
++A suíte possui testes arquiteturais que falham caso tabelas ou rotas legadas do GAP reapareçam.
++
++## Usuário fora do estoque
++
++`Usuario` foi movido de `app.features.estoque.models` para `app.features.auth.models`.
++
++A tabela SQL continua se chamando `usuario`; portanto esta mudança reorganiza o domínio Python sem alterar os dados persistidos.
++
++O estoque apenas referencia o usuário responsável por uma movimentação.
++
++## Consistência Produto × Estoque
++
++O catálogo não pode mais ser alterado de maneira que torne lotes existentes inválidos:
++
++- não é permitido alterar a conservação do produto se algum lote estiver em uma localização incompatível;
++- não é permitido ativar `validade_obrigatoria` enquanto existirem lotes desse produto sem data de validade;
++- continua proibido transformar em `INSUMO` um produto que possui ficha técnica.
++
++Essas validações ficam no `ProdutoService`; o banco continua responsável por constraints estruturais.
++
++## Regras de ficha preservadas
++
++Foram congeladas por testes as regras já adotadas na fusão com o GAP:
++
++- INSUMO não possui ficha;
++- uma ficha por produto;
++- produto não pode ser componente de si próprio;
++- componentes precisam existir e estar ativos;
++- fases precisam existir;
++- ordens de fase não se repetem;
++- componentes não se repetem;
++- componente só referencia uma ordem de fase existente na própria ficha.
++
++## FIFO → FEFO
++
++O sistema já selecionava lotes pela data de validade; portanto a nomenclatura `FIFO` era histórica e incorreta.
++
++A migration `8a3c1d4e5f67`:
++
++- substitui `vw_fifo` por `vw_fefo`;
++- substitui `idx_lote_fifo` por `idx_lote_fefo`;
++- mantém downgrade reversível para a baseline `fee791234a46`.
++
++A seleção operacional continua usando FEFO e deixa lotes sem validade por último. Lotes vencidos não são sugeridos.
++
++## Validação
++
++- 37 testes passando;
++- `alembic upgrade head` validado em banco vazio;
++- `alembic check` sem operações pendentes;
++- downgrade para `fee791234a46` e novo upgrade para `8a3c1d4e5f67` validados;
++- views finais: `vw_fefo`, `vw_inventario`, `vw_sp_componente`, `vw_sp_producao`.
++
++## Próxima etapa
++
++Fase 8.4 — Planejamento de produção:
++
++- quantidade planejada;
++- prioridade;
++- data/horário previsto;
++- responsável;
++- observação;
++- escala dos componentes da ficha pelo rendimento.
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/migrations/versions/8a3c1d4e5f67_consolida_dominio_fefo.py /mnt/data/Machry_Fase8_03_Dominio/migrations/versions/8a3c1d4e5f67_consolida_dominio_fefo.py
+--- /mnt/data/Machry_Fase8_02_Migrations/migrations/versions/8a3c1d4e5f67_consolida_dominio_fefo.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/migrations/versions/8a3c1d4e5f67_consolida_dominio_fefo.py	2026-11-01 04:12:30.648737655 +0000
+@@ -0,0 +1,63 @@
++"""consolida domínio e corrige nomenclatura FEFO
++
++Revision ID: 8a3c1d4e5f67
++Revises: fee791234a46
++Create Date: 2026-11-01 04:15:00
++
++"""
++from typing import Sequence, Union
++
++from alembic import op
++
++revision: str = "8a3c1d4e5f67"
++down_revision: Union[str, Sequence[str], None] = "fee791234a46"
++branch_labels: Union[str, Sequence[str], None] = None
++depends_on: Union[str, Sequence[str], None] = None
++
++
++_FEFO_VIEW = """
++    CREATE VIEW vw_fefo AS
++    SELECT l.* FROM lote l WHERE l.quantidade > 0
++     ORDER BY l.produto_id,
++              CASE WHEN l.data_validade IS NULL THEN 1 ELSE 0 END,
++              l.data_validade ASC,
++              l.criado_em ASC,
++              l.id ASC
++"""
++
++_FIFO_VIEW = """
++    CREATE VIEW vw_fifo AS
++    SELECT l.* FROM lote l WHERE l.quantidade > 0
++     ORDER BY l.produto_id, l.data_validade ASC, l.criado_em ASC
++"""
++
++
++def upgrade() -> None:
++    # O domínio sempre selecionou por validade; o nome FIFO era legado.
++    op.execute("DROP VIEW IF EXISTS vw_fifo")
++    op.execute("DROP VIEW IF EXISTS vw_fefo")
++
++    with op.batch_alter_table("lote") as batch_op:
++        batch_op.drop_index("idx_lote_fifo")
++        batch_op.create_index(
++            "idx_lote_fefo",
++            ["produto_id", "data_validade", "localizacao_id"],
++            unique=False,
++        )
++
++    op.execute(_FEFO_VIEW)
++
++
++def downgrade() -> None:
++    op.execute("DROP VIEW IF EXISTS vw_fefo")
++    op.execute("DROP VIEW IF EXISTS vw_fifo")
++
++    with op.batch_alter_table("lote") as batch_op:
++        batch_op.drop_index("idx_lote_fefo")
++        batch_op.create_index(
++            "idx_lote_fifo",
++            ["produto_id", "data_validade", "localizacao_id"],
++            unique=False,
++        )
++
++    op.execute(_FIFO_VIEW)
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/tests/test_domain_consolidation.py /mnt/data/Machry_Fase8_03_Dominio/tests/test_domain_consolidation.py
+--- /mnt/data/Machry_Fase8_02_Migrations/tests/test_domain_consolidation.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/tests/test_domain_consolidation.py	2026-11-01 04:14:14.090669498 +0000
+@@ -0,0 +1,110 @@
++from app.features.auth.models import Usuario
++from db.database_config import db
++
++
++def test_dominios_legados_nao_estao_no_metadata(app):
++    """Garante que a fusão não reintroduza entidades paralelas do GAP."""
++    with app.app_context():
++        tabelas = set(db.metadata.tables)
++
++    assert "produto" in tabelas
++    assert "lote" in tabelas
++    assert "ficha_tecnica" in tabelas
++    assert "solicitacao_producao" in tabelas
++
++    assert {
++        "item",
++        "ingrediente_ficha",
++        "etapa_ficha_tecnica",
++        "processamento",
++        "item_processamento",
++        "etapa_processamento",
++    }.isdisjoint(tabelas)
++
++
++def test_usuario_pertence_ao_dominio_auth():
++    assert Usuario.__module__ == "app.features.auth.models"
++
++
++def test_rotas_legadas_do_gap_nao_estao_expostas(app):
++    rotas = {rule.rule for rule in app.url_map.iter_rules()}
++
++    assert "/api/produtos" in rotas
++    assert "/api/fichas-tecnicas" in rotas
++    assert "/api/estoque/lotes" in rotas
++    assert "/api/producao/solicitacoes" in rotas
++
++    assert "/items" not in rotas
++    assert "/lotes" not in rotas
++    assert "/processamentos" not in rotas
++
++
++def test_catalogo_nao_pode_invalidar_conservacao_de_lote(seeded_client):
++    c = seeded_client
++    lote = c.post(
++        "/api/estoque/lotes",
++        json={"produto_id": 1, "localizacao_id": 1},
++    )
++    assert lote.status_code == 201, lote.get_json()
++
++    resposta = c.put("/api/produtos/1", json={"conservacao": "RESFRIADO"})
++    assert resposta.status_code == 400
++
++    produto = c.get("/api/produtos/1").get_json()
++    assert produto["conservacao"] == "SECO"
++
++
++def test_catalogo_nao_pode_exigir_validade_com_lote_sem_validade(seeded_client):
++    c = seeded_client
++    lote = c.post(
++        "/api/estoque/lotes",
++        json={"produto_id": 1, "localizacao_id": 1},
++    )
++    assert lote.status_code == 201, lote.get_json()
++    assert lote.get_json()["data_validade"] is None
++
++    resposta = c.put("/api/produtos/1", json={"validade_obrigatoria": 1})
++    assert resposta.status_code == 400
++
++    produto = c.get("/api/produtos/1").get_json()
++    assert produto["validade_obrigatoria"] == 0
++
++
++def test_fefo_prioriza_validade_e_deixa_sem_validade_por_ultimo(seeded_client):
++    c = seeded_client
++
++    def criar_lote(validade):
++        payload = {"produto_id": 1, "localizacao_id": 1}
++        if validade is not None:
++            payload["data_validade"] = validade
++        resposta = c.post("/api/estoque/lotes", json=payload)
++        assert resposta.status_code == 201, resposta.get_json()
++        lote_id = resposta.get_json()["id"]
++        entrada = c.post(
++            "/api/estoque/movimentacoes",
++            json={
++                "tipo": "ENTRADA",
++                "lote_id": lote_id,
++                "usuario_id": 1,
++                "quantidade": 2,
++            },
++        )
++        assert entrada.status_code == 201, entrada.get_json()
++        return lote_id
++
++    expirado = criar_lote("2000-01-01")
++    mais_cedo = criar_lote("2099-01-01")
++    mais_tarde = criar_lote("2099-02-01")
++    sem_validade = criar_lote(None)
++
++    resposta = c.get("/api/estoque/sugestao-saida/1?quantidade=5")
++    assert resposta.status_code == 200
++    lotes = resposta.get_json()["lotes"]
++
++    assert [item["lote_id"] for item in lotes] == [
++        mais_cedo,
++        mais_tarde,
++        sem_validade,
++    ]
++    assert expirado not in {item["lote_id"] for item in lotes}
++    assert [item["quantidade"] for item in lotes] == [2, 2, 1]
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/tests/test_fichas_tecnicas.py /mnt/data/Machry_Fase8_03_Dominio/tests/test_fichas_tecnicas.py
+--- /mnt/data/Machry_Fase8_02_Migrations/tests/test_fichas_tecnicas.py	2026-11-01 03:11:52.000000000 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/tests/test_fichas_tecnicas.py	2026-11-01 04:12:19.635754501 +0000
+@@ -1,72 +1,108 @@
+-from app.features.fichas_tecnicas.models import FaseProducao
+-from db.database_config import db
+-
+-
+-URL = "/api/fichas-tecnicas"
+-
+-
+-def _produto(client, nome, tipo):
+-    resposta = client.post(
+-        "/api/produtos",
+-        json={"nome": nome, "tipo": tipo, "unidade_medida": "g"},
+-    )
+-    assert resposta.status_code == 201
+-    return resposta.get_json()["id"]
+-
+-
+-def _preparar(app, client):
+-    with app.app_context():
+-        db.session.add_all(
+-            [FaseProducao(nome="Preparar"), FaseProducao(nome="Cozinhar")]
+-        )
+-        db.session.commit()
+-        fases = db.session.query(FaseProducao).order_by(FaseProducao.id).all()
+-        fase_ids = [fase.id for fase in fases]
+-    insumo = _produto(client, "Farinha", "INSUMO")
+-    final = _produto(client, "Pão", "FINAL")
+-    return insumo, final, fase_ids
+-
+-
+-def test_crud_ficha_tecnica(app, client):
+-    insumo, final, fases = _preparar(app, client)
+-    payload = {
+-        "produto_id": final,
+-        "rendimento": 10,
+-        "observacao": "Receita base",
+-        "fases": [
+-            {"fase_id": fases[0], "ordem": 1, "tempo_previsto_min": 5},
+-            {"fase_id": fases[1], "ordem": 2, "tempo_previsto_min": 30},
+-        ],
+-        "componentes": [
+-            {"produto_id": insumo, "quantidade": 500, "fase_ordem": 1}
+-        ],
+-    }
+-
+-    criada = client.post(URL, json=payload)
+-    assert criada.status_code == 201, criada.get_json()
+-    ficha = criada.get_json()
+-    assert ficha["produto"] == "Pão"
+-    assert ficha["componentes"][0]["fase_ordem"] == 1
+-
+-    payload["rendimento"] = 12
+-    atualizada = client.put(f"{URL}/{ficha['id']}", json=payload)
+-    assert atualizada.status_code == 200
+-    assert atualizada.get_json()["rendimento"] == 12
+-
+-    assert client.delete(f"{URL}/{ficha['id']}").status_code == 204
+-    assert client.get(f"{URL}/{ficha['id']}").status_code == 404
+-
+-
+-def test_regras_da_ficha(app, client):
+-    insumo, final, fases = _preparar(app, client)
+-    base = {
+-        "produto_id": final,
+-        "rendimento": 1,
+-        "fases": [{"fase_id": fases[0], "ordem": 1, "tempo_previsto_min": 5}],
+-        "componentes": [{"produto_id": insumo, "quantidade": 1}],
+-    }
+-    assert client.post(URL, json={**base, "produto_id": insumo}).status_code == 400
+-    assert client.post(URL, json={**base, "componentes": [{"produto_id": final, "quantidade": 1}]}).status_code == 400
+-    assert client.post(URL, json=base).status_code == 201
+-    assert client.post(URL, json=base).status_code == 409
+-    assert client.put(f"/api/produtos/{final}", json={"tipo": "INSUMO"}).status_code == 400
++from app.features.fichas_tecnicas.models import FaseProducao
++from db.database_config import db
++
++
++URL = "/api/fichas-tecnicas"
++
++
++def _produto(client, nome, tipo):
++    resposta = client.post(
++        "/api/produtos",
++        json={"nome": nome, "tipo": tipo, "unidade_medida": "g"},
++    )
++    assert resposta.status_code == 201
++    return resposta.get_json()["id"]
++
++
++def _preparar(app, client):
++    with app.app_context():
++        db.session.add_all(
++            [FaseProducao(nome="Preparar"), FaseProducao(nome="Cozinhar")]
++        )
++        db.session.commit()
++        fases = db.session.query(FaseProducao).order_by(FaseProducao.id).all()
++        fase_ids = [fase.id for fase in fases]
++    insumo = _produto(client, "Farinha", "INSUMO")
++    final = _produto(client, "Pão", "FINAL")
++    return insumo, final, fase_ids
++
++
++def test_crud_ficha_tecnica(app, client):
++    insumo, final, fases = _preparar(app, client)
++    payload = {
++        "produto_id": final,
++        "rendimento": 10,
++        "observacao": "Receita base",
++        "fases": [
++            {"fase_id": fases[0], "ordem": 1, "tempo_previsto_min": 5},
++            {"fase_id": fases[1], "ordem": 2, "tempo_previsto_min": 30},
++        ],
++        "componentes": [
++            {"produto_id": insumo, "quantidade": 500, "fase_ordem": 1}
++        ],
++    }
++
++    criada = client.post(URL, json=payload)
++    assert criada.status_code == 201, criada.get_json()
++    ficha = criada.get_json()
++    assert ficha["produto"] == "Pão"
++    assert ficha["componentes"][0]["fase_ordem"] == 1
++
++    payload["rendimento"] = 12
++    atualizada = client.put(f"{URL}/{ficha['id']}", json=payload)
++    assert atualizada.status_code == 200
++    assert atualizada.get_json()["rendimento"] == 12
++
++    assert client.delete(f"{URL}/{ficha['id']}").status_code == 204
++    assert client.get(f"{URL}/{ficha['id']}").status_code == 404
++
++
++def test_regras_da_ficha(app, client):
++    insumo, final, fases = _preparar(app, client)
++    base = {
++        "produto_id": final,
++        "rendimento": 1,
++        "fases": [{"fase_id": fases[0], "ordem": 1, "tempo_previsto_min": 5}],
++        "componentes": [{"produto_id": insumo, "quantidade": 1}],
++    }
++    assert client.post(URL, json={**base, "produto_id": insumo}).status_code == 400
++    assert client.post(URL, json={**base, "componentes": [{"produto_id": final, "quantidade": 1}]}).status_code == 400
++    assert client.post(URL, json=base).status_code == 201
++    assert client.post(URL, json=base).status_code == 409
++    assert client.put(f"/api/produtos/{final}", json={"tipo": "INSUMO"}).status_code == 400
++
++
++def test_regras_estruturais_da_ficha(app, client):
++    insumo, final, fases = _preparar(app, client)
++    base = {
++        "produto_id": final,
++        "rendimento": 1,
++        "fases": [{"fase_id": fases[0], "ordem": 1, "tempo_previsto_min": 5}],
++        "componentes": [{"produto_id": insumo, "quantidade": 1, "fase_ordem": 1}],
++    }
++
++    fases_duplicadas = {
++        **base,
++        "fases": [
++            {"fase_id": fases[0], "ordem": 1, "tempo_previsto_min": 5},
++            {"fase_id": fases[1], "ordem": 1, "tempo_previsto_min": 10},
++        ],
++    }
++    assert client.post(URL, json=fases_duplicadas).status_code == 400
++
++    componentes_duplicados = {
++        **base,
++        "componentes": [
++            {"produto_id": insumo, "quantidade": 1},
++            {"produto_id": insumo, "quantidade": 2},
++        ],
++    }
++    assert client.post(URL, json=componentes_duplicados).status_code == 400
++
++    fase_inexistente_na_ficha = {
++        **base,
++        "componentes": [
++            {"produto_id": insumo, "quantidade": 1, "fase_ordem": 999}
++        ],
++    }
++    assert client.post(URL, json=fase_inexistente_na_ficha).status_code == 400
+diff -ruN '--exclude=.pytest_cache' '--exclude=__pycache__' '--exclude=FASE8_03_CHANGES.diff' /mnt/data/Machry_Fase8_02_Migrations/tests/test_migrations.py /mnt/data/Machry_Fase8_03_Dominio/tests/test_migrations.py
+--- /mnt/data/Machry_Fase8_02_Migrations/tests/test_migrations.py	2026-11-01 03:53:37.897132206 +0000
++++ /mnt/data/Machry_Fase8_03_Dominio/tests/test_migrations.py	2026-11-01 04:12:19.634998573 +0000
+@@ -44,11 +44,12 @@
+         }
+         revisao = conexao.execute("SELECT version_num FROM alembic_version").fetchone()
+ 
+-    assert revisao == ("fee791234a46",)
++    assert revisao == ("8a3c1d4e5f67",)
+     assert ("table", "produto") in objetos
+     assert ("table", "solicitacao_producao") in objetos
+     assert ("table", "movimentacao_estoque") in objetos
+     assert ("view", "vw_inventario") in objetos
+-    assert ("view", "vw_fifo") in objetos
++    assert ("view", "vw_fefo") in objetos
++    assert ("view", "vw_fifo") not in objetos
+     assert ("view", "vw_sp_componente") in objetos
+     assert ("view", "vw_sp_producao") in objetos
