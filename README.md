@@ -1,4 +1,4 @@
-# Machry
+# Cozinha+
 
 Sistema de operação para restaurante, com API Flask, frontend React com Vite e TypeScript e persistência SQLAlchemy. O ambiente padrão usa SQLite em volume local. A mesma camada de persistência aceita PostgreSQL quando a infraestrutura for migrada.
 
@@ -9,7 +9,7 @@ Sistema de operação para restaurante, com API Flask, frontend React com Vite e
 - Validações de domínio recuperadas do projeto anterior.
 - Lotes, localizações, movimentações e sugestão de saída por FEFO.
 - Estoque geral de insumos, produtos intermediários e produtos finais, com entradas, saídas e ajustes pela interface.
-- Consulta das solicitações de produção.
+- Planejamento e conclusão da produção com quantidade desejada, baixa FEFO dos componentes e entrada automática do produto final.
 - Interface responsiva para produtos e fichas técnicas.
 - Login por sessão com perfis de proprietária, gestor e cozinha.
 - Swagger em `/docs`.
@@ -157,13 +157,13 @@ Sobre as fichas da apostila:
 
 ## Identidade visual
 
-A identidade (nome, logo, ícones e CSS) vem de uma pasta em `branding/`, escolhida pela variável `BRANDING`. O padrão é `machry`: nome e logo do site oficial (machry.com.br). Para trocar, defina no `.env` outra pasta (ou um caminho absoluto, fora do Docker):
+A identidade (nome, logo, ícones e CSS) vem de uma pasta em `branding/`, escolhida pela variável `BRANDING`. O padrão do sistema é `cozinha_plus`. Para trocar, defina no `.env` outra pasta (ou um caminho absoluto, fora do Docker):
 
 ```
 BRANDING=cozinha_plus
 ```
 
-Com `BRANDING=` vazio, nenhuma pasta é lida e o frontend usa os textos da pasta `machry` embutidos no código (sem logo, ícones nem CSS).
+Com `BRANDING=` vazio, nenhuma pasta é lida e o frontend usa os textos da Cozinha+ embutidos no código (sem logo, ícones nem CSS).
 
 A pasta deve conter um `brand.json`; todos os campos são opcionais e os ausentes mantêm o padrão:
 
@@ -174,13 +174,15 @@ A pasta deve conter um `brand.json`; todos os campos são opcionais e os ausente
   "sigla": "BA",
   "titulo": "Bistrô Aurora · Operação de cozinha",
   "logo": "logo.svg",
+  "logo_horizontal": "logo-horizontal.svg",
+  "logo_impressao": "logo-impressao.svg",
   "favicon": "favicon.png",
   "apple_touch_icon": "apple-touch-icon.png",
   "css": "custom.css"
 }
 ```
 
-- `sigla` aparece no lugar do logo quando `logo` não é informado.
+- `sigla` aparece no lugar do logo quando `logo` não é informado. `logo_horizontal` é usado no login e `logo_impressao` nas fichas técnicas; ambos usam `logo` como alternativa.
 - `css` é carregado depois do CSS padrão; sobrescreva as variáveis `--green`, `--lime`, `--cream`, `--line`, `--muted` ou qualquer classe.
 - Arquivos são lidos da própria pasta. No Docker, `./branding` é montado na API: alterações em arquivos exigem apenas recarregar a página; alterar `BRANDING` exige `docker compose up -d api`.
 - Veja `branding/machry/`, `branding/cozinha_plus/` e `branding/exemplo/`.
@@ -247,6 +249,10 @@ Regras aplicadas:
 - Componentes só podem apontar para fases da própria ficha.
 - A atualização de cabeçalho, fases e componentes ocorre na mesma transação.
 - Fichas com histórico de produção não podem ser excluídas.
+
+## Produção e estoque
+
+Ao adicionar uma ficha à fila, o gestor informa a quantidade planejada e o local do produto final. Os componentes são proporcionais ao rendimento da ficha. Ao concluir, a API executa uma única transação: valida todo o saldo, consome lotes não vencidos por FEFO, registra `CONSUMO_PRODUCAO`, cria o lote final e registra `PRODUCAO`. Se faltar qualquer componente, nenhuma baixa é gravada e a solicitação permanece em produção.
 
 ## Testes
 
