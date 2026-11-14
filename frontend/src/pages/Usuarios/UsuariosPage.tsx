@@ -3,8 +3,13 @@ import { PageHeading } from '../../components/ui'
 import { FormularioDeUsuario, TabelaDeUsuarios, useUsuarios } from '../../features/usuarios'
 import type { Usuario } from '../../types'
 
-export function UsuariosPage({ usuarioLogado }: { usuarioLogado: Usuario }) {
-  const { usuarios, erro, atualizar } = useUsuarios()
+interface UsuariosPageProps {
+  usuarioLogado: Usuario
+  rodadaDeAtualizacao: number
+}
+
+export function UsuariosPage({ usuarioLogado, rodadaDeAtualizacao }: UsuariosPageProps) {
+  const { usuarios, erro, atualizar } = useUsuarios(rodadaDeAtualizacao)
   const [editando, setEditando] = useState<Usuario | null>(null)
   const [versaoDoFormulario, setVersaoDoFormulario] = useState(0)
 

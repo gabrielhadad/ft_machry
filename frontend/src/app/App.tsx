@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSessao } from '../features/auth'
 import { BrandMark, useBranding } from '../features/branding'
 import { SheetModal } from '../features/fichas'
+import { useAtualizacaoPeriodica } from '../hooks/useAtualizacaoPeriodica'
 import { LoginPage } from '../pages/Login/LoginPage'
 import { recursosAfetados, useDados, type Mutacao, type Recurso } from '../stores/dados'
 import type { FichaTecnica, Usuario } from '../types'
@@ -13,15 +14,26 @@ type Toast = { text: string; error?: boolean }
 
 const recursosDoEditorDeFicha: Recurso[] = ['produtos', 'fases']
 
+const INTERVALO_DE_ATUALIZACAO_MS = 60_000
+
 export function App() {
   const branding = useBranding()
   const [view, setView] = useState<View>(() => viewDaUrl() ?? 'inicio')
   const [menuOpen, setMenuOpen] = useState(false)
-  const { dados, estado, atualizando, garantir, recarregar, marcarDesatualizados, limpar } = useDados()
+  const {
+    dados,
+    estado,
+    garantir,
+    recarregar,
+    atualizarEmSegundoPlano,
+    marcarDesatualizados,
+    limpar,
+  } = useDados()
   const [erroTela, setErroTela] = useState('')
   const [tentativa, setTentativa] = useState(0)
   const [sheetModal, setSheetModal] = useState<FichaTecnica | 'new' | null>(null)
   const [toast, setToast] = useState<Toast | null>(null)
+  const [rodadaDeAtualizacao, setRodadaDeAtualizacao] = useState(0)
 
   const aoEntrar = useCallback((usuario: Usuario) => {
     const pedida = viewDaUrl()
@@ -58,6 +70,11 @@ export function App() {
     window.addEventListener('popstate', seguirAUrl)
     return () => window.removeEventListener('popstate', seguirAUrl)
   }, [])
+
+  const atualizarTelaAtual = () => {
+    atualizarEmSegundoPlano(recursosNecessarios).catch(() => undefined)
+  }
+  useAtualizacaoPeriodica(atualizarTelaAtual, INTERVALO_DE_ATUALIZACAO_MS, Boolean(usuario))
 
   useEffect(() => {
     if (!toast) return
@@ -99,7 +116,24 @@ export function App() {
   }
   if (usuario === null) return <LoginPage onLogin={iniciar} />
 
-  const contexto: ContextoDaPagina = { usuario, dados, aoAlterar, atualizar, abrirFicha: setSheetModal, avisarErro }
+  const atualizarManualmente = async () => {
+    setRodadaDeAtualizacao((rodada) => rodada + 1)
+    try {
+      await recarregar(recursosNecessarios)
+    } catch (reason) {
+      avisarErro(mensagemDeErro(reason, 'Não foi possível atualizar os dados.'))
+    }
+  }
+
+  const contexto: ContextoDaPagina = {
+    usuario,
+    dados,
+    aoAlterar,
+    atualizar,
+    abrirFicha: setSheetModal,
+    avisarErro,
+    rodadaDeAtualizacao,
+  }
 
   let page
   if (!podeAcessar(rota, usuario)) {
@@ -122,11 +156,11 @@ export function App() {
       viewAtual={view}
       titulo={rota.titulo}
       menuOpen={menuOpen}
-      atualizando={atualizando}
       usuario={usuario}
       onNavigate={navigate}
       onMenuToggle={() => setMenuOpen((open) => !open)}
       onLogout={() => void logout()}
+      onAtualizar={() => void atualizarManualmente()}
     >
       {page}
     </Shell>

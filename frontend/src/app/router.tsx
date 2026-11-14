@@ -19,6 +19,7 @@ export interface ContextoDaPagina {
   atualizar: (mutacao: Mutacao) => Promise<boolean>
   abrirFicha: (ficha: FichaTecnica | 'new') => void
   avisarErro: (mensagem: string) => void
+  rodadaDeAtualizacao: number
 }
 
 export interface Rota {
@@ -121,7 +122,11 @@ export const rotas: Rota[] = [
     icone: '↺',
     papeis: gestao,
     recursos: () => ['lotes', 'produtos'],
-    pagina: ({ dados, atualizar }) => <MovimentacoesPage lotes={dados.lotes} produtos={dados.produtos} atualizar={atualizar} />,
+    pagina: ({ dados, rodadaDeAtualizacao }) => <MovimentacoesPage
+      lotes={dados.lotes}
+      produtos={dados.produtos}
+      rodadaDeAtualizacao={rodadaDeAtualizacao}
+    />,
   },
   {
     view: 'locais',
@@ -139,7 +144,7 @@ export const rotas: Rota[] = [
     icone: '♙',
     papeis: proprietaria,
     recursos: () => [],
-    pagina: ({ usuario }) => <UsuariosPage usuarioLogado={usuario} />,
+    pagina: ({ usuario, rodadaDeAtualizacao }) => <UsuariosPage usuarioLogado={usuario} rodadaDeAtualizacao={rodadaDeAtualizacao} />,
   },
 ]
 
