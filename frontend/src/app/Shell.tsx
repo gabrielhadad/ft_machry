@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { BrandMark, useBranding } from '../features/branding'
 import type { PapelUsuario, Usuario } from '../types'
 import type { Rota, View } from './router'
@@ -14,16 +14,22 @@ interface ShellProps {
   viewAtual: View
   titulo: string
   menuOpen: boolean
-  atualizando: boolean
   usuario: Usuario
   onNavigate: (view: View) => void
   onMenuToggle: () => void
   onLogout: () => void
+  onAtualizar: () => void
   children: ReactNode
 }
 
-export function Shell({ rotas, viewAtual, titulo, menuOpen, atualizando, usuario, onNavigate, onMenuToggle, onLogout, children }: ShellProps) {
+export function Shell({ rotas, viewAtual, titulo, menuOpen, usuario, onNavigate, onMenuToggle, onLogout, onAtualizar, children }: ShellProps) {
   const branding = useBranding()
+  const [cliquesEmAtualizar, setCliquesEmAtualizar] = useState(0)
+
+  const atualizar = () => {
+    setCliquesEmAtualizar((cliques) => cliques + 1)
+    onAtualizar()
+  }
 
   return <div className="layout">
     <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
@@ -57,7 +63,14 @@ export function Shell({ rotas, viewAtual, titulo, menuOpen, atualizando, usuario
           <small>ÁREA ATUAL</small>
           <strong>{titulo}</strong>
         </div>
-        {atualizando && <span className="sync-state" role="status">Atualizando…</span>}
+        <button
+          key={cliquesEmAtualizar}
+          className={`secondary outline small refresh-button ${cliquesEmAtualizar ? 'clicado' : ''}`}
+          type="button"
+          onClick={atualizar}
+        >
+          Atualizar
+        </button>
       </header>
       <div className="content">{children}</div>
     </main>

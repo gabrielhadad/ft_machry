@@ -56,7 +56,7 @@ main{min-width:0}header{height:78px;border-bottom:1px solid var(--line);display:
 .picker-list li[aria-selected=true]{font-weight:700}
 .picker-list .picker-empty{color:var(--muted);cursor:default}
 
-.sync-state{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+.refresh-button{margin-left:auto;white-space:nowrap}.refresh-button:active{transform:scale(.96)}.refresh-button.clicado{animation:botao-clicado .7s ease-out}@keyframes botao-clicado{0%{background:var(--lime);border-color:var(--lime);color:var(--green)}100%{background:#fff;border-color:#cfd5cb;color:#20342f}}
 .heading-actions{display:flex;gap:10px;flex-wrap:wrap}
 .secondary.outline{background:#fff;border:1px solid #cfd5cb;color:#20342f}
 .secondary.outline:hover{background:#f6f7f2}

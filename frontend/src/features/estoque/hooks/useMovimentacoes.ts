@@ -3,7 +3,7 @@ import type { Movimento } from '../../../types'
 import { mensagemDeErro } from '../../../utils/erros'
 import { listarMovimentacoes } from '../api/estoqueApi'
 
-export function useMovimentacoes() {
+export function useMovimentacoes(rodadaDeAtualizacao: number) {
   const [movimentos, setMovimentos] = useState<Movimento[]>([])
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
@@ -22,7 +22,7 @@ export function useMovimentacoes() {
 
   useEffect(() => {
     void atualizar()
-  }, [atualizar])
+  }, [atualizar, rodadaDeAtualizacao])
 
   return { movimentos, erro, carregando, atualizar }
 }

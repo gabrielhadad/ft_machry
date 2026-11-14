@@ -97,6 +97,15 @@ export function useDados() {
     await Promise.all(recursos.map(iniciarBusca))
   }, [iniciarBusca])
 
+  const atualizarEmSegundoPlano = useCallback(async (recursos: Recurso[]) => {
+    const prontos = recursos.filter((recurso) => {
+      const carregado = estadoAtual.current[recurso] === 'pronto'
+      const jaBuscando = emAndamento.current.has(recurso)
+      return carregado && !jaBuscando
+    })
+    await Promise.all(prontos.map(buscarUm))
+  }, [buscarUm])
+
   const marcarDesatualizados = useCallback((recursos: Recurso[]) => {
     for (const recurso of recursos) {
       versoes.current[recurso] += 1
@@ -115,5 +124,14 @@ export function useDados() {
     setEstado(estadoAtual.current)
   }, [])
 
-  return { dados, estado, atualizando, garantir, recarregar, marcarDesatualizados, limpar }
+  return {
+    dados,
+    estado,
+    atualizando,
+    garantir,
+    recarregar,
+    atualizarEmSegundoPlano,
+    marcarDesatualizados,
+    limpar,
+  }
 }

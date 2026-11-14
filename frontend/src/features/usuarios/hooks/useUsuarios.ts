@@ -3,7 +3,7 @@ import type { Usuario } from '../../../types'
 import { mensagemDeErro } from '../../../utils/erros'
 import { listarUsuarios } from '../api/usuariosApi'
 
-export function useUsuarios() {
+export function useUsuarios(rodadaDeAtualizacao: number) {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [erro, setErro] = useState('')
 
@@ -18,7 +18,7 @@ export function useUsuarios() {
 
   useEffect(() => {
     void atualizar()
-  }, [atualizar])
+  }, [atualizar, rodadaDeAtualizacao])
 
   return { usuarios, erro, atualizar }
 }
