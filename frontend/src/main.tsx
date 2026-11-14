@@ -1,13 +1,14 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { App } from './App'
-import { BrandingProvider, carregarBranding } from './branding'
-import './styles.css'
+import { App } from './app/App'
+import { Providers } from './app/providers'
+import { carregarBranding } from './features/branding'
+import './styles/global.css'
 
 void carregarBranding().then((branding) => createRoot(document.getElementById('app')!).render(
   <StrictMode>
-    <BrandingProvider value={branding}>
+    <Providers branding={branding}>
       <App />
-    </BrandingProvider>
+    </Providers>
   </StrictMode>,
 ))

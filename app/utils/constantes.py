@@ -6,7 +6,7 @@ class Constantes:
     # -- paginação -----------------------------------------------------------
 
     POR_PAGINA_PADRAO = 20
-    POR_PAGINA_MAXIMO = 100
+    POR_PAGINA_MAXIMO = 500
 
     # -- autenticação --------------------------------------------------------
 

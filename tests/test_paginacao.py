@@ -39,7 +39,7 @@ def test_pagina_alem_do_fim_vem_vazia(client):
 
 
 @pytest.mark.parametrize(
-    "query", ["page=0", "page=-1", "page=abc", "per_page=0", "per_page=101", "per_page=x"]
+    "query", ["page=0", "page=-1", "page=abc", "per_page=0", "per_page=501", "per_page=x"]
 )
 def test_parametros_invalidos(client, query):
     r = client.get(f"{PRODUTOS}?{query}")

@@ -940,7 +940,7 @@ components:
       name: per_page
       in: query
       description: Quantidade de itens por página
-      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      schema: {type: integer, minimum: 1, maximum: 500, default: 20}
   responses:
     Invalido:
       description: Corpo ou parâmetros inválidos, ou violação de regra de negócio
