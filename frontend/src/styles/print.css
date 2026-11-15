@@ -1,0 +1,88 @@
+@media print {
+  .sidebar,
+  header,
+  .no-print,
+  .production-planner,
+  button {
+    display: none!important;
+  }
+
+  .layout {
+    display: block;
+  }
+
+  .content {
+    padding: 0;
+  }
+
+  .panel {
+    border: 0;
+    box-shadow: none;
+  }
+
+  .page-heading {
+    margin-bottom: 12px;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  body.printing-sheet #root>*:not(.modal-backdrop) {
+    display: none!important;
+  }
+
+  body.printing-sheet #root>.modal-backdrop:not(:has(.sheet-dialog)) {
+    display: none!important;
+  }
+
+  body.printing-sheet .modal-backdrop:has(.sheet-dialog) {
+    display: block!important;
+    position: static;
+    background: none;
+    backdrop-filter: none;
+    padding: 0;
+  }
+
+  body.printing-sheet .sheet-dialog {
+    display: block!important;
+    width: 100%;
+    max-height: none;
+    box-shadow: none;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  body.printing-sheet .sheet-dialog>.dialog-head,
+  body.printing-sheet .sheet-dialog>.dialog-actions {
+    display: none!important;
+  }
+
+  body.printing-sheet .sheet-document {
+    display: block;
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+    font-size: 11pt;
+  }
+
+  body.printing-sheet .sheet-document-head {
+    display: grid!important;
+  }
+
+  body.printing-sheet .sheet-title-block h1 {
+    font-size: 28pt;
+  }
+
+  body.printing-sheet .sheet-section {
+    break-inside: avoid;
+  }
+
+  body.printing-sheet .sheet-document table {
+    font-size: 10pt;
+  }
+
+  body.printing-sheet .sheet-document-foot {
+    display: block!important;
+  }
+}

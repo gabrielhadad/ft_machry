@@ -1,0 +1,118 @@
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #20342f;
+  background: #f4f2eb;
+  font-synthesis: none;
+  --green: #173f35;
+  --lime: #d7e85c;
+  --cream: #f4f2eb;
+  --line: #dcded4;
+  --muted: #718078;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  font: 600 clamp(32px, 4vw, 54px)/1.03 'Fraunces';
+  margin: 9px 0 15px;
+}
+
+h1 em {
+  color: #819b60;
+  font-style: italic;
+}
+
+.primary,
+.secondary {
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-weight: 700;
+}
+
+.primary {
+  background: var(--lime);
+  color: #24392e;
+}
+
+.secondary {
+  background: #e5e8df;
+  color: #41534c;
+}
+
+.text-button,
+.danger-link {
+  border: 0;
+  background: none;
+  color: #376454;
+  font-weight: 700;
+  padding: 7px 0;
+}
+
+.danger-link {
+  color: #a43c35;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 14px 12px;
+  border-bottom: 1px solid #e9ebe5;
+  white-space: nowrap;
+}
+
+th {
+  font-size: 9px;
+  letter-spacing: .12em;
+  color: var(--muted);
+}
+
+td {
+  font-size: 13px;
+}
+
+.secondary.outline {
+  background: #fff;
+  border: 1px solid #cfd5cb;
+  color: #20342f;
+}
+
+.secondary.outline:hover {
+  background: #f6f7f2;
+}
+
+.secondary.small {
+  padding: 8px 13px;
+  font-size: 12px;
+}

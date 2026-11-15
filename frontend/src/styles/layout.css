@@ -1,0 +1,281 @@
+.layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 250px 1fr;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 26px 14px 18px;
+  background: var(--green);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 0 8px 28px;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #8da79f;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: 'Fraunces';
+  font-size: 23px;
+  color: var(--lime);
+  flex: none;
+}
+
+.brand strong {
+  display: block;
+  font: 600 23px 'Fraunces';
+}
+
+.brand small {
+  display: block;
+  color: #9eb5ae;
+  font-size: 11px;
+  letter-spacing: .08em;
+  margin-top: 2px;
+}
+
+.nav-caption,
+.eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  color: #819c94;
+}
+
+.sidebar nav {
+  display: grid;
+  gap: 5px;
+  grid-auto-rows: min-content;
+}
+
+.nav {
+  border: 0;
+  background: transparent;
+  color: #b8cac4;
+  text-decoration: none;
+  padding: 11px 14px;
+  border-radius: 9px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  min-height: 45px;
+}
+
+.nav:hover,
+.nav.active {
+  background: #28574b;
+  color: #fff;
+}
+
+.nav.active {
+  box-shadow: inset 3px 0 var(--lime);
+}
+
+.nav span {
+  font-size: 18px;
+  width: 18px;
+  text-align: center;
+}
+
+main {
+  min-width: 0;
+}
+
+header {
+  height: 78px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  padding: 0 42px;
+  background: #f8f7f1;
+  gap: 14px;
+}
+
+header div small,
+header div strong {
+  display: block;
+}
+
+header div small {
+  font-size: 9px;
+  letter-spacing: .14em;
+  color: var(--muted);
+}
+
+header div strong {
+  margin-top: 3px;
+}
+
+.environment {
+  margin-left: auto;
+  background: #e5eadf;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 11px;
+  color: #52645d;
+}
+
+.menu {
+  display: none;
+  border: 0;
+  background: none;
+  font-size: 22px;
+}
+
+.content {
+  padding: 44px;
+  max-width: 1450px;
+  margin: auto;
+}
+
+.account {
+  margin-top: auto;
+  padding: 16px 7px;
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.account-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #315e52;
+  color: var(--lime);
+  font-weight: 700;
+}
+
+.account strong,
+.account small {
+  display: block;
+}
+
+.account strong {
+  font-size: 12px;
+}
+
+.account small {
+  font-size: 10px;
+  color: #9eb5ae;
+  margin-top: 2px;
+}
+
+.account button {
+  border: 0;
+  background: transparent;
+  color: #a9beb7;
+  font-size: 11px;
+  padding: 6px;
+}
+
+.account button:hover {
+  color: #fff;
+}
+
+.sidebar-scrim {
+  display: none;
+}
+
+.app-loading {
+  min-height: 100vh;
+  background: var(--green);
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+  color: #dce7e3;
+}
+
+@media(max-width:900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    z-index: 9;
+    width: 250px;
+    transform: translateX(-100%);
+    transition: .2s;
+  }
+
+  .sidebar.open {
+    transform: none;
+  }
+
+  .menu {
+    display: block;
+  }
+
+  header {
+    padding: 0 20px;
+  }
+
+  .content {
+    padding: 24px;
+  }
+
+  .environment {
+    display: none;
+  }
+
+  .sidebar-scrim {
+    display: block;
+    position: fixed;
+    z-index: 8;
+    inset: 0;
+    border: 0;
+    background: #102a2466;
+  }
+}
+
+@media(max-width:600px) {
+  .content {
+    padding: 18px;
+  }
+}
+
+.refresh-button {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.refresh-button:active {
+  transform: scale(.96);
+}
+
+.refresh-button.clicado {
+  animation: botao-clicado .7s ease-out;
+}
+
+@keyframes botao-clicado {
+  0% {
+    background: var(--lime);
+    border-color: var(--lime);
+    color: var(--green);
+  }
+
+  100% {
+    background: #fff;
+    border-color: #cfd5cb;
+    color: #20342f;
+  }
+}
