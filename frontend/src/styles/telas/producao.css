@@ -1,0 +1,55 @@
+.production-planner {
+  display: grid;
+  grid-template-columns: 1fr minmax(220px, 1.2fr) minmax(140px, .6fr) minmax(190px, .8fr) auto;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.production-planner>div {
+  align-self: center;
+}
+
+.production-planner h2 {
+  font: 600 24px 'Fraunces';
+  margin: 5px 0 0;
+}
+
+.production-planner>label {
+  display: grid;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #596b64;
+}
+
+.production-planner>label input {
+  width: 100%;
+  border: 1px solid #ccd2c9;
+  border-radius: 8px;
+  padding: 11px;
+  background: #fff;
+  color: #20342f;
+  font: inherit;
+}
+
+.production-planner>.primary {
+  padding: 11px 18px;
+  border: 1px solid transparent;
+}
+
+.status-em_producao {
+  background: #fff2c9;
+  color: #735b00;
+}
+
+.status-concluida {
+  background: #dcebd5;
+  color: #396032;
+}
+
+@media(max-width:900px) {
+  .production-planner {
+    grid-template-columns: 1fr;
+  }
+}

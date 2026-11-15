@@ -1,0 +1,141 @@
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(340px, 1.05fr) minmax(420px, .95fr);
+  background: #f5f3ec;
+}
+
+.login-brand {
+  background: var(--green);
+  color: #fff;
+  padding: clamp(48px, 7vw, 100px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-mark {
+  width: 58px;
+  height: 58px;
+  border: 1px solid #78968e;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--lime);
+  font: 600 31px 'Fraunces';
+  margin-bottom: 52px;
+}
+
+.login-brand h1 {
+  max-width: 590px;
+  font-size: clamp(46px, 6vw, 78px);
+  margin: 14px 0 22px;
+}
+
+.login-brand>p {
+  max-width: 520px;
+  color: #acc0ba;
+  font-size: 17px;
+  line-height: 1.65;
+  margin-bottom: 42px;
+}
+
+.login-feature {
+  display: flex;
+  gap: 16px;
+  padding: 17px 0;
+  border-top: 1px solid #31594f;
+  max-width: 520px;
+}
+
+.login-feature>span {
+  color: var(--lime);
+  font: 600 18px 'Fraunces';
+}
+
+.login-feature strong,
+.login-feature small {
+  display: block;
+}
+
+.login-feature small {
+  color: #91aaa3;
+  margin-top: 5px;
+}
+
+.login-panel {
+  display: grid;
+  place-items: center;
+  padding: 40px;
+}
+
+.login-card {
+  width: min(410px, 100%);
+  display: grid;
+  gap: 18px;
+}
+
+.login-card h2 {
+  font: 600 42px 'Fraunces';
+  margin: 0;
+}
+
+.login-card>p {
+  color: var(--muted);
+  margin: -10px 0 10px;
+}
+
+.login-card label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #596b64;
+  display: grid;
+  gap: 7px;
+}
+
+.login-card input {
+  width: 100%;
+  border: 1px solid #ccd2c9;
+  background: #fff;
+  border-radius: 9px;
+  padding: 14px;
+}
+
+.login-submit {
+  margin-top: 6px;
+  padding: 14px;
+}
+
+.login-help {
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media(max-width:760px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-brand {
+    display: none;
+  }
+
+  .login-panel {
+    padding: 28px;
+    min-height: 100vh;
+  }
+}
+
+.brand-mark.has-logo,
+.login-mark.has-logo {
+  border: 0;
+  overflow: hidden;
+}
+
+.brand-mark img,
+.login-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
