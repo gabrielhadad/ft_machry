@@ -15,7 +15,12 @@ const abas: Array<[FiltroDeTipo, string]> = [
   ['FINAL', 'Produtos finais'],
 ]
 
-export function CatalogoDeProdutos({ produtos, onEdit }: { produtos: Produto[]; onEdit: (produto: Produto) => void }) {
+interface CatalogoDeProdutosProps {
+  produtos: Produto[]
+  onEdit?: (produto: Produto) => void
+}
+
+export function CatalogoDeProdutos({ produtos, onEdit }: CatalogoDeProdutosProps) {
   const [query, setQuery] = useState('')
   const [tipo, setTipo] = useState<FiltroDeTipo>('TODOS')
   const [subdivisao, setSubdivisao] = useState('')
@@ -80,7 +85,7 @@ export function CatalogoDeProdutos({ produtos, onEdit }: { produtos: Produto[]; 
     <div className="table-wrap">
       <table>
         <thead>
-          <tr><th>Produto</th><th>Tipo</th><th>Subdivisão</th><th>Unidade</th><th>Conservação</th><th>Validade padrão</th><th>Ação</th></tr>
+          <tr><th>Produto</th><th>Tipo</th><th>Subdivisão</th><th>Unidade</th><th>Conservação</th><th>Validade padrão</th>{onEdit && <th>Ação</th>}</tr>
         </thead>
         <tbody>
           {visiveis.map((produto) => <tr key={produto.id}>
@@ -90,7 +95,9 @@ export function CatalogoDeProdutos({ produtos, onEdit }: { produtos: Produto[]; 
             <td>{produto.unidade_medida}</td>
             <td>{produto.conservacao.toLowerCase()}</td>
             <td>{produto.validade_padrao_dias == null ? '—' : `${produto.validade_padrao_dias} dias`}</td>
-            <td><button className="text-button" onClick={() => onEdit(produto)}>Editar</button></td>
+            {onEdit && <td>
+              <button className="text-button" onClick={() => onEdit(produto)}>Editar</button>
+            </td>}
           </tr>)}
         </tbody>
       </table>

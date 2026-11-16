@@ -1,6 +1,7 @@
 from flask_sqlalchemy.pagination import Pagination
 from pydantic import ValidationError
 
+from app.utils.enums import TipoProduto
 from app.utils.errors import RegistroNaoEncontrado, mensagem_validacao
 from app.utils.paginacao import PaginacaoQuery
 from app.utils.texto import normalizar_nome
@@ -68,7 +69,7 @@ class ProdutoService:
                 self._validar_nome_unico(campos["nome"], ignorar_id=produto_id)
             if "grupo_id" in campos:
                 self._validar_grupo(campos["grupo_id"])
-            if campos.get("tipo") == "INSUMO" and self.repository.possui_ficha(produto_id):
+            if campos.get("tipo") == TipoProduto.INSUMO and self.repository.possui_ficha(produto_id):
                 raise ValueError("produto com ficha técnica não pode se tornar insumo")
             return self.repository.atualizar(produto, campos)
 

@@ -11,12 +11,22 @@ interface SheetModalProps {
   produtos: Produto[]
   catalogoFases: FaseCatalogo[]
   canEdit: boolean
+  canDelete: boolean
   onClose: () => void
   onSaved: () => void
   onDeleted: () => void
 }
 
-export function SheetModal({ ficha, produtos, catalogoFases, canEdit, onClose, onSaved, onDeleted }: SheetModalProps) {
+export function SheetModal({
+  ficha,
+  produtos,
+  catalogoFases,
+  canEdit,
+  canDelete,
+  onClose,
+  onSaved,
+  onDeleted,
+}: SheetModalProps) {
   const [editing, setEditing] = useState(ficha === null)
   const [saving, setSaving] = useState(false)
 
@@ -48,19 +58,56 @@ export function SheetModal({ ficha, produtos, catalogoFases, canEdit, onClose, o
   }
 
   const footer = <>
-    {ficha && canEdit && <button className="secondary outline" type="button" disabled={editing || saving} onClick={() => setEditing(true)}>Editar</button>}
-    {editing && <button className="primary" form="sheet-form" disabled={saving}>{saving ? 'Salvando…' : 'Salvar'}</button>}
+    {ficha && canEdit && <button
+      className="secondary outline"
+      type="button"
+      disabled={editing || saving}
+      onClick={() => setEditing(true)}
+    >
+      Editar
+    </button>}
+    {editing && <button className="primary" form="sheet-form" disabled={saving}>
+      {saving ? 'Salvando…' : 'Salvar'}
+    </button>}
     <button className="secondary" onClick={cancel} type="button" disabled={saving}>Cancelar</button>
-    {ficha && <button className="primary print-action" type="button" onClick={print} disabled={editing || saving}>Imprimir</button>}
-    {ficha && canEdit && editing && <button className="danger-link" type="button" onClick={() => void remove()} disabled={saving}>Excluir ficha</button>}
+    {ficha && <button
+      className="primary print-action"
+      type="button"
+      onClick={print}
+      disabled={editing || saving}
+    >
+      Imprimir
+    </button>}
+    {ficha && canDelete && editing && <button
+      className="danger-link"
+      type="button"
+      onClick={() => void remove()}
+      disabled={saving}
+    >
+      Excluir ficha
+    </button>}
   </>
 
   let title = 'Nova ficha técnica'
   if (ficha) title = editing ? 'Editar ficha técnica' : 'Ficha técnica'
 
-  return <Modal className="sheet-dialog" eyebrow="PADRONIZAÇÃO" title={title} wide onClose={cancel} footer={footer}>
+  return <Modal
+    className="sheet-dialog"
+    eyebrow="PADRONIZAÇÃO"
+    title={title}
+    wide
+    onClose={cancel}
+    footer={footer}
+  >
     {editing
-      ? <SheetEditor key={`${ficha?.id ?? 'new'}-${editing}`} ficha={ficha} produtos={produtos} catalogoFases={catalogoFases} setSaving={setSaving} onSaved={onSaved} />
+      ? <SheetEditor
+        key={`${ficha?.id ?? 'new'}-${editing}`}
+        ficha={ficha}
+        produtos={produtos}
+        catalogoFases={catalogoFases}
+        setSaving={setSaving}
+        onSaved={onSaved}
+      />
       : ficha && <SheetDocument ficha={ficha} />}
   </Modal>
 }

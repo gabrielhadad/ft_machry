@@ -1,13 +1,13 @@
 import { LoginForm } from '../../features/auth'
 import { BrandMark, useBranding } from '../../features/branding'
-import type { Usuario } from '../../types'
+import type { UsuarioLogado } from '../../types'
 
 const destaques = [
   { numero: '01', titulo: 'Planejamento claro', texto: 'Cada pessoa vê exatamente o que precisa fazer.' },
   { numero: '02', titulo: 'Receitas padronizadas', texto: 'Etapas e quantidades sempre disponíveis.' },
 ]
 
-export function LoginPage({ onLogin }: { onLogin: (usuario: Usuario) => void }) {
+export function LoginPage({ onLogin }: { onLogin: (usuario: UsuarioLogado) => void }) {
   const branding = useBranding()
   return <main className="login-page">
     <section className="login-brand">

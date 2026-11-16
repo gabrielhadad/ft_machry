@@ -444,6 +444,32 @@
   margin-top: 10px;
 }
 
+.notice {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: #f6f4ee;
+  border: 1px solid var(--line);
+  color: #40524b;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.chip-button {
+  border: 1px solid #cfd5cb;
+  background: #fff;
+  color: #20342f;
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chip-button:hover {
+  background: #f6f7f2;
+}
+
 .panel+.panel {
   margin-top: 20px;
 }

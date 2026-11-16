@@ -8,7 +8,7 @@ from flask_sqlalchemy.pagination import Pagination
 
 from app.features.estoque.models import ItemLote, Lote
 from app.features.estoque.repository import EstoqueRepository
-from app.utils.constantes import Constantes
+from app.utils.enums import StatusItem, StatusSolicitacao, TipoMovimentacao
 from app.utils.errors import RegistroNaoEncontrado
 from app.utils.paginacao import PaginacaoQuery
 
@@ -59,14 +59,14 @@ class ProducaoService:
         )
 
     def atualizar_status(
-        self, sp_id: int, status: str, usuario_id: int
+        self, sp_id: int, status: StatusSolicitacao, usuario_id: int
     ) -> models.SolicitacaoProducao:
         solicitacao = self.repository.obter_solicitacao(sp_id)
         if solicitacao is None:
             raise RegistroNaoEncontrado("solicitação não encontrada")
-        if status not in Constantes.TRANSICOES_SOLICITACAO[solicitacao.status]:
+        if status not in StatusSolicitacao.proximos(solicitacao.status):
             raise ValueError(f"não é possível alterar de {solicitacao.status} para {status}")
-        if status == "CONCLUIDA":
+        if status == StatusSolicitacao.CONCLUIDA:
             return self._concluir(solicitacao.id, usuario_id)
         return self.repository.atualizar_status(solicitacao, status)
 
@@ -80,7 +80,7 @@ class ProducaoService:
             )
             if solicitacao is None:
                 raise RegistroNaoEncontrado("solicitação não encontrada")
-            if solicitacao.status != "EM_PRODUCAO":
+            if solicitacao.status != StatusSolicitacao.EM_PRODUCAO:
                 raise ValueError(
                     f"não é possível concluir uma produção em {solicitacao.status}"
                 )
@@ -99,7 +99,7 @@ class ProducaoService:
             for componente, usos in planos:
                 for uso in usos:
                     movimento = estoque.inserir_movimentacao(
-                        tipo="CONSUMO_PRODUCAO",
+                        tipo=TipoMovimentacao.CONSUMO_PRODUCAO,
                         lote_origem=uso.lote,
                         lote_destino=None,
                         quantidade=uso.quantidade,
@@ -141,7 +141,7 @@ class ProducaoService:
                 ),
             )
             producao = estoque.inserir_movimentacao(
-                tipo="PRODUCAO",
+                tipo=TipoMovimentacao.PRODUCAO,
                 lote_origem=lote_final,
                 lote_destino=None,
                 quantidade=quantidade_final,
@@ -151,7 +151,7 @@ class ProducaoService:
                 observacao=f"Produção concluída na solicitação #{solicitacao.id}",
             )
             producao.solicitacao_producao_id = solicitacao.id
-            self.repository.marcar_status(solicitacao, "CONCLUIDA")
+            self.repository.marcar_status(solicitacao, StatusSolicitacao.CONCLUIDA)
             return solicitacao
 
     def _planejar_consumo(self, estoque: EstoqueRepository, componente):
@@ -199,9 +199,9 @@ class ProducaoService:
             item.saldo = round(float(item.saldo) - quantidade, 6)
             if item.saldo <= 0:
                 item.saldo = 0
-                item.status = "CONSUMIDA"
+                item.status = StatusItem.CONSUMIDA
             else:
-                item.status = "EM_USO"
+                item.status = StatusItem.EM_USO
                 item.aberto_em = item.aberto_em or agora
 
     def _recalcular_lote_com_itens(

@@ -1,20 +1,14 @@
 import { useState, type ReactNode } from 'react'
 import { BrandMark, useBranding } from '../features/branding'
-import type { PapelUsuario, Usuario } from '../types'
+import type { UsuarioLogado } from '../types'
 import type { Rota, View } from './router'
-
-const nomeDoPapel: Record<PapelUsuario, string> = {
-  OWNER: 'Proprietária',
-  ADMIN: 'Gestor',
-  USER: 'Cozinha',
-}
 
 interface ShellProps {
   rotas: Rota[]
   viewAtual: View
   titulo: string
   menuOpen: boolean
-  usuario: Usuario
+  usuario: UsuarioLogado
   onNavigate: (view: View) => void
   onMenuToggle: () => void
   onLogout: () => void
@@ -22,7 +16,22 @@ interface ShellProps {
   children: ReactNode
 }
 
-export function Shell({ rotas, viewAtual, titulo, menuOpen, usuario, onNavigate, onMenuToggle, onLogout, onAtualizar, children }: ShellProps) {
+function nomesDosGrupos(usuario: UsuarioLogado) {
+  return usuario.grupos.map((grupo) => grupo.nome).join(', ') || 'Sem grupo de acesso'
+}
+
+export function Shell({
+  rotas,
+  viewAtual,
+  titulo,
+  menuOpen,
+  usuario,
+  onNavigate,
+  onMenuToggle,
+  onLogout,
+  onAtualizar,
+  children,
+}: ShellProps) {
   const branding = useBranding()
   const [cliquesEmAtualizar, setCliquesEmAtualizar] = useState(0)
 
@@ -30,6 +39,9 @@ export function Shell({ rotas, viewAtual, titulo, menuOpen, usuario, onNavigate,
     setCliquesEmAtualizar((cliques) => cliques + 1)
     onAtualizar()
   }
+
+  const classeDoBotaoAtualizar =
+    `secondary outline small refresh-button ${cliquesEmAtualizar ? 'clicado' : ''}`
 
   return <div className="layout">
     <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
@@ -42,7 +54,12 @@ export function Shell({ rotas, viewAtual, titulo, menuOpen, usuario, onNavigate,
       </div>
       <p className="nav-caption">OPERAÇÃO</p>
       <nav>
-        {rotas.map((rota) => <button className={`nav ${viewAtual === rota.view ? 'active' : ''}`} key={rota.view} onClick={() => onNavigate(rota.view)} type="button">
+        {rotas.map((rota) => <button
+          className={`nav ${viewAtual === rota.view ? 'active' : ''}`}
+          key={rota.view}
+          onClick={() => onNavigate(rota.view)}
+          type="button"
+        >
           <span aria-hidden="true">{rota.icone}</span>
           {rota.titulo}
         </button>)}
@@ -51,21 +68,23 @@ export function Shell({ rotas, viewAtual, titulo, menuOpen, usuario, onNavigate,
         <div className="account-avatar">{usuario.nome.charAt(0).toUpperCase()}</div>
         <div>
           <strong>{usuario.nome}</strong>
-          <small>{nomeDoPapel[usuario.papel]}</small>
+          <small>{nomesDosGrupos(usuario)}</small>
         </div>
         <button onClick={onLogout} type="button">Sair</button>
       </div>
     </aside>
     <main>
       <header>
-        <button className="menu" onClick={onMenuToggle} aria-label="Abrir menu" type="button">☰</button>
+        <button className="menu" onClick={onMenuToggle} aria-label="Abrir menu" type="button">
+          ☰
+        </button>
         <div>
           <small>ÁREA ATUAL</small>
           <strong>{titulo}</strong>
         </div>
         <button
           key={cliquesEmAtualizar}
-          className={`secondary outline small refresh-button ${cliquesEmAtualizar ? 'clicado' : ''}`}
+          className={classeDoBotaoAtualizar}
           type="button"
           onClick={atualizar}
         >
@@ -74,6 +93,11 @@ export function Shell({ rotas, viewAtual, titulo, menuOpen, usuario, onNavigate,
       </header>
       <div className="content">{children}</div>
     </main>
-    {menuOpen && <button className="sidebar-scrim" onClick={onMenuToggle} aria-label="Fechar menu" type="button" />}
+    {menuOpen && <button
+      className="sidebar-scrim"
+      onClick={onMenuToggle}
+      aria-label="Fechar menu"
+      type="button"
+    />}
   </div>
 }

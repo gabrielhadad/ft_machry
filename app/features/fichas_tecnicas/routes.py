@@ -1,7 +1,9 @@
 from flask import Blueprint
 
+from app.utils.enums import AcaoPermissao, RecursoPermissao
 from app.utils.paginacao import PaginacaoQuery, resposta_paginada
 from app.utils.parsing import consulta, entrada
+from app.utils.permissoes import exigir_permissao
 
 from .repository import FichaTecnicaRepository
 from .schemas import FaseCatalogoOut, FichaLoteInput, FichaTecnicaInput
@@ -48,6 +50,7 @@ def _serializar(ficha):
 
 
 @bp.get("/fases")
+@exigir_permissao(RecursoPermissao.FICHAS_TECNICAS, AcaoPermissao.LER)
 def listar_fases():
     return resposta_paginada(
         get_service().listar_fases(consulta(PaginacaoQuery)), FaseCatalogoOut
@@ -55,21 +58,25 @@ def listar_fases():
 
 
 @bp.get("")
+@exigir_permissao(RecursoPermissao.FICHAS_TECNICAS, AcaoPermissao.LER)
 def listar():
     return resposta_paginada(get_service().listar(consulta(PaginacaoQuery)), _serializar)
 
 
 @bp.get("/<int:ficha_id>")
+@exigir_permissao(RecursoPermissao.FICHAS_TECNICAS, AcaoPermissao.LER)
 def detalhar(ficha_id: int):
     return _serializar(get_service().obter(ficha_id))
 
 
 @bp.post("")
+@exigir_permissao(RecursoPermissao.FICHAS_TECNICAS, AcaoPermissao.CRIAR)
 def criar():
     return _serializar(get_service().criar(entrada(FichaTecnicaInput))), 201
 
 
 @bp.post("/lote")
+@exigir_permissao(RecursoPermissao.FICHAS_TECNICAS, AcaoPermissao.CRIAR)
 def criar_lote():
     fichas, fases_criadas, ignoradas = get_service().criar_lote(entrada(FichaLoteInput))
     return {
@@ -81,6 +88,7 @@ def criar_lote():
 
 
 @bp.put("/<int:ficha_id>")
+@exigir_permissao(RecursoPermissao.FICHAS_TECNICAS, AcaoPermissao.ATUALIZAR)
 def atualizar(ficha_id: int):
     return _serializar(
         get_service().atualizar(ficha_id, entrada(FichaTecnicaInput))
@@ -88,6 +96,7 @@ def atualizar(ficha_id: int):
 
 
 @bp.delete("/<int:ficha_id>")
+@exigir_permissao(RecursoPermissao.FICHAS_TECNICAS, AcaoPermissao.EXCLUIR)
 def remover(ficha_id: int):
     get_service().remover(ficha_id)
     return "", 204

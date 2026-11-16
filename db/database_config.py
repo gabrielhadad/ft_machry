@@ -95,39 +95,156 @@ def _migrar_producao() -> None:
     db.session.commit()
 
 
-def _provisionar_usuarios_iniciais() -> None:
+def _sincronizar_permissoes() -> None:
+    from app.features.acessos.models import Permissao
+    from app.utils.permissoes import catalogo_de_permissoes
+
+    existentes = {
+        permissao.codigo: permissao
+        for permissao in db.session.execute(db.select(Permissao)).scalars()
+    }
+    codigos_do_catalogo = set()
+    for item in catalogo_de_permissoes():
+        codigos_do_catalogo.add(item["codigo"])
+        permissao = existentes.get(item["codigo"])
+        if permissao is None:
+            db.session.add(Permissao(**item))
+        else:
+            permissao.recurso = item["recurso"]
+            permissao.acao = item["acao"]
+            permissao.descricao = item["descricao"]
+    for codigo, permissao in existentes.items():
+        if codigo not in codigos_do_catalogo:
+            db.session.delete(permissao)
+    db.session.commit()
+
+
+def _grupos_por_nome() -> dict:
+    from app.features.acessos.models import GrupoAcesso
+
+    grupos = db.session.execute(db.select(GrupoAcesso)).scalars()
+    return {grupo.nome: grupo for grupo in grupos}
+
+
+def _criar_grupos_padrao() -> None:
+    from app.features.acessos.models import GrupoAcesso, Permissao
+    from app.utils.enums import GrupoPadrao
+    from app.utils.permissoes import permissoes_do_grupo_padrao
+
+    permissoes = {
+        permissao.codigo: permissao
+        for permissao in db.session.execute(db.select(Permissao)).scalars()
+    }
+    grupos = _grupos_por_nome()
+    for padrao in GrupoPadrao:
+        grupo = grupos.get(padrao.value)
+        if grupo is None:
+            grupo = GrupoAcesso(
+                nome=padrao.value,
+                descricao=padrao.descricao,
+                protegido=int(padrao.protegido),
+            )
+            grupo.permissoes = [permissoes[codigo] for codigo in permissoes_do_grupo_padrao(padrao)]
+            db.session.add(grupo)
+        elif grupo.protegido:
+            grupo.permissoes = list(permissoes.values())
+    db.session.commit()
+
+
+def _migrar_papeis_para_grupos() -> None:
+    from app.features.acessos.models import UsuarioGrupoAcesso
     from app.features.usuarios.models import Usuario
+    from app.utils.enums import PapelAntigo
+
+    colunas = {coluna["name"] for coluna in inspect(db.engine).get_columns("usuario")}
+    if "papel" not in colunas:
+        return
+    vinculos = db.session.execute(
+        db.select(db.func.count()).select_from(UsuarioGrupoAcesso)
+    ).scalar_one()
+    if vinculos > 0:
+        return
+
+    grupos = _grupos_por_nome()
+    for usuario_id, papel in db.session.execute(text("SELECT id, papel FROM usuario")).all():
+        if papel not in PapelAntigo.valores():
+            continue
+        grupo = grupos.get(PapelAntigo(papel).grupo.value)
+        if grupo is not None:
+            usuario = db.session.get(Usuario, usuario_id)
+            usuario.grupos.append(grupo)
+    db.session.commit()
+
+    if db.engine.dialect.name == "postgresql":
+        db.session.execute(text("ALTER TABLE usuario DROP COLUMN papel"))
+        db.session.commit()
+
+
+def _provisionar_usuarios_iniciais() -> None:
     from flask import current_app
 
-    configuracoes = [
-        ("Proprietária", current_app.config["OWNER_USERNAME"], current_app.config["OWNER_INITIAL_PASSWORD"], "OWNER"),
-        ("Gestor", current_app.config["MANAGER_USERNAME"], current_app.config["MANAGER_INITIAL_PASSWORD"], "ADMIN"),
-        ("Cozinha", current_app.config["COOK_USERNAME"], current_app.config["COOK_INITIAL_PASSWORD"], "USER"),
-    ]
-    usuarios = db.session.execute(db.select(Usuario).order_by(Usuario.id)).scalars().all()
-    por_username = {usuario.username.lower(): usuario for usuario in usuarios if usuario.username}
-    por_papel = {usuario.papel: usuario for usuario in usuarios if usuario.papel}
+    from app.features.usuarios.models import Usuario
+    from app.features.usuarios.repository import UsuarioRepository
+    from app.utils.enums import GrupoPadrao
 
-    for nome, username, password, papel in configuracoes:
+    config = current_app.config
+    contas = [
+        (
+            "Proprietária",
+            config["OWNER_USERNAME"],
+            config["OWNER_INITIAL_PASSWORD"],
+            GrupoPadrao.ADMINISTRADOR,
+        ),
+        (
+            "Gestor",
+            config["MANAGER_USERNAME"],
+            config["MANAGER_INITIAL_PASSWORD"],
+            GrupoPadrao.GESTOR,
+        ),
+        (
+            "Cozinha",
+            config["COOK_USERNAME"],
+            config["COOK_INITIAL_PASSWORD"],
+            GrupoPadrao.COZINHA,
+        ),
+    ]
+    repositorio = UsuarioRepository()
+    grupos = _grupos_por_nome()
+    for nome, username, password, grupo in contas:
         username = username.strip().lower()
-        usuario = por_username.get(username)
-        if usuario is None and papel == "OWNER":
-            usuario = por_papel.get("OWNER") or por_papel.get("ADMIN")
-        elif usuario is None and papel == "USER":
-            usuario = por_papel.get("USER")
-        if usuario is None:
-            usuario = Usuario(nome=nome, username=username, senha_hash=generate_password_hash(password), papel=papel)
+        if repositorio.obter_por_username(username) is None:
+            usuario = Usuario(
+                nome=nome, username=username, senha_hash=generate_password_hash(password)
+            )
+            usuario.grupos.append(grupos[grupo.value])
             db.session.add(usuario)
-        else:
-            usuario.username = usuario.username or username
-            usuario.senha_hash = usuario.senha_hash or generate_password_hash(password)
-            if papel == "OWNER":
-                usuario.papel = "OWNER"
-        por_username[username] = usuario
     db.session.commit()
+
+    _garantir_administrador_ativo(config["OWNER_USERNAME"].strip().lower())
 
     db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_usuario_username ON usuario (username)"))
     db.session.commit()
+
+
+def _garantir_administrador_ativo(username_da_proprietaria: str) -> None:
+    from app.features.usuarios.repository import UsuarioRepository
+    from app.utils.enums import GrupoPadrao
+
+    grupo = _grupos_por_nome()[GrupoPadrao.ADMINISTRADOR.value]
+    if any(usuario.ativo for usuario in grupo.usuarios):
+        return
+    proprietaria = UsuarioRepository().obter_por_username(username_da_proprietaria)
+    proprietaria.ativo = 1
+    if grupo not in proprietaria.grupos:
+        proprietaria.grupos.append(grupo)
+    db.session.commit()
+
+
+def _sincronizar_acessos() -> None:
+    _sincronizar_permissoes()
+    _criar_grupos_padrao()
+    _migrar_papeis_para_grupos()
+    _provisionar_usuarios_iniciais()
 
 
 VIEWS = {
@@ -183,7 +300,7 @@ def init_db_command(seed: bool):
         _migrar_produto()
         _migrar_lote()
         _migrar_producao()
-        _provisionar_usuarios_iniciais()
+        _sincronizar_acessos()
         click.echo("Banco já criado e atualizado")
         return
 
@@ -193,7 +310,7 @@ def init_db_command(seed: bool):
         from db.seed import carregar_seeds
 
         carregar_seeds()
-    _provisionar_usuarios_iniciais()
+    _sincronizar_acessos()
     click.echo("Banco inicializado." + (" (com seeds)" if seed else ""))
 
 

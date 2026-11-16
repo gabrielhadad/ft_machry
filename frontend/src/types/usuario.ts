@@ -1,9 +1,18 @@
-export type PapelUsuario = 'OWNER' | 'ADMIN' | 'USER'
+import type { Permissao } from './acesso'
+
+export interface GrupoResumo {
+  id: number
+  nome: string
+}
 
 export interface Usuario {
   id: number
   nome: string
   username: string
-  papel: PapelUsuario
   ativo: number
+  grupos: GrupoResumo[]
+}
+
+export interface UsuarioLogado extends Usuario {
+  permissoes: Permissao[]
 }

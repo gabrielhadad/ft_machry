@@ -2,8 +2,12 @@ NOVO = {
     "nome": "Maria Souza",
     "username": "Maria.Souza",
     "password": "Senha@1234",
-    "papel": "USER",
 }
+
+
+def grupo_id(client, nome):
+    grupos = client.get("/api/grupos-acesso").get_json()["items"]
+    return next(grupo["id"] for grupo in grupos if grupo["nome"] == nome)
 
 
 def test_sessao_expira_apos_inatividade(app):
@@ -16,8 +20,11 @@ def test_sessao_expira_apos_inatividade(app):
 def test_login_logout_e_me(client):
     resposta = client.get("/api/auth/me")
     assert resposta.status_code == 200
-    assert resposta.get_json()["username"] == "dona"
-    assert "senha_hash" not in resposta.get_json()
+    corpo = resposta.get_json()
+    assert corpo["username"] == "dona"
+    assert "senha_hash" not in corpo
+    assert [grupo["nome"] for grupo in corpo["grupos"]] == ["Administrador"]
+    assert "usuarios:criar" in corpo["permissoes"]
 
     assert client.post("/api/auth/logout").status_code == 204
     assert client.get("/api/auth/me").status_code == 401
@@ -29,23 +36,32 @@ def test_login_invalido(client):
 
 
 def test_crud_usuario(client):
-    criado = client.post("/api/usuarios", json=NOVO)
+    cozinha = grupo_id(client, "Cozinha")
+    gestor = grupo_id(client, "Gestor")
+
+    criado = client.post("/api/usuarios", json={**NOVO, "grupos": [cozinha]})
     assert criado.status_code == 201
     corpo = criado.get_json()
     assert corpo["username"] == "maria.souza"
-    assert corpo["papel"] == "USER"
+    assert [grupo["nome"] for grupo in corpo["grupos"]] == ["Cozinha"]
+    assert "permissoes" not in corpo
 
-    assert client.post("/api/usuarios", json=NOVO).status_code == 409
+    assert client.post("/api/usuarios", json={**NOVO, "grupos": [cozinha]}).status_code == 409
 
     usernames = [u["username"] for u in client.get("/api/usuarios").get_json()["items"]]
     assert "maria.souza" in usernames
 
-    atualizado = client.put(f"/api/usuarios/{corpo['id']}", json={"papel": "ADMIN", "ativo": 0})
+    atualizado = client.put(f"/api/usuarios/{corpo['id']}", json={"grupos": [gestor], "ativo": 0})
     assert atualizado.status_code == 200
-    assert atualizado.get_json()["papel"] == "ADMIN"
+    assert [grupo["nome"] for grupo in atualizado.get_json()["grupos"]] == ["Gestor"]
     assert atualizado.get_json()["ativo"] == 0
 
     assert client.put("/api/usuarios/9999", json={"nome": "Alguém"}).status_code == 404
+
+
+def test_grupo_inexistente_ao_criar_usuario(client):
+    resposta = client.post("/api/usuarios", json={**NOVO, "grupos": [9999]})
+    assert resposta.status_code == 400
 
 
 def test_nao_desativa_a_propria_conta(client):
@@ -54,10 +70,20 @@ def test_nao_desativa_a_propria_conta(client):
     assert resposta.status_code == 409
 
 
-def test_somente_proprietaria_gerencia_usuarios(app, client):
-    client.post("/api/usuarios", json=NOVO)
-    gestor = app.test_client()
-    login = gestor.post("/api/auth/login", json={"username": "maria.souza", "password": NOVO["password"]})
+def test_administrador_precisa_de_usuario_ativo(client):
+    meu_id = client.get("/api/auth/me").get_json()["id"]
+    resposta = client.put(f"/api/usuarios/{meu_id}", json={"grupos": []})
+    assert resposta.status_code == 409
+
+
+def test_sem_permissao_nao_gerencia_usuarios(app, client):
+    gestor = grupo_id(client, "Gestor")
+    client.post("/api/usuarios", json={**NOVO, "grupos": [gestor]})
+    outro = app.test_client()
+    login = outro.post(
+        "/api/auth/login", json={"username": "maria.souza", "password": NOVO["password"]}
+    )
     assert login.status_code == 200
-    assert gestor.get("/api/usuarios").status_code == 403
-    assert gestor.post("/api/usuarios", json=NOVO).status_code == 403
+    assert "usuarios:ler" not in login.get_json()["permissoes"]
+    assert outro.get("/api/usuarios").status_code == 403
+    assert outro.post("/api/usuarios", json=NOVO).status_code == 403

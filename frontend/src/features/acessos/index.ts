@@ -1,0 +1,5 @@
+export { excluirGrupo } from './api/acessosApi'
+export { ModalDeGrupo } from './components/ModalDeGrupo'
+export { TabelaDeGrupos } from './components/TabelaDeGrupos'
+export { useGruposDeAcesso } from './hooks/useGruposDeAcesso'
+export { usePermissoes } from './hooks/usePermissoes'

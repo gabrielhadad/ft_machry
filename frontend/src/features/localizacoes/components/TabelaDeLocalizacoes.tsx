@@ -3,11 +3,17 @@ import type { Localizacao } from '../../../types'
 interface TabelaDeLocalizacoesProps {
   localizacoes: Localizacao[]
   erro: string
-  onEditar: (localizacao: Localizacao) => void
-  onExcluir: (localizacao: Localizacao) => void
+  onEditar?: (localizacao: Localizacao) => void
+  onExcluir?: (localizacao: Localizacao) => void
 }
 
-export function TabelaDeLocalizacoes({ localizacoes, erro, onEditar, onExcluir }: TabelaDeLocalizacoesProps) {
+export function TabelaDeLocalizacoes({
+  localizacoes,
+  erro,
+  onEditar,
+  onExcluir,
+}: TabelaDeLocalizacoesProps) {
+  const temAcoes = Boolean(onEditar || onExcluir)
   const nomeDaSuperior = (localizacao: Localizacao) =>
     localizacoes.find((item) => item.id === localizacao.parent_id)?.nome || '—'
 
@@ -16,18 +22,27 @@ export function TabelaDeLocalizacoes({ localizacoes, erro, onEditar, onExcluir }
     <div className="table-wrap">
       <table>
         <thead>
-          <tr><th>Nome</th><th>Tipo</th><th>Dentro de</th><th>Ações</th></tr>
+          <tr>
+            <th>Nome</th>
+            <th>Tipo</th>
+            <th>Dentro de</th>
+            {temAcoes && <th>Ações</th>}
+          </tr>
         </thead>
         <tbody>
           {localizacoes.map((localizacao) => <tr key={localizacao.id}>
             <td><strong>{localizacao.nome}</strong></td>
             <td>{localizacao.tipo}</td>
             <td>{nomeDaSuperior(localizacao)}</td>
-            <td>
-              <button className="text-button" onClick={() => onEditar(localizacao)}>Editar</button>
-              {' · '}
-              <button className="danger-link" onClick={() => onExcluir(localizacao)}>Excluir</button>
-            </td>
+            {temAcoes && <td>
+              {onEditar && <button className="text-button" onClick={() => onEditar(localizacao)}>
+                Editar
+              </button>}
+              {onEditar && onExcluir && ' · '}
+              {onExcluir && <button className="danger-link" onClick={() => onExcluir(localizacao)}>
+                Excluir
+              </button>}
+            </td>}
           </tr>)}
         </tbody>
       </table>
