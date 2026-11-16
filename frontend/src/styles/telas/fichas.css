@@ -293,3 +293,138 @@
     margin-left: 0;
   }
 }
+
+.phase-timer {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.phase-timer-display {
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s ease;
+}
+
+.phase-timer.is-overtime .phase-timer-display {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.phase-timer-btn {
+  opacity: 0;
+  pointer-events: none;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.phase-timer-btn:hover {
+  background: #f3f4f6;
+}
+
+.phase-timer:hover .phase-timer-btn,
+.phase-timer:focus-within .phase-timer-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.phase-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.phase-assignee-add {
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 999px;
+  border: 1px dashed #cbd5e1;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.phase-assignee-add:hover {
+  border-color: #94a3b8;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+.phase-assignee-input {
+  width: 140px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #94a3b8;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+}
+
+.phase-assignee-input:focus {
+  border-color: #15803d;
+  box-shadow: 0 0 0 2px rgba(21, 128, 61, 0.15);
+}
+
+.phase-assignee-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.phase-assignee-name {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.phase-assignee-name:hover {
+  text-decoration: underline;
+}
+
+.phase-assignee-remove {
+  border: none;
+  background: transparent;
+  padding: 0 2px;
+  font-size: 0.9rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.phase-assignee-remove:hover {
+  color: #dc2626;
+}
+
+.phase-assignee-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 190px;
+  font-size: 0.82rem;
+  font-weight: 400;
+}

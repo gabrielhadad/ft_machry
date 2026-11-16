@@ -1,9 +1,13 @@
 import type { FichaTecnica } from '../../../types'
 import { numero } from '../../../utils/formatacao'
 import { BrandMark, useBranding } from '../../branding'
+import { useUsuarios } from '../../usuarios'
+import { PhaseAssignee } from './PhaseAssignee'
+import { PhaseTimer } from './Phasetimer'
 
 export function SheetDocument({ ficha }: { ficha: FichaTecnica }) {
   const branding = useBranding()
+  const { usuarios } = useUsuarios(0)
   const fases = [...ficha.fases].sort((a, b) => a.ordem - b.ordem)
   const semEtapa = ficha.componentes.filter((item) => item.fase_ordem == null)
   const tempoTotal = fases.reduce((total, fase) => total + fase.tempo_previsto_min, 0)
@@ -46,7 +50,21 @@ export function SheetDocument({ ficha }: { ficha: FichaTecnica }) {
           return <li key={fase.id}>
             <span>{fase.ordem}</span>
             <div>
-              <h3>{fase.fase}<small>{fase.tempo_previsto_min} min</small></h3>
+              <h3>
+                {fase.fase}
+                <div className="phase-controls">
+                  <PhaseAssignee timerId={`${ficha.id}-${fase.id}`} usuarios={usuarios} />
+                  <PhaseTimer
+                    key={`${ficha.id}-${fase.id}`}
+                    timerId={`${ficha.id}-${fase.id}`}
+                    fichaId={ficha.id}
+                    produtoNome={ficha.produto}
+                    faseNome={fase.fase}
+                    faseOrdem={fase.ordem}
+                    minutosPrevistos={fase.tempo_previsto_min}
+                  />
+                </div>
+              </h3>
               {componentes.length > 0 && <p>{componentes.map((item) => `${item.produto} (${numero.format(item.quantidade)} ${item.unidade_medida})`).join(' · ')}</p>}
             </div>
           </li>

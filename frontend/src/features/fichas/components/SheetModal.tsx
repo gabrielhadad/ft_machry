@@ -41,10 +41,16 @@ export function SheetModal({ ficha, produtos, catalogoFases, canEdit, onClose, o
   function print() {
     if (!ficha || editing) return
     const cleanup = () => document.body.classList.remove('printing-sheet')
+    
     document.body.classList.add('printing-sheet')
     window.addEventListener('afterprint', cleanup, { once: true })
-    window.print()
-    cleanup()
+
+    // Garante que o navegador renderize a classe .printing-sheet antes de abrir o diálogo
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.print()
+      })
+    })
   }
 
   const footer = <>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PageHeading } from '../../components/ui'
+import { ActiveTimersBadge } from '../../features/fichas/components/ActiveTimersBadge'
 import { alterarStatusDaSolicitacao, criarSolicitacao, FilaDeProducao, MetricasDeProducao, PlanejadorDeProducao } from '../../features/producao'
 import type { Mutacao } from '../../stores/dados'
 import type { FichaTecnica, Localizacao, Produto, SolicitacaoProducao } from '../../types'
@@ -52,7 +53,12 @@ export function ProducaoPage({ solicitacoes, fichas, produtos, localizacoes, can
       eyebrow="COZINHA"
       title="Produção"
       description="Fila de preparos definida pelo gestor para a equipe da cozinha."
-      action={<button className="secondary no-print" onClick={() => window.print()}>Imprimir fila</button>}
+      action={
+        <div className="heading-actions">
+          <ActiveTimersBadge />
+          <button className="secondary no-print" onClick={() => window.print()}>Imprimir fila</button>
+        </div>
+      }
     />
     <MetricasDeProducao solicitacoes={solicitacoes} />
     {canPlan && <PlanejadorDeProducao fichas={fichas} produtos={produtos} localizacoes={localizacoes} ocupado={ocupado} onCriar={criar} />}
