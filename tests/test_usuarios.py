@@ -64,6 +64,47 @@ def test_grupo_inexistente_ao_criar_usuario(client):
     assert resposta.status_code == 400
 
 
+def test_excluir_usuario_apenas_desativa(app, client):
+    cozinha = grupo_id(client, "Cozinha")
+    criado = client.post("/api/usuarios", json={**NOVO, "grupos": [cozinha]}).get_json()
+
+    assert client.delete(f"/api/usuarios/{criado['id']}").status_code == 204
+
+    usuarios = {u["username"]: u for u in client.get("/api/usuarios").get_json()["items"]}
+    assert usuarios["maria.souza"]["ativo"] == 0
+    assert [grupo["nome"] for grupo in usuarios["maria.souza"]["grupos"]] == ["Cozinha"]
+
+    outro = app.test_client()
+    login = outro.post(
+        "/api/auth/login", json={"username": "maria.souza", "password": NOVO["password"]}
+    )
+    assert login.status_code == 401
+
+    assert client.delete("/api/usuarios/9999").status_code == 404
+
+
+def test_nao_exclui_a_propria_conta(client):
+    meu_id = client.get("/api/auth/me").get_json()["id"]
+    assert client.delete(f"/api/usuarios/{meu_id}").status_code == 409
+
+
+def test_excluir_exige_permissao(app, client):
+    gestor = grupo_id(client, "Gestor")
+    alvo = client.post("/api/usuarios", json={**NOVO, "grupos": [gestor]}).get_json()
+    client.post(
+        "/api/usuarios",
+        json={
+            "nome": "Outra Pessoa",
+            "username": "outra",
+            "password": "Senha@1234",
+            "grupos": [gestor],
+        },
+    )
+    outro = app.test_client()
+    outro.post("/api/auth/login", json={"username": "outra", "password": "Senha@1234"})
+    assert outro.delete(f"/api/usuarios/{alvo['id']}").status_code == 403
+
+
 def test_nao_desativa_a_propria_conta(client):
     meu_id = client.get("/api/auth/me").get_json()["id"]
     resposta = client.put(f"/api/usuarios/{meu_id}", json={"ativo": 0})

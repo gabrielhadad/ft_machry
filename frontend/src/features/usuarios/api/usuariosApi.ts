@@ -26,3 +26,7 @@ export function criarUsuario(dados: NovoUsuario) {
 export function atualizarUsuario(id: number, dados: AlteracaoDoUsuario) {
   return api(`/api/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(dados) })
 }
+
+export function excluirUsuario(id: number) {
+  return api(`/api/usuarios/${id}`, { method: 'DELETE' })
+}

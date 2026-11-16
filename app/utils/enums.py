@@ -162,7 +162,6 @@ class RecursoPermissao(EnumBase):
         sem_exclusao = {
             RecursoPermissao.ESTOQUE,
             RecursoPermissao.PRODUCAO,
-            RecursoPermissao.USUARIOS,
         }
         if self in sem_exclusao:
             return AcaoPermissao.sem_exclusao()

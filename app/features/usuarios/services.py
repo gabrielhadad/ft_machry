@@ -55,6 +55,14 @@ class UsuarioService:
             self._garantir_administrador_ativo()
             return usuario
 
+    def remover(self, usuario_id: int, usuario_logado_id: int) -> None:
+        with self.repository.transacao():
+            usuario = self.obter(usuario_id)
+            if usuario.id == usuario_logado_id:
+                raise Conflito("a conta em uso não pode ser excluída")
+            self.repository.desativar(usuario)
+            self._garantir_administrador_ativo()
+
     def _grupos(self, ids: list[int]) -> list[GrupoAcesso]:
         grupos = self.acessos.grupos_por_ids(ids)
         if len(grupos) != len(ids):

@@ -17,6 +17,7 @@ export function UsuariosPage({ usuarioLogado, rodadaDeAtualizacao }: UsuariosPag
   const podeCriar = temPermissao(usuarioLogado, 'usuarios:criar')
   const podeAtualizar = temPermissao(usuarioLogado, 'usuarios:atualizar')
   const podeVerGrupos = temPermissao(usuarioLogado, 'grupos_acesso:ler')
+  const podeExcluir = temPermissao(usuarioLogado, 'usuarios:excluir')
   const { usuarios, erro, atualizar } = useUsuarios(rodadaDeAtualizacao)
   const { grupos, erro: erroDosGrupos } = useGruposDeAcesso(rodadaDeAtualizacao, podeVerGrupos)
   const [aberto, setAberto] = useState<Usuario | 'novo' | null>(null)
@@ -48,6 +49,7 @@ export function UsuariosPage({ usuarioLogado, rodadaDeAtualizacao }: UsuariosPag
       usuario={aberto === 'novo' ? null : aberto}
       usuarioLogado={usuarioLogado}
       grupos={podeVerGrupos ? grupos : null}
+      podeExcluir={podeExcluir}
       onClose={() => setAberto(null)}
       onSalvo={aposSalvar}
     />}
