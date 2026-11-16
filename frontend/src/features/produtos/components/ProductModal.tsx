@@ -8,12 +8,13 @@ import { unidadesMedida } from '../unidades'
 
 interface ProductModalProps {
   produto: Produto | null
+  podeExcluir: boolean
   onClose: () => void
   onSaved: () => void
   onDeleted: () => void
 }
 
-export function ProductModal({ produto, onClose, onSaved, onDeleted }: ProductModalProps) {
+export function ProductModal({ produto, podeExcluir, onClose, onSaved, onDeleted }: ProductModalProps) {
   const [nome, setNome] = useState(produto?.nome ?? '')
   const [tipo, setTipo] = useState<TipoProduto>(produto?.tipo ?? 'INSUMO')
   const [unidade, setUnidade] = useState(produto?.unidade_medida ?? 'kg')
@@ -68,7 +69,9 @@ export function ProductModal({ produto, onClose, onSaved, onDeleted }: ProductMo
   }
 
   const footer = <>
-    {produto && <button className="danger-link" onClick={remove} disabled={saving}>Excluir produto</button>}
+    {produto && podeExcluir && <button className="danger-link" onClick={remove} disabled={saving}>
+      Excluir produto
+    </button>}
     <button className="secondary" onClick={onClose} type="button">Cancelar</button>
     <button className="primary" form="product-form" disabled={saving}>{saving ? 'Salvando…' : 'Salvar produto'}</button>
   </>

@@ -13,13 +13,13 @@ import { LotHistory } from './LotHistory'
 import { MoveForm } from './MoveForm'
 import { TransferForm } from './TransferForm'
 
-function abasDoLote(lote: Lote): Array<[Aba, string]> {
-  return [
+function abasDoLote(lote: Lote, podeCriar: boolean): Array<[Aba, string]> {
+  const abas: Array<[Aba, string]> = [
     ['ITENS', temItens(lote) ? `Itens (${itensAtivos(lote)})` : 'Detalhes'],
-    ['TRANSFERIR', 'Transferir ou transformar'],
-    ['MOVIMENTAR', 'Movimentar'],
-    ['HISTORICO', 'Histórico'],
   ]
+  if (podeCriar) abas.push(['TRANSFERIR', 'Transferir ou transformar'], ['MOVIMENTAR', 'Movimentar'])
+  abas.push(['HISTORICO', 'Histórico'])
+  return abas
 }
 
 interface LotModalProps {
@@ -29,12 +29,26 @@ interface LotModalProps {
   produtos: Produto[]
   contexto: Contexto
   usuarioId: number
+  podeCriar: boolean
+  podeEditar: boolean
   onClose: () => void
   onChanged: (mensagem: string) => Promise<void>
   onFinishedWithoutLot: () => void
 }
 
-export function LotModal({ lote, abaInicial, lotes, produtos, contexto, usuarioId, onClose, onChanged, onFinishedWithoutLot }: LotModalProps) {
+export function LotModal({
+  lote,
+  abaInicial,
+  lotes,
+  produtos,
+  contexto,
+  usuarioId,
+  podeCriar,
+  podeEditar,
+  onClose,
+  onChanged,
+  onFinishedWithoutLot,
+}: LotModalProps) {
   const [aba, setAba] = useState<Aba>(abaInicial)
   const [modo, setModo] = useState<ModoItens>('VER')
   const [origemId, setOrigemId] = useState<number | ''>(lote?.id ?? '')
@@ -78,14 +92,16 @@ export function LotModal({ lote, abaInicial, lotes, produtos, contexto, usuarioI
     </button>
     <span className="dialog-actions-spacer" />
     {aba === 'ITENS' && modo === 'VER' && lote && <>
-      <button className="secondary outline" type="button" onClick={() => setModo('EDITAR')}>Editar lote</button>
-      <button
+      {podeEditar && <button className="secondary outline" type="button" onClick={() => setModo('EDITAR')}>
+        Editar lote
+      </button>}
+      {podeCriar && <button
         className="primary"
         type="button"
         disabled={!podeAdicionarItens}
         title={podeAdicionarItens ? undefined : 'Este lote tem saldo sem itens. Zere o saldo (ajuste de saída) para passar a controlá-lo por itens.'}
         onClick={() => setModo('ADICIONAR')}
-      >+ Adicionar itens</button>
+      >+ Adicionar itens</button>}
     </>}
     {formId && <button className="primary" form={formId} type="submit" disabled={salvando || (aba === 'TRANSFERIR' && !origem)}>
       {salvando ? 'Salvando…' : textoSalvar}
@@ -120,7 +136,7 @@ export function LotModal({ lote, abaInicial, lotes, produtos, contexto, usuarioI
     footer={footer}
   >
     {lote && <nav className="modal-tabs" aria-label="Seções do lote">
-      {abasDoLote(lote).map(([valor, label]) =>
+      {abasDoLote(lote, podeCriar).map(([valor, label]) =>
         <button type="button" key={valor} className={aba === valor ? 'active' : ''} onClick={() => trocarAba(valor)}>{label}</button>)}
     </nav>}
     <div className="dialog-body lot-body">
@@ -128,6 +144,8 @@ export function LotModal({ lote, abaInicial, lotes, produtos, contexto, usuarioI
         lote={lote}
         contexto={contexto}
         usuarioId={usuarioId}
+        podeCriar={podeCriar}
+        podeEditar={podeEditar}
         itens={itens}
         erroItens={erroItens}
         onItemChanged={concluir}

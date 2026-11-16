@@ -6,10 +6,19 @@ import type { Produto } from '../../types'
 
 interface ProdutosPageProps {
   produtos: Produto[]
+  podeCriar: boolean
+  podeEditar: boolean
+  podeExcluir: boolean
   aoAlterar: (mutacao: Mutacao, mensagem: string) => Promise<void>
 }
 
-export function ProdutosPage({ produtos, aoAlterar }: ProdutosPageProps) {
+export function ProdutosPage({
+  produtos,
+  podeCriar,
+  podeEditar,
+  podeExcluir,
+  aoAlterar,
+}: ProdutosPageProps) {
   const [editando, setEditando] = useState<Produto | 'new' | null>(null)
   const [importando, setImportando] = useState(false)
 
@@ -20,21 +29,33 @@ export function ProdutosPage({ produtos, aoAlterar }: ProdutosPageProps) {
   }
 
   const mensagemDaImportacao = (total: number, ignorados: string[]) => {
-    const avisoDeIgnorados = ignorados.length ? ` ${ignorados.length} já cadastrado(s) foram ignorados.` : ''
+    const avisoDeIgnorados = ignorados.length
+      ? ` ${ignorados.length} já cadastrado(s) foram ignorados.`
+      : ''
     return `${total} produto(s) importado(s).${avisoDeIgnorados}`
   }
 
-  const acoes = <div className="heading-actions">
-    <button className="secondary outline" onClick={() => setImportando(true)}>Importar CSV</button>
-    <button className="primary" onClick={() => setEditando('new')}>Novo produto</button>
-  </div>
+  const acoes = podeCriar
+    ? <div className="heading-actions">
+      <button className="secondary outline" onClick={() => setImportando(true)}>
+        Importar CSV
+      </button>
+      <button className="primary" onClick={() => setEditando('new')}>Novo produto</button>
+    </div>
+    : undefined
 
   return <>
-    <PageHeading eyebrow="CATÁLOGO" title="Produtos" description="Catálogo organizado por insumos, preparos intermediários e produtos finais." action={acoes} />
-    <CatalogoDeProdutos produtos={produtos} onEdit={setEditando} />
+    <PageHeading
+      eyebrow="CATÁLOGO"
+      title="Produtos"
+      description="Catálogo organizado por insumos, preparos intermediários e produtos finais."
+      action={acoes}
+    />
+    <CatalogoDeProdutos produtos={produtos} onEdit={podeEditar ? setEditando : undefined} />
 
     {editando && <ProductModal
       produto={editando === 'new' ? null : editando}
+      podeExcluir={podeExcluir}
       onClose={() => setEditando(null)}
       onSaved={() => concluir('Produto salvo com sucesso.')}
       onDeleted={() => concluir('Produto excluído.')}

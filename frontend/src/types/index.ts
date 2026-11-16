@@ -1,3 +1,4 @@
+export type * from './acesso'
 export type * from './estoque'
 export type * from './ficha'
 export type * from './producao'

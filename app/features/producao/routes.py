@@ -5,8 +5,10 @@ Controller puro: delega a leitura para o service e serializa com schemas.py
 """
 from flask import Blueprint, g
 
+from app.utils.enums import AcaoPermissao, RecursoPermissao
 from app.utils.paginacao import PaginacaoQuery, resposta_paginada
 from app.utils.parsing import consulta, entrada
+from app.utils.permissoes import exigir_permissao
 
 from . import schemas
 from .repository import ProducaoRepository
@@ -20,12 +22,14 @@ def get_service() -> ProducaoService:
 
 
 @bp.get("/solicitacoes")
+@exigir_permissao(RecursoPermissao.PRODUCAO, AcaoPermissao.LER)
 def listar_solicitacoes():
     pagina = get_service().listar_solicitacoes(consulta(PaginacaoQuery))
     return resposta_paginada(pagina, schemas.SolicitacaoProducaoOut)
 
 
 @bp.post("/solicitacoes")
+@exigir_permissao(RecursoPermissao.PRODUCAO, AcaoPermissao.CRIAR)
 def criar_solicitacao():
     dados = entrada(schemas.SolicitacaoCreate)
     item = get_service().criar_solicitacao(
@@ -38,6 +42,7 @@ def criar_solicitacao():
 
 
 @bp.put("/solicitacoes/<int:sp_id>/status")
+@exigir_permissao(RecursoPermissao.PRODUCAO, AcaoPermissao.ATUALIZAR)
 def atualizar_status(sp_id: int):
     dados = entrada(schemas.SolicitacaoStatusUpdate)
     item = get_service().atualizar_status(sp_id, dados.status, g.usuario.id)
@@ -45,6 +50,7 @@ def atualizar_status(sp_id: int):
 
 
 @bp.get("/solicitacoes/<int:sp_id>")
+@exigir_permissao(RecursoPermissao.PRODUCAO, AcaoPermissao.LER)
 def detalhar_solicitacao(sp_id):
     detalhe = get_service().obter_detalhe(sp_id)
     return schemas.SolicitacaoDetalheOut.model_validate(detalhe).model_dump()

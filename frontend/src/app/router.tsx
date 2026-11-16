@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { EstoquePage } from '../pages/Estoque/EstoquePage'
 import { FichasPage } from '../pages/Fichas/FichasPage'
+import { GruposDeAcessoPage } from '../pages/GruposDeAcesso/GruposDeAcessoPage'
 import { InicioPage } from '../pages/Inicio/InicioPage'
 import { LocalizacoesPage } from '../pages/Localizacoes/LocalizacoesPage'
 import { MovimentacoesPage } from '../pages/Movimentacoes/MovimentacoesPage'
@@ -8,12 +9,23 @@ import { ProducaoPage } from '../pages/Producao/ProducaoPage'
 import { ProdutosPage } from '../pages/Produtos/ProdutosPage'
 import { UsuariosPage } from '../pages/Usuarios/UsuariosPage'
 import type { Dados, Mutacao, Recurso } from '../stores/dados'
-import type { FichaTecnica, PapelUsuario, Usuario } from '../types'
+import type { FichaTecnica, Permissao, UsuarioLogado } from '../types'
+import { temPermissao, temTodas } from '../utils/permissoes'
+import { podeCriarFicha, podePlanejarProducao } from './regrasDeAcesso'
 
-export type View = 'inicio' | 'produtos' | 'fichas' | 'estoque' | 'producao' | 'historico' | 'locais' | 'usuarios'
+export type View =
+  | 'inicio'
+  | 'produtos'
+  | 'fichas'
+  | 'estoque'
+  | 'producao'
+  | 'historico'
+  | 'locais'
+  | 'usuarios'
+  | 'grupos'
 
 export interface ContextoDaPagina {
-  usuario: Usuario
+  usuario: UsuarioLogado
   dados: Dados
   aoAlterar: (mutacao: Mutacao, mensagem: string) => Promise<void>
   atualizar: (mutacao: Mutacao) => Promise<boolean>
@@ -27,17 +39,10 @@ export interface Rota {
   caminho: string
   titulo: string
   icone: string
-  papeis: PapelUsuario[]
-  recursos: (usuario: Usuario) => Recurso[]
+  permissoes: Permissao[]
+  recursos: (usuario: UsuarioLogado) => Recurso[]
   pagina: (contexto: ContextoDaPagina) => ReactNode
 }
-
-const todos: PapelUsuario[] = ['OWNER', 'ADMIN', 'USER']
-const gestao: PapelUsuario[] = ['OWNER', 'ADMIN']
-const proprietaria: PapelUsuario[] = ['OWNER']
-
-const ehProprietaria = (usuario: Usuario) => usuario.papel === 'OWNER'
-const ehGestao = (usuario: Usuario) => usuario.papel !== 'USER'
 
 export const rotas: Rota[] = [
   {
@@ -45,13 +50,13 @@ export const rotas: Rota[] = [
     caminho: '/',
     titulo: 'Visão geral',
     icone: '⌂',
-    papeis: gestao,
+    permissoes: ['produtos:ler', 'fichas_tecnicas:ler', 'estoque:ler'],
     recursos: () => ['produtos', 'fichas', 'lotes'],
     pagina: ({ usuario, dados, abrirFicha }) => <InicioPage
       produtos={dados.produtos}
       fichas={dados.fichas}
       lotes={dados.lotes}
-      canManage={ehProprietaria(usuario)}
+      canManage={podeCriarFicha(usuario)}
       onNewSheet={() => abrirFicha('new')}
       onViewSheet={abrirFicha}
     />,
@@ -61,20 +66,26 @@ export const rotas: Rota[] = [
     caminho: '/produtos',
     titulo: 'Produtos',
     icone: '◫',
-    papeis: proprietaria,
+    permissoes: ['produtos:ler'],
     recursos: () => ['produtos'],
-    pagina: ({ dados, aoAlterar }) => <ProdutosPage produtos={dados.produtos} aoAlterar={aoAlterar} />,
+    pagina: ({ usuario, dados, aoAlterar }) => <ProdutosPage
+      produtos={dados.produtos}
+      podeCriar={temPermissao(usuario, 'produtos:criar')}
+      podeEditar={temPermissao(usuario, 'produtos:atualizar')}
+      podeExcluir={temPermissao(usuario, 'produtos:excluir')}
+      aoAlterar={aoAlterar}
+    />,
   },
   {
     view: 'fichas',
     caminho: '/fichas',
     titulo: 'Fichas técnicas',
     icone: '≡',
-    papeis: todos,
+    permissoes: ['fichas_tecnicas:ler'],
     recursos: () => ['fichas'],
     pagina: ({ usuario, dados, abrirFicha, aoAlterar }) => <FichasPage
       fichas={dados.fichas}
-      canManage={ehProprietaria(usuario)}
+      canManage={podeCriarFicha(usuario)}
       onNew={() => abrirFicha('new')}
       onView={abrirFicha}
       aoAlterar={aoAlterar}
@@ -85,13 +96,15 @@ export const rotas: Rota[] = [
     caminho: '/estoque',
     titulo: 'Estoque',
     icone: '▦',
-    papeis: gestao,
+    permissoes: ['estoque:ler', 'produtos:ler', 'localizacoes:ler'],
     recursos: () => ['lotes', 'produtos', 'localizacoes'],
     pagina: ({ usuario, dados, aoAlterar }) => <EstoquePage
       lotes={dados.lotes}
       produtos={dados.produtos}
       localizacoes={dados.localizacoes}
       usuarioId={usuario.id}
+      podeCriar={temPermissao(usuario, 'estoque:criar')}
+      podeEditar={temPermissao(usuario, 'estoque:atualizar')}
       onChanged={(mensagem) => aoAlterar('estoque', mensagem)}
     />,
   },
@@ -100,8 +113,8 @@ export const rotas: Rota[] = [
     caminho: '/producao',
     titulo: 'Produção',
     icone: '◉',
-    papeis: todos,
-    recursos: (usuario) => ehGestao(usuario)
+    permissoes: ['producao:ler', 'fichas_tecnicas:ler'],
+    recursos: (usuario) => podePlanejarProducao(usuario)
       ? ['solicitacoes', 'fichas', 'produtos', 'localizacoes']
       : ['solicitacoes', 'fichas'],
     pagina: ({ usuario, dados, abrirFicha, aoAlterar, avisarErro }) => <ProducaoPage
@@ -109,7 +122,8 @@ export const rotas: Rota[] = [
       fichas={dados.fichas}
       produtos={dados.produtos}
       localizacoes={dados.localizacoes}
-      canPlan={ehGestao(usuario)}
+      canPlan={podePlanejarProducao(usuario)}
+      podeAtualizar={temPermissao(usuario, 'producao:atualizar')}
       onViewSheet={abrirFicha}
       aoAlterar={aoAlterar}
       avisarErro={avisarErro}
@@ -120,7 +134,7 @@ export const rotas: Rota[] = [
     caminho: '/movimentacoes',
     titulo: 'Movimentações',
     icone: '↺',
-    papeis: gestao,
+    permissoes: ['estoque:ler', 'produtos:ler'],
     recursos: () => ['lotes', 'produtos'],
     pagina: ({ dados, rodadaDeAtualizacao }) => <MovimentacoesPage
       lotes={dados.lotes}
@@ -133,35 +147,62 @@ export const rotas: Rota[] = [
     caminho: '/localizacoes',
     titulo: 'Localizações',
     icone: '▤',
-    papeis: gestao,
+    permissoes: ['localizacoes:ler'],
     recursos: () => ['localizacoes'],
-    pagina: ({ dados, atualizar }) => <LocalizacoesPage localizacoes={dados.localizacoes} atualizar={atualizar} />,
+    pagina: ({ usuario, dados, atualizar }) => <LocalizacoesPage
+      localizacoes={dados.localizacoes}
+      podeCriar={temPermissao(usuario, 'localizacoes:criar')}
+      podeAtualizar={temPermissao(usuario, 'localizacoes:atualizar')}
+      podeExcluir={temPermissao(usuario, 'localizacoes:excluir')}
+      atualizar={atualizar}
+    />,
   },
   {
     view: 'usuarios',
     caminho: '/usuarios',
     titulo: 'Usuários',
     icone: '♙',
-    papeis: proprietaria,
+    permissoes: ['usuarios:ler'],
     recursos: () => [],
-    pagina: ({ usuario, rodadaDeAtualizacao }) => <UsuariosPage usuarioLogado={usuario} rodadaDeAtualizacao={rodadaDeAtualizacao} />,
+    pagina: ({ usuario, rodadaDeAtualizacao }) => <UsuariosPage
+      usuarioLogado={usuario}
+      rodadaDeAtualizacao={rodadaDeAtualizacao}
+    />,
+  },
+  {
+    view: 'grupos',
+    caminho: '/grupos-acesso',
+    titulo: 'Grupos de acesso',
+    icone: '◈',
+    permissoes: ['grupos_acesso:ler'],
+    recursos: () => [],
+    pagina: ({ usuario, rodadaDeAtualizacao }) => <GruposDeAcessoPage
+      usuarioLogado={usuario}
+      rodadaDeAtualizacao={rodadaDeAtualizacao}
+    />,
   },
 ]
+
+const viewsPreferidasParaEntrar: View[] = ['inicio', 'producao']
 
 export function rotaDaView(view: View): Rota {
   return rotas.find((rota) => rota.view === view) ?? rotas[0]
 }
 
-export function rotasDoUsuario(usuario: Usuario): Rota[] {
-  return rotas.filter((rota) => rota.papeis.includes(usuario.papel))
+export function podeAcessar(rota: Rota, usuario: UsuarioLogado) {
+  return temTodas(usuario, rota.permissoes)
 }
 
-export function podeAcessar(rota: Rota, usuario: Usuario) {
-  return rota.papeis.includes(usuario.papel)
+export function rotasDoUsuario(usuario: UsuarioLogado): Rota[] {
+  return rotas.filter((rota) => podeAcessar(rota, usuario))
 }
 
-export function viewInicial(usuario: Usuario): View {
-  return ehGestao(usuario) ? 'inicio' : 'producao'
+export function viewInicial(usuario: UsuarioLogado): View {
+  const liberadas = rotasDoUsuario(usuario)
+  const preferida = viewsPreferidasParaEntrar.find(
+    (view) => liberadas.some((rota) => rota.view === view),
+  )
+  return preferida ?? liberadas[0]?.view ?? 'inicio'
 }
 
 function caminhoAtual() {

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from app.utils.constantes import Constantes
+from app.utils.enums import StatusItem, TipoConservacao, TipoMovimentacao
 from db.database_config import db
 from app.features.produtos.models import Produto
 
@@ -12,14 +13,19 @@ class Localizacao(db.Model):
     __tablename__ = "localizacao"
     __table_args__ = (
         db.CheckConstraint(
-            Constantes.sql_in("tipo", Constantes.TIPOS_CONSERVACAO),
+            Constantes.sql_in("tipo", TipoConservacao.valores()),
             name="ck_localizacao_tipo",
         ),
     )
 
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.Text, nullable=False, unique=True)
-    tipo = db.Column(db.Text, nullable=False, default="SECO", server_default="SECO")
+    tipo = db.Column(
+        db.Text,
+        nullable=False,
+        default=TipoConservacao.SECO,
+        server_default=TipoConservacao.SECO.value,
+    )
     parent_id = db.Column(db.Integer, db.ForeignKey("localizacao.id"))
     foto_url = db.Column(db.Text)
 
@@ -57,7 +63,7 @@ class ItemLote(db.Model):
     __tablename__ = "item_lote"
     __table_args__ = (
         db.CheckConstraint(
-            Constantes.sql_in("status", Constantes.STATUS_ITEM), name="ck_item_lote_status"
+            Constantes.sql_in("status", StatusItem.valores()), name="ck_item_lote_status"
         ),
         db.CheckConstraint("quantidade > 0", name="ck_item_lote_quantidade"),
         db.CheckConstraint("saldo >= 0 AND saldo <= quantidade", name="ck_item_lote_saldo"),
@@ -75,7 +81,12 @@ class ItemLote(db.Model):
     fabricante = db.Column(db.Text)
     data_fabricacao = db.Column(db.String)
     data_validade = db.Column(db.String)
-    status = db.Column(db.Text, nullable=False, default="DISPONIVEL", server_default="DISPONIVEL")
+    status = db.Column(
+        db.Text,
+        nullable=False,
+        default=StatusItem.DISPONIVEL,
+        server_default=StatusItem.DISPONIVEL.value,
+    )
     solicitacao_producao_id = db.Column(db.Integer, db.ForeignKey("solicitacao_producao.id"))
     aberto_em = db.Column(db.String)
     criado_em = db.Column(
@@ -104,7 +115,7 @@ class MovimentacaoEstoque(db.Model):
     __tablename__ = "movimentacao_estoque"
     __table_args__ = (
         db.CheckConstraint(
-            Constantes.sql_in("tipo", Constantes.TIPOS_MOVIMENTACAO),
+            Constantes.sql_in("tipo", TipoMovimentacao.valores()),
             name="ck_movimentacao_tipo",
         ),
         db.CheckConstraint("quantidade > 0", name="ck_movimentacao_quantidade"),

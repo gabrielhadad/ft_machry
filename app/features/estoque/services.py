@@ -8,6 +8,7 @@ from typing import Optional
 from flask_sqlalchemy.pagination import Pagination
 
 from app.utils.constantes import Constantes
+from app.utils.enums import StatusItem, TipoMovimentacao
 from app.utils.errors import RegistroNaoEncontrado
 from app.utils.paginacao import PaginacaoQuery
 
@@ -56,7 +57,7 @@ class EstoqueService:
             self._validar_saida_de_lote_vencido(origem, dados.tipo)
 
             destino = None
-            if dados.tipo == "TRANSFERENCIA" and dados.localizacao_destino_id is not None:
+            if dados.tipo == TipoMovimentacao.TRANSFERENCIA and dados.localizacao_destino_id is not None:
                 destino = self._criar_lote_para_transferencia(
                     origem, dados.localizacao_destino_id
                 )
@@ -73,47 +74,48 @@ class EstoqueService:
             raise ValueError("o lote de origem não possui itens cadastrados")
 
         destino_tem_itens = destino is not None and self.repository.lote_tem_itens(destino.id)
-        if dados.tipo == "TRANSFERENCIA" and destino_tem_itens:
+        if dados.tipo == TipoMovimentacao.TRANSFERENCIA and destino_tem_itens:
             raise ValueError("o lote de destino é controlado por itens e a origem não")
 
-        if dados.tipo in Constantes.TIPOS_QUE_EXIGEM_SAIDA and origem.quantidade < dados.quantidade:
+        exige_saida = dados.tipo in TipoMovimentacao.que_exigem_saida()
+        if exige_saida and origem.quantidade < dados.quantidade:
             raise ValueError("saldo insuficiente")
 
         movimentacao = self._gravar_movimentacao(dados, origem, destino, dados.quantidade)
 
-        if dados.tipo == "TRANSFORMACAO" and destino_tem_itens:
+        if dados.tipo == TipoMovimentacao.TRANSFORMACAO and destino_tem_itens:
             self._registrar_resultado_como_item(destino, movimentacao, dados.quantidade_destino)
             self._recalcular_lote(destino)
         return movimentacao
 
     def _movimentar_lote_com_itens(self, origem, destino, dados) -> models.MovimentacaoEstoque:
         """Lote com itens: a saída sai dos itens e o saldo do lote é recalculado."""
-        if dados.tipo in Constantes.TIPOS_SOMAM_NA_ORIGEM:
+        if dados.tipo in TipoMovimentacao.que_somam_na_origem():
             raise ValueError(
                 "lote controlado por itens: registre entradas em POST /api/estoque/lotes/{id}/itens"
             )
 
         if dados.item_ids is not None:
             usos = self._usar_itens_escolhidos(origem, dados.item_ids, dados.tipo)
-        elif dados.tipo == "TRANSFERENCIA":
+        elif dados.tipo == TipoMovimentacao.TRANSFERENCIA:
             raise ValueError("lote controlado por itens: informe os itens a transferir (item_ids)")
         else:
             usos = self._usar_itens_por_validade(origem, dados.quantidade)
 
         destino_tem_itens = destino is not None and self.repository.lote_tem_itens(destino.id)
-        if dados.tipo == "TRANSFERENCIA" and not destino_tem_itens and destino.quantidade > 0:
+        if dados.tipo == TipoMovimentacao.TRANSFERENCIA and not destino_tem_itens and destino.quantidade > 0:
             raise ValueError("o lote de destino tem saldo sem itens; escolha outro lote")
 
         quantidade = self._total_dos_usos(usos, origem)
         movimentacao = self._gravar_movimentacao(dados, origem, destino, quantidade)
         self._vincular_usos(movimentacao, usos)
 
-        if dados.tipo == "TRANSFERENCIA":
+        if dados.tipo == TipoMovimentacao.TRANSFERENCIA:
             self._mover_itens(usos, destino)
         else:
             self._baixar_itens(usos)
 
-        if dados.tipo == "TRANSFORMACAO" and destino_tem_itens:
+        if dados.tipo == TipoMovimentacao.TRANSFORMACAO and destino_tem_itens:
             self._registrar_resultado_como_item(destino, movimentacao, dados.quantidade_destino)
 
         self._recalcular_lote(origem)
@@ -131,9 +133,9 @@ class EstoqueService:
         for item in itens:
             if item.lote_id != origem.id:
                 raise ValueError(f"o item {item.codigo} não pertence ao lote {origem.id}")
-            if item.status not in Constantes.STATUS_ITEM_LIVRES:
+            if item.status not in StatusItem.livres():
                 raise ValueError(f"o item {item.codigo} não está disponível ({item.status})")
-            if _vencido(item.data_validade) and tipo != "AJUSTE_SAIDA":
+            if _vencido(item.data_validade) and tipo != TipoMovimentacao.AJUSTE_SAIDA:
                 raise ValueError(
                     f"o item {item.codigo} está vencido: registre um ajuste de saída para descarte"
                 )
@@ -180,9 +182,9 @@ class EstoqueService:
             item.saldo = _arredondar(item.saldo - uso.quantidade)
             if item.saldo <= 0:
                 item.saldo = 0
-                item.status = "CONSUMIDA"
+                item.status = StatusItem.CONSUMIDA
             else:
-                item.status = "EM_USO"
+                item.status = StatusItem.EM_USO
                 if item.aberto_em is None:
                     item.aberto_em = _agora()
 
@@ -257,9 +259,9 @@ class EstoqueService:
             or produto_destino.conservacao != local_destino.tipo
         ):
             raise ValueError("lote destino com conservação incompatível")
-        if dados.tipo == "TRANSFERENCIA" and origem.produto_id != destino.produto_id:
+        if dados.tipo == TipoMovimentacao.TRANSFERENCIA and origem.produto_id != destino.produto_id:
             raise ValueError("transferência requer mesmo produto")
-        if dados.tipo == "TRANSFORMACAO" and not self.repository.transformacao_cadastrada(
+        if dados.tipo == TipoMovimentacao.TRANSFORMACAO and not self.repository.transformacao_cadastrada(
             origem.produto_id, destino.produto_id
         ):
             raise ValueError("transformação não cadastrada entre os produtos")
@@ -283,9 +285,9 @@ class EstoqueService:
             nota_fiscal=origem.nota_fiscal,
         )
 
-    def _validar_saida_de_lote_vencido(self, lote, tipo: str) -> None:
+    def _validar_saida_de_lote_vencido(self, lote, tipo: TipoMovimentacao) -> None:
         if (
-            tipo in {"SAIDA", "TRANSFERENCIA", "TRANSFORMACAO"}
+            tipo in {TipoMovimentacao.SAIDA, TipoMovimentacao.TRANSFERENCIA, TipoMovimentacao.TRANSFORMACAO}
             and lote.data_validade
             and lote.data_validade < date.today().isoformat()
         ):
@@ -423,7 +425,7 @@ class EstoqueService:
 
         total = _arredondar(sum(item.quantidade for item in itens))
         movimentacao = self.repository.inserir_movimentacao(
-            tipo="ENTRADA",
+            tipo=TipoMovimentacao.ENTRADA,
             lote_origem=lote,
             lote_destino=None,
             quantidade=total,
@@ -459,7 +461,7 @@ class EstoqueService:
             fabricante=fabricante,
             data_fabricacao=data_fabricacao,
             data_validade=data_validade,
-            status="DISPONIVEL",
+            status=StatusItem.DISPONIVEL,
         )
 
     def listar_itens(self, lote_id: int, filtro: schemas.ItemLoteQuery) -> Pagination:
@@ -499,9 +501,9 @@ class EstoqueService:
             item = self.repository.obter_item(item_id, para_atualizacao=True)
             if item is None:
                 raise RegistroNaoEncontrado("item não encontrado")
-            if item.status != "DISPONIVEL":
+            if item.status != StatusItem.DISPONIVEL:
                 raise ValueError(f"somente itens disponíveis podem ser abertos (atual: {item.status})")
-            item.status = "EM_USO"
+            item.status = StatusItem.EM_USO
             if _vencido(item.data_validade):
                 raise ValueError("item vencido não pode ser aberto")
             item.aberto_em = _agora()

@@ -5,7 +5,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.utils.constantes import Constantes
+from app.utils.enums import StatusSolicitacao
 
 
 class SolicitacaoCreate(BaseModel):
@@ -19,7 +19,7 @@ class SolicitacaoCreate(BaseModel):
 class SolicitacaoStatusUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Constantes.StatusSolicitacao
+    status: StatusSolicitacao
 
 
 class SolicitacaoProducaoOut(BaseModel):

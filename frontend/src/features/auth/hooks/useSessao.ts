@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { EVENTO_SESSAO_EXPIRADA } from '../../../services/api'
-import type { Usuario } from '../../../types'
+import type { UsuarioLogado } from '../../../types'
 import { buscarUsuarioLogado, sair } from '../api/authApi'
 
 interface OpcoesDaSessao {
-  aoEntrar: (usuario: Usuario) => void
+  aoEntrar: (usuario: UsuarioLogado) => void
   aoEncerrar: () => void
 }
 
 export function useSessao({ aoEntrar, aoEncerrar }: OpcoesDaSessao) {
-  const [usuario, setUsuario] = useState<Usuario | null | undefined>(undefined)
+  const [usuario, setUsuario] = useState<UsuarioLogado | null | undefined>(undefined)
 
-  const iniciar = useCallback((logado: Usuario) => {
+  const iniciar = useCallback((logado: UsuarioLogado) => {
     setUsuario(logado)
     aoEntrar(logado)
   }, [aoEntrar])

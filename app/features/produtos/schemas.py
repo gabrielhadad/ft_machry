@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.utils.constantes import Constantes
+from app.utils.enums import TipoConservacao, TipoProduto, UnidadeMedida
 from app.utils.texto import padronizar_nome
 
 
@@ -10,11 +10,11 @@ class ProdutoCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     nome: str = Field(min_length=1, max_length=150)
-    tipo: Constantes.TipoProduto
-    unidade_medida: Constantes.UnidadeMedida
+    tipo: TipoProduto
+    unidade_medida: UnidadeMedida
     grupo_id: int | None = Field(default=None, gt=0)
     subdivisao: str | None = Field(default=None, max_length=100)
-    conservacao: Constantes.TipoConservacao = "SECO"
+    conservacao: TipoConservacao = TipoConservacao.SECO
     validade_obrigatoria: int = Field(default=0, ge=0, le=1)
     validade_padrao_dias: int | None = Field(default=None, ge=0)
     foto_url: str | None = None
@@ -38,11 +38,11 @@ class ProdutoUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     nome: str | None = Field(default=None, min_length=1, max_length=150)
-    tipo: Constantes.TipoProduto | None = None
-    unidade_medida: Constantes.UnidadeMedida | None = None
+    tipo: TipoProduto | None = None
+    unidade_medida: UnidadeMedida | None = None
     grupo_id: int | None = Field(default=None, gt=0)
     subdivisao: str | None = Field(default=None, max_length=100)
-    conservacao: Constantes.TipoConservacao | None = None
+    conservacao: TipoConservacao | None = None
     validade_obrigatoria: int | None = Field(default=None, ge=0, le=1)
     validade_padrao_dias: int | None = Field(default=None, ge=0)
     foto_url: str | None = None

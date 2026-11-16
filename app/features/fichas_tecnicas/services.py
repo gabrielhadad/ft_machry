@@ -3,6 +3,7 @@ from decimal import Decimal
 from flask_sqlalchemy.pagination import Pagination
 from pydantic import ValidationError
 
+from app.utils.enums import TipoProduto
 from app.utils.errors import Conflito, RegistroNaoEncontrado, mensagem_validacao
 from app.utils.paginacao import PaginacaoQuery
 from app.utils.texto import normalizar_nome
@@ -153,7 +154,7 @@ class FichaTecnicaService:
         produto = self.repository.obter_produto(dados.produto_id)
         if produto is None or not produto.ativo:
             raise ValueError("produto final não encontrado ou inativo")
-        if produto.tipo == "INSUMO":
+        if produto.tipo == TipoProduto.INSUMO:
             raise ValueError("um insumo não pode possuir ficha técnica")
 
         existente = self.repository.ficha_do_produto(dados.produto_id)

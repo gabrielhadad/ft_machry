@@ -1,7 +1,19 @@
 openapi: 3.0.3
 info:
   title: ft_machry API
-  version: "2.0"
+  version: "3.0"
+  description: |
+    O acesso é controlado por grupos de acesso: um usuário pertence a N grupos e cada grupo
+    reúne N permissões. Uma permissão tem o formato `recurso:acao`, com os recursos
+    `produtos`, `fichas_tecnicas`, `estoque`, `localizacoes`, `producao`, `usuarios` e
+    `grupos_acesso`, e as ações `ler`, `criar`, `atualizar` e `excluir`. Cada rota exige uma
+    permissão: GET exige `ler`, POST exige `criar`, PUT exige `atualizar` e DELETE exige
+    `excluir` do recurso correspondente. As rotas de localizações ficam sob `/api/estoque`,
+    mas usam o recurso `localizacoes`. Sem a permissão a API responde 403.
+
+    O `init-db` cria os grupos Administrador (todas as permissões, protegido contra
+    alteração e exclusão), Gestor e Cozinha, e a lista completa pode ser consultada em
+    `GET /api/permissoes`.
 security:
   - cookieAuth: []
 paths:
@@ -25,7 +37,7 @@ paths:
           description: Usuário autenticado
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Usuario"}
+              schema: {$ref: "#/components/schemas/UsuarioSessao"}
         "401": {description: Usuário ou senha inválidos}
   /api/auth/logout:
     post:
@@ -42,12 +54,12 @@ paths:
           description: Usuário autenticado
           content:
             application/json:
-              schema: {$ref: "#/components/schemas/Usuario"}
+              schema: {$ref: "#/components/schemas/UsuarioSessao"}
         "401": {description: Autenticação necessária}
   /api/usuarios:
     get:
-      summary: Lista usuários; exclusivo da proprietária
-      tags: [autenticacao]
+      summary: Lista usuários (permissão usuarios:ler)
+      tags: [acessos]
       parameters:
         - {$ref: "#/components/parameters/Page"}
         - {$ref: "#/components/parameters/PerPage"}
@@ -66,10 +78,134 @@ paths:
                         items: {$ref: "#/components/schemas/Usuario"}
         "400": {$ref: "#/components/responses/Invalido"}
     post:
-      summary: Cria usuário; exclusivo da proprietária
-      tags: [autenticacao]
+      summary: Cria usuário (permissão usuarios:criar)
+      tags: [acessos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UsuarioCriar"}
       responses:
-        "201": {description: Usuário criado}
+        "201":
+          description: Usuário criado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Usuario"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "409": {description: Nome de usuário já cadastrado}
+  /api/usuarios/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+    put:
+      summary: Atualiza usuário (permissão usuarios:atualizar)
+      tags: [acessos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UsuarioAtualizar"}
+      responses:
+        "200":
+          description: Usuário atualizado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Usuario"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+        "409": {description: A conta em uso não pode ser desativada, ou o grupo Administrador ficaria sem usuário ativo}
+
+  /api/permissoes:
+    get:
+      summary: Lista o catálogo de permissões (permissão grupos_acesso:ler)
+      tags: [acessos]
+      parameters:
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/PerPage"}
+      responses:
+        "200":
+          description: Lista paginada de permissões
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: "#/components/schemas/Pagina"}
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: {$ref: "#/components/schemas/Permissao"}
+
+  /api/grupos-acesso:
+    get:
+      summary: Lista grupos de acesso (permissão grupos_acesso:ler)
+      tags: [acessos]
+      parameters:
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/PerPage"}
+      responses:
+        "200":
+          description: Lista paginada de grupos
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: "#/components/schemas/Pagina"}
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: {$ref: "#/components/schemas/GrupoAcesso"}
+    post:
+      summary: Cria grupo de acesso (permissão grupos_acesso:criar)
+      tags: [acessos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/GrupoAcessoEntrada"}
+      responses:
+        "201":
+          description: Grupo criado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/GrupoAcesso"}
+        "400": {description: Permissão desconhecida ou dados inválidos}
+        "409": {description: Já existe um grupo com este nome}
+  /api/grupos-acesso/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer}}
+    get:
+      summary: Detalha grupo de acesso (permissão grupos_acesso:ler)
+      tags: [acessos]
+      responses:
+        "200":
+          description: Grupo
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/GrupoAcesso"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+    put:
+      summary: Atualiza grupo de acesso (permissão grupos_acesso:atualizar)
+      tags: [acessos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/GrupoAcessoEntrada"}
+      responses:
+        "200":
+          description: Grupo atualizado
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/GrupoAcesso"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+        "409": {description: Grupo protegido ou nome já em uso}
+    delete:
+      summary: Exclui grupo de acesso (permissão grupos_acesso:excluir)
+      tags: [acessos]
+      responses:
+        "204": {description: Grupo excluído; os usuários vinculados perdem as permissões dele}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+        "409": {description: Grupo protegido}
 
   /api/produtos:
     get:
@@ -632,14 +768,78 @@ components:
       in: cookie
       name: session
   schemas:
+    GrupoAcessoResumo:
+      type: object
+      properties:
+        id: {type: integer}
+        nome: {type: string, example: Gestor}
     Usuario:
       type: object
       properties:
         id: {type: integer}
         nome: {type: string}
         username: {type: string}
-        papel: {type: string, enum: [OWNER, ADMIN, USER]}
         ativo: {type: integer, enum: [0, 1]}
+        grupos:
+          type: array
+          items: {$ref: "#/components/schemas/GrupoAcessoResumo"}
+    UsuarioSessao:
+      allOf:
+        - $ref: "#/components/schemas/Usuario"
+        - type: object
+          properties:
+            permissoes:
+              type: array
+              description: Códigos `recurso:acao` reunidos de todos os grupos do usuário
+              items: {type: string, example: "produtos:ler"}
+    UsuarioCriar:
+      type: object
+      required: [nome, username, password]
+      properties:
+        nome: {type: string, minLength: 2, maxLength: 120}
+        username: {type: string, pattern: "^[a-zA-Z0-9._-]+$", minLength: 3, maxLength: 80}
+        password: {type: string, format: password, minLength: 8}
+        grupos:
+          type: array
+          description: Ids dos grupos de acesso
+          items: {type: integer}
+    UsuarioAtualizar:
+      type: object
+      properties:
+        nome: {type: string, minLength: 2, maxLength: 120}
+        password: {type: string, format: password, minLength: 8}
+        ativo: {type: integer, enum: [0, 1]}
+        grupos:
+          type: array
+          description: Substitui todos os grupos do usuário
+          items: {type: integer}
+    Permissao:
+      type: object
+      properties:
+        codigo: {type: string, example: "produtos:ler"}
+        recurso: {type: string, enum: [produtos, fichas_tecnicas, estoque, localizacoes, producao, usuarios, grupos_acesso]}
+        acao: {type: string, enum: [ler, criar, atualizar, excluir]}
+        descricao: {type: string, example: Visualizar produtos}
+    GrupoAcessoEntrada:
+      type: object
+      properties:
+        nome: {type: string, minLength: 2, maxLength: 80}
+        descricao: {type: string, nullable: true, maxLength: 300}
+        permissoes:
+          type: array
+          description: Códigos `recurso:acao`; no PUT substitui todas as permissões do grupo
+          items: {type: string, example: "estoque:criar"}
+    GrupoAcesso:
+      type: object
+      properties:
+        id: {type: integer}
+        nome: {type: string}
+        descricao: {type: string, nullable: true}
+        protegido: {type: integer, enum: [0, 1], description: Grupos protegidos não podem ser alterados nem excluídos}
+        total_usuarios: {type: integer}
+        permissoes:
+          type: array
+          items: {$ref: "#/components/schemas/Permissao"}
     ProdutoCampos:
       type: object
       properties:

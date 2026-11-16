@@ -1,4 +1,5 @@
 from app.utils.constantes import Constantes
+from app.utils.enums import TipoConservacao, TipoProduto
 from db.database_config import db
 
 
@@ -13,11 +14,11 @@ class Produto(db.Model):
     __tablename__ = "produto"
     __table_args__ = (
         db.CheckConstraint(
-            Constantes.sql_in("tipo", Constantes.TIPOS_PRODUTO),
+            Constantes.sql_in("tipo", TipoProduto.valores()),
             name="ck_produto_tipo",
         ),
         db.CheckConstraint(
-            Constantes.sql_in("conservacao", Constantes.TIPOS_CONSERVACAO),
+            Constantes.sql_in("conservacao", TipoConservacao.valores()),
             name="ck_produto_conservacao",
         ),
     )
@@ -28,7 +29,12 @@ class Produto(db.Model):
     unidade_medida = db.Column(db.Text, nullable=False)
     grupo_id = db.Column(db.Integer, db.ForeignKey("grupo_produto.id"))
     subdivisao = db.Column(db.Text)
-    conservacao = db.Column(db.Text, nullable=False, default="SECO", server_default="SECO")
+    conservacao = db.Column(
+        db.Text,
+        nullable=False,
+        default=TipoConservacao.SECO,
+        server_default=TipoConservacao.SECO.value,
+    )
     validade_obrigatoria = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     validade_padrao_dias = db.Column(db.Integer)
     foto_url = db.Column(db.Text)
