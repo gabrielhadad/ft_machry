@@ -83,7 +83,7 @@ export function ProducaoPage({
       description="Fila de preparos definida pelo gestor para a equipe da cozinha."
       action={acaoDeImprimir}
     />
-    <MetricasDeProducao solicitacoes={solicitacoes} />
+    {canPlan && <MetricasDeProducao solicitacoes={solicitacoes} />}
     {canPlan && <PlanejadorDeProducao
       fichas={fichas}
       produtos={produtos}
