@@ -24,6 +24,10 @@ class UsuarioRepository(RepositorioBase):
             db.select(Usuario).where(db.func.lower(Usuario.username) == username.lower())
         ).scalar_one_or_none()
 
+    def desativar(self, usuario: Usuario) -> None:
+        usuario.ativo = 0
+        db.session.flush()
+
     def inserir(self, dados: dict) -> Usuario:
         usuario = Usuario(**dados)
         db.session.add(usuario)

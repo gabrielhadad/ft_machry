@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Modal, SearchSelect, type SearchSelectOption } from '../../../components/ui'
 import type { GrupoResumo, Usuario } from '../../../types'
 import { mensagemDeErro } from '../../../utils/erros'
-import { atualizarUsuario, criarUsuario } from '../api/usuariosApi'
+import { atualizarUsuario, criarUsuario, excluirUsuario } from '../api/usuariosApi'
 
 const opcoesDeAtivo = [
   { value: '1', label: 'Sim' },
@@ -13,6 +13,7 @@ interface ModalDeUsuarioProps {
   usuario: Usuario | null
   usuarioLogado: Usuario
   grupos: GrupoResumo[] | null
+  podeExcluir: boolean
   onClose: () => void
   onSalvo: () => Promise<void>
 }
@@ -21,6 +22,7 @@ export function ModalDeUsuario({
   usuario,
   usuarioLogado,
   grupos,
+  podeExcluir,
   onClose,
   onSalvo,
 }: ModalDeUsuarioProps) {
@@ -57,6 +59,23 @@ export function ModalDeUsuario({
     setGruposEscolhidos((atuais) => atuais.filter((item) => item !== id))
   }
 
+  async function excluir() {
+    if (!usuario) return
+    const confirmacao =
+      `Excluir o usuário ${usuario.nome}? ` +
+      'Ele perde o acesso ao sistema, mas o histórico do que fez é mantido.'
+    if (!window.confirm(confirmacao)) return
+    setSalvando(true)
+    setErro('')
+    try {
+      await excluirUsuario(usuario.id)
+      await onSalvo()
+    } catch (reason) {
+      setErro(mensagemDeErro(reason, 'Não foi possível excluir o usuário.'))
+      setSalvando(false)
+    }
+  }
+
   async function salvar(event: FormEvent) {
     event.preventDefault()
     setSalvando(true)
@@ -89,7 +108,17 @@ export function ModalDeUsuario({
   let textoDoBotao = usuario ? 'Salvar usuário' : 'Cadastrar usuário'
   if (salvando) textoDoBotao = 'Salvando…'
 
+  const mostrarExcluir = usuario !== null && podeExcluir && usuario.id !== usuarioLogado.id
+
   const footer = <>
+    {mostrarExcluir && <button
+      className="danger-link"
+      type="button"
+      onClick={() => void excluir()}
+      disabled={salvando}
+    >
+      Excluir usuário
+    </button>}
     <button className="secondary" onClick={onClose} type="button" disabled={salvando}>
       Cancelar
     </button>

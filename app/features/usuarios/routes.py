@@ -39,3 +39,10 @@ def criar():
 def atualizar(usuario_id: int):
     usuario = get_service().atualizar(usuario_id, entrada(UsuarioUpdate), g.usuario.id)
     return _saida(usuario)
+
+
+@bp.delete("/<int:usuario_id>")
+@exigir_permissao(RecursoPermissao.USUARIOS, AcaoPermissao.EXCLUIR)
+def remover(usuario_id: int):
+    get_service().remover(usuario_id, g.usuario.id)
+    return "", 204

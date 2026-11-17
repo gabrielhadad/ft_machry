@@ -112,6 +112,14 @@ paths:
               schema: {$ref: "#/components/schemas/Usuario"}
         "404": {$ref: "#/components/responses/NaoEncontrado"}
         "409": {description: A conta em uso não pode ser desativada, ou o grupo Administrador ficaria sem usuário ativo}
+    delete:
+      summary: Exclui usuário (permissão usuarios:excluir)
+      description: Exclusão lógica. O usuário é desativado e mantido no banco, preservando o histórico de movimentações e produção.
+      tags: [acessos]
+      responses:
+        "204": {description: Usuário desativado}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+        "409": {description: A conta em uso não pode ser excluída, ou o grupo Administrador ficaria sem usuário ativo}
 
   /api/permissoes:
     get:
