@@ -3,7 +3,7 @@ import { numero } from '../../../utils/formatacao'
 import { BrandMark, useBranding } from '../../branding'
 import { useUsuarios } from '../../usuarios'
 import { PhaseAssignee } from './PhaseAssignee'
-import { PhaseTimer } from './Phasetimer'
+import { PhaseTimer } from './PhaseTimer'
 
 export function SheetDocument({ ficha }: { ficha: FichaTecnica }) {
   const branding = useBranding()
