@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from app.utils.constantes import Constantes
+from app.utils.enums import StatusSolicitacao
 from db.database_config import db
 
 
@@ -11,7 +12,7 @@ class SolicitacaoProducao(db.Model):
     __tablename__ = "solicitacao_producao"
     __table_args__ = (
         db.CheckConstraint(
-            Constantes.sql_in("status", Constantes.STATUS_SOLICITACAO),
+            Constantes.sql_in("status", StatusSolicitacao.valores()),
             name="ck_solicitacao_status",
         ),
     )
@@ -27,7 +28,12 @@ class SolicitacaoProducao(db.Model):
     localizacao_destino_id = db.Column(
         db.Integer, db.ForeignKey("localizacao.id"), nullable=True
     )
-    status = db.Column(db.Text, nullable=False, default="ABERTA", server_default="ABERTA")
+    status = db.Column(
+        db.Text,
+        nullable=False,
+        default=StatusSolicitacao.ABERTA,
+        server_default=StatusSolicitacao.ABERTA.value,
+    )
     criado_em = db.Column(
         db.String,
         nullable=False,

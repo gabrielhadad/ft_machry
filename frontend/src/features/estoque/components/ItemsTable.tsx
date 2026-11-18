@@ -24,10 +24,21 @@ interface ItemsTableProps {
   itens: ItemLote[] | null
   erro: string
   unidade: string
+  podeCriar: boolean
+  podeEditar: boolean
   onItemChanged: (mensagem: string) => Promise<void>
 }
 
-export function ItemsTable({ loteId, usuarioId, itens, erro, unidade, onItemChanged }: ItemsTableProps) {
+export function ItemsTable({
+  loteId,
+  usuarioId,
+  itens,
+  erro,
+  unidade,
+  podeCriar,
+  podeEditar,
+  onItemChanged,
+}: ItemsTableProps) {
   const [filtro, setFiltro] = useState<FiltroDeItens>('TODOS')
   const [itemEmAcao, setItemEmAcao] = useState<number | null>(null)
   const [erroAcao, setErroAcao] = useState('')
@@ -91,8 +102,8 @@ export function ItemsTable({ loteId, usuarioId, itens, erro, unidade, onItemChan
             const vencido = itemVencido(item)
             const emAcao = itemEmAcao === item.id
             const parcialmenteUsado = item.saldo < item.quantidade && item.saldo > 0
-            const podeAbrir = item.status === 'DISPONIVEL' && !vencido
-            const podeConsumir = item.status === 'DISPONIVEL' || item.status === 'EM_USO'
+            const podeAbrir = podeEditar && item.status === 'DISPONIVEL' && !vencido
+            const podeConsumir = podeCriar && (item.status === 'DISPONIVEL' || item.status === 'EM_USO')
             return <tr key={item.id}>
               <td><strong>{item.codigo}</strong></td>
               <td>{item.fabricante ?? '—'}</td>

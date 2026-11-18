@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { PageHeading } from '../../components/ui'
 import { ActiveTimersBadge } from '../../features/fichas/components/ActiveTimersBadge'
-import { alterarStatusDaSolicitacao, criarSolicitacao, FilaDeProducao, MetricasDeProducao, PlanejadorDeProducao } from '../../features/producao'
+import {
+  alterarStatusDaSolicitacao,
+  criarSolicitacao,
+  FilaDeProducao,
+  MetricasDeProducao,
+  PlanejadorDeProducao,
+} from '../../features/producao'
 import type { Mutacao } from '../../stores/dados'
 import type { FichaTecnica, Localizacao, Produto, SolicitacaoProducao } from '../../types'
 import { mensagemDeErro } from '../../utils/erros'
@@ -12,15 +18,30 @@ interface ProducaoPageProps {
   produtos: Produto[]
   localizacoes: Localizacao[]
   canPlan: boolean
+  podeAtualizar: boolean
   onViewSheet: (ficha: FichaTecnica) => void
   aoAlterar: (mutacao: Mutacao, mensagem: string) => Promise<void>
   avisarErro: (mensagem: string) => void
 }
 
-export function ProducaoPage({ solicitacoes, fichas, produtos, localizacoes, canPlan, onViewSheet, aoAlterar, avisarErro }: ProducaoPageProps) {
+export function ProducaoPage({
+  solicitacoes,
+  fichas,
+  produtos,
+  localizacoes,
+  canPlan,
+  podeAtualizar,
+  onViewSheet,
+  aoAlterar,
+  avisarErro,
+}: ProducaoPageProps) {
   const [ocupado, setOcupado] = useState(false)
 
-  const executar = async (acao: () => Promise<unknown>, erroPadrao: string, mensagemDeSucesso: string) => {
+  const executar = async (
+    acao: () => Promise<unknown>,
+    erroPadrao: string,
+    mensagemDeSucesso: string,
+  ) => {
     setOcupado(true)
     try {
       await acao()
@@ -37,7 +58,11 @@ export function ProducaoPage({ solicitacoes, fichas, produtos, localizacoes, can
   }
 
   const criar = (fichaId: number, quantidade: number, localizacaoId: number) => executar(
-    () => criarSolicitacao({ ficha_tecnica_id: fichaId, quantidade_planejada: quantidade, localizacao_destino_id: localizacaoId }),
+    () => criarSolicitacao({
+      ficha_tecnica_id: fichaId,
+      quantidade_planejada: quantidade,
+      localizacao_destino_id: localizacaoId,
+    }),
     'Não foi possível adicionar o preparo.',
     'Preparo adicionado à fila.',
   )
@@ -48,6 +73,10 @@ export function ProducaoPage({ solicitacoes, fichas, produtos, localizacoes, can
     status === 'CONCLUIDA' ? 'Preparo concluído.' : 'Preparo iniciado.',
   )
 
+  const acaoDeImprimir = <button className="secondary no-print" onClick={() => window.print()}>
+    Imprimir fila
+  </button>
+
   return <>
     <PageHeading
       eyebrow="COZINHA"
@@ -56,12 +85,25 @@ export function ProducaoPage({ solicitacoes, fichas, produtos, localizacoes, can
       action={
         <div className="heading-actions">
           <ActiveTimersBadge />
-          <button className="secondary no-print" onClick={() => window.print()}>Imprimir fila</button>
+          {acaoDeImprimir}
         </div>
       }
     />
-    <MetricasDeProducao solicitacoes={solicitacoes} />
-    {canPlan && <PlanejadorDeProducao fichas={fichas} produtos={produtos} localizacoes={localizacoes} ocupado={ocupado} onCriar={criar} />}
-    <FilaDeProducao solicitacoes={solicitacoes} fichas={fichas} ocupado={ocupado} onStatus={alterarStatus} onViewSheet={onViewSheet} />
+    {canPlan && <MetricasDeProducao solicitacoes={solicitacoes} />}
+    {canPlan && <PlanejadorDeProducao
+      fichas={fichas}
+      produtos={produtos}
+      localizacoes={localizacoes}
+      ocupado={ocupado}
+      onCriar={criar}
+    />}
+    <FilaDeProducao
+      solicitacoes={solicitacoes}
+      fichas={fichas}
+      ocupado={ocupado}
+      podeAtualizar={podeAtualizar}
+      onStatus={alterarStatus}
+      onViewSheet={onViewSheet}
+    />
   </>
 }

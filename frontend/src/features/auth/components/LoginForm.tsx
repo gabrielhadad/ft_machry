@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import type { Usuario } from '../../../types'
+import type { UsuarioLogado } from '../../../types'
 import { mensagemDeErro } from '../../../utils/erros'
 import { entrar } from '../api/authApi'
 
-export function LoginForm({ onLogin }: { onLogin: (usuario: Usuario) => void }) {
+export function LoginForm({ onLogin }: { onLogin: (usuario: UsuarioLogado) => void }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')

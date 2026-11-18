@@ -4,7 +4,16 @@ from datetime import timedelta
 from flask import Flask, send_from_directory
 
 from app.utils.config import config as app_config
-from app.features import auth, branding, estoque, fichas_tecnicas, producao, produtos, usuarios
+from app.features import (
+    acessos,
+    auth,
+    branding,
+    estoque,
+    fichas_tecnicas,
+    producao,
+    produtos,
+    usuarios,
+)
 from app.middleware import registrar_middleware_autenticacao
 from db.database_config import init_app as init_db
 
@@ -30,6 +39,8 @@ def create_app(config: dict | None = None) -> Flask:
     app.register_blueprint(auth.bp, url_prefix=f"{prefixo_api}/auth")
     app.register_blueprint(branding.bp, url_prefix=f"{prefixo_api}/branding")
     app.register_blueprint(usuarios.bp, url_prefix=f"{prefixo_api}/usuarios")
+    app.register_blueprint(acessos.grupos_bp, url_prefix=f"{prefixo_api}/grupos-acesso")
+    app.register_blueprint(acessos.permissoes_bp, url_prefix=f"{prefixo_api}/permissoes")
     app.register_blueprint(produtos.bp, url_prefix=f"{prefixo_api}/produtos")
     app.register_blueprint(
         fichas_tecnicas.bp, url_prefix=f"{prefixo_api}/fichas-tecnicas"

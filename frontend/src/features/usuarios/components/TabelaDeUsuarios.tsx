@@ -7,7 +7,11 @@ const POR_PAGINA = 20
 interface TabelaDeUsuariosProps {
   usuarios: Usuario[]
   erro: string
-  onEditar: (usuario: Usuario) => void
+  onEditar?: (usuario: Usuario) => void
+}
+
+function nomesDosGrupos(usuario: Usuario) {
+  return usuario.grupos.map((grupo) => grupo.nome).join(', ') || '—'
 }
 
 export function TabelaDeUsuarios({ usuarios, erro, onEditar }: TabelaDeUsuariosProps) {
@@ -20,19 +24,33 @@ export function TabelaDeUsuarios({ usuarios, erro, onEditar }: TabelaDeUsuariosP
     <div className="table-wrap">
       <table>
         <thead>
-          <tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th></th></tr>
+          <tr>
+            <th>Nome</th>
+            <th>Login</th>
+            <th>Grupos de acesso</th>
+            <th>Status</th>
+            {onEditar && <th></th>}
+          </tr>
         </thead>
         <tbody>
           {visiveis.map((usuario) => <tr key={usuario.id}>
             <td><strong>{usuario.nome}</strong></td>
             <td>{usuario.username}</td>
-            <td>{usuario.papel}</td>
+            <td>{nomesDosGrupos(usuario)}</td>
             <td>{usuario.ativo ? 'Ativo' : 'Inativo'}</td>
-            <td><button className="text-button" onClick={() => onEditar(usuario)}>Editar</button></td>
+            {onEditar && <td>
+              <button className="text-button" onClick={() => onEditar(usuario)}>Editar</button>
+            </td>}
           </tr>)}
         </tbody>
       </table>
     </div>
-    <Pagination page={paginaAtual} perPage={POR_PAGINA} total={usuarios.length} label="Paginação de usuários" onChange={setPagina} />
+    <Pagination
+      page={paginaAtual}
+      perPage={POR_PAGINA}
+      total={usuarios.length}
+      label="Paginação de usuários"
+      onChange={setPagina}
+    />
   </section>
 }

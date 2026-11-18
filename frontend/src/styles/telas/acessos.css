@@ -1,0 +1,69 @@
+.lista-de-grupos {
+  display: grid;
+  gap: 10px;
+}
+
+.lista-de-grupos small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.grupos-escolhidos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.grupos-escolhidos .chip-button span {
+  margin-left: 7px;
+  color: var(--muted);
+}
+
+.grupos-escolhidos .chip-button:hover span {
+  color: #a43c35;
+}
+
+.matriz-permissoes {
+  flex-basis: 100%;
+}
+
+.matriz-permissoes th,
+.matriz-permissoes td {
+  text-align: center;
+  padding: 10px 12px;
+}
+
+.matriz-permissoes th:first-child,
+.matriz-permissoes td:first-child {
+  text-align: left;
+}
+
+.matriz-permissoes input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--green);
+}
+
+.matriz-permissoes .ausente {
+  color: var(--muted);
+}
+
+.matriz-permissoes .text-button {
+  padding: 0;
+  font-size: 12px;
+}
+
+.badge.protegido {
+  margin-left: 8px;
+  background: #e9eee4;
+  color: #41534c;
+}
+
+.grupo-descricao {
+  max-width: 360px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: normal;
+}

@@ -4,16 +4,16 @@ from __future__ import annotations
 from datetime import date
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.utils.constantes import Constantes
+from app.utils.enums import StatusItem, TipoConservacao, TipoMovimentacao
 from app.utils.paginacao import PaginacaoQuery
 
 
 
 class LocalizacaoCreate(BaseModel):
     nome: str
-    tipo: Constantes.TipoConservacao = "SECO"
+    tipo: TipoConservacao = TipoConservacao.SECO
     parent_id: Optional[int] = Field(default=None, gt=0, strict=True)
     foto_url: Optional[str] = None
 
@@ -29,7 +29,7 @@ class LocalizacaoUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     nome: Optional[str] = None
-    tipo: Optional[Constantes.TipoConservacao] = None
+    tipo: Optional[TipoConservacao] = None
     parent_id: Optional[int] = Field(default=None, gt=0, strict=True)
     foto_url: Optional[str] = None
 
@@ -179,7 +179,7 @@ class ItemLoteUpdate(BaseModel):
 
 
 class ItemLoteQuery(PaginacaoQuery):
-    status: Optional[Constantes.StatusItem] = None
+    status: Optional[StatusItem] = None
 
 
 class ItemLoteOut(BaseModel):
@@ -202,7 +202,7 @@ class ItemLoteOut(BaseModel):
 
 
 class MovimentacaoCreate(BaseModel):
-    tipo: Constantes.TipoMovimentacaoManual
+    tipo: TipoMovimentacao
     lote_id: int = Field(gt=0, strict=True)
     usuario_id: int = Field(gt=0, strict=True)
     quantidade: Optional[float] = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
@@ -213,10 +213,19 @@ class MovimentacaoCreate(BaseModel):
     observacao: Optional[str] = None
     item_ids: Optional[list[int]] = Field(default=None, min_length=1, max_length=500)
 
+    @field_validator("tipo")
+    @classmethod
+    def _apenas_tipos_manuais(cls, valor: TipoMovimentacao) -> TipoMovimentacao:
+        if valor not in TipoMovimentacao.manuais():
+            raise ValueError(
+                f"o tipo {valor} é gerado pela produção e não pode ser lançado manualmente"
+            )
+        return valor
+
     @model_validator(mode="after")
     def _regras_cruzadas(self):
         if self.item_ids is not None:
-            if self.tipo not in Constantes.TIPOS_QUE_EXIGEM_SAIDA:
+            if self.tipo not in TipoMovimentacao.que_exigem_saida():
                 raise ValueError("item_ids só vale para saídas, transferências e transformações")
             if len(set(self.item_ids)) != len(self.item_ids):
                 raise ValueError("item_ids repetidos")
@@ -227,19 +236,19 @@ class MovimentacaoCreate(BaseModel):
         self.motivo = self.motivo.strip() if self.motivo else None
         if self.motivo == "":
             self.motivo = None
-        if self.tipo in {"SAIDA", "AJUSTE_ENTRADA", "AJUSTE_SAIDA"} and not self.motivo:
+        if self.tipo in TipoMovimentacao.que_exigem_motivo() and not self.motivo:
             raise ValueError("motivo obrigatório")
-        if self.tipo == "TRANSFERENCIA":
+        if self.tipo == TipoMovimentacao.TRANSFERENCIA:
             if (self.lote_destino_id is None) == (self.localizacao_destino_id is None):
                 raise ValueError(
                     "informe apenas lote_destino_id ou localizacao_destino_id na transferência"
                 )
-        elif self.tipo == "TRANSFORMACAO":
+        elif self.tipo == TipoMovimentacao.TRANSFORMACAO:
             if self.lote_destino_id is None or self.localizacao_destino_id is not None:
                 raise ValueError("lote_destino_id obrigatório para transformação")
         elif self.lote_destino_id is not None or self.localizacao_destino_id is not None:
             raise ValueError("destino permitido apenas para transferência/transformação")
-        exige_qtd_destino = self.tipo == "TRANSFORMACAO"
+        exige_qtd_destino = self.tipo == TipoMovimentacao.TRANSFORMACAO
         if exige_qtd_destino != (self.quantidade_destino is not None):
             raise ValueError(
                 "quantidade_destino obrigatória apenas para transformação"

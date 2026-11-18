@@ -1,17 +1,17 @@
 import { api, apiListAll } from '../../../services/api'
-import type { PapelUsuario, Usuario } from '../../../types'
+import type { Usuario } from '../../../types'
 
 export interface NovoUsuario {
   nome: string
   username: string
   password: string
-  papel: PapelUsuario
+  grupos: number[]
 }
 
 export interface AlteracaoDoUsuario {
   nome: string
-  papel: PapelUsuario
   ativo: number
+  grupos?: number[]
   password?: string
 }
 
@@ -25,4 +25,8 @@ export function criarUsuario(dados: NovoUsuario) {
 
 export function atualizarUsuario(id: number, dados: AlteracaoDoUsuario) {
   return api(`/api/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(dados) })
+}
+
+export function excluirUsuario(id: number) {
+  return api(`/api/usuarios/${id}`, { method: 'DELETE' })
 }

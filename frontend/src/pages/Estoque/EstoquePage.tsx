@@ -1,17 +1,38 @@
 import { useMemo, useState } from 'react'
 import { PageHeading } from '../../components/ui'
-import { LotModal, MetricasDeEstoque, NewLotModal, TabelaDeLotes, type Aba, type Contexto } from '../../features/estoque'
+import {
+  LotModal,
+  MetricasDeEstoque,
+  NewLotModal,
+  TabelaDeLotes,
+  type Aba,
+  type Contexto,
+} from '../../features/estoque'
 import type { Localizacao, Lote, Produto } from '../../types'
+
+const descricaoDaPagina =
+  'Veja todos os lotes com entrada, validade e situação. ' +
+  'Clique em um lote para ver os itens que ele contém.'
 
 interface EstoquePageProps {
   lotes: Lote[]
   produtos: Produto[]
   localizacoes: Localizacao[]
   usuarioId: number
+  podeCriar: boolean
+  podeEditar: boolean
   onChanged: (mensagem: string) => Promise<void>
 }
 
-export function EstoquePage({ lotes, produtos, localizacoes, usuarioId, onChanged }: EstoquePageProps) {
+export function EstoquePage({
+  lotes,
+  produtos,
+  localizacoes,
+  usuarioId,
+  podeCriar,
+  podeEditar,
+  onChanged,
+}: EstoquePageProps) {
   const [aberto, setAberto] = useState<{ loteId: number | null; aba: Aba } | null>(null)
   const [novoLote, setNovoLote] = useState(false)
 
@@ -22,20 +43,34 @@ export function EstoquePage({ lotes, produtos, localizacoes, usuarioId, onChange
 
   const loteAberto = aberto?.loteId ? lotes.find((lote) => lote.id === aberto.loteId) ?? null : null
 
-  const acoes = <div className="heading-actions">
-    <button className="secondary outline" type="button" onClick={() => setAberto({ loteId: null, aba: 'TRANSFERIR' })}>Transferir ou transformar</button>
-    <button className="primary" type="button" onClick={() => setNovoLote(true)}>+ Novo lote</button>
-  </div>
+  const acoes = podeCriar
+    ? <div className="heading-actions">
+      <button
+        className="secondary outline"
+        type="button"
+        onClick={() => setAberto({ loteId: null, aba: 'TRANSFERIR' })}
+      >
+        Transferir ou transformar
+      </button>
+      <button className="primary" type="button" onClick={() => setNovoLote(true)}>
+        + Novo lote
+      </button>
+    </div>
+    : undefined
 
   return <>
     <PageHeading
       eyebrow="CONTROLE GERAL"
       title="Estoque"
-      description="Veja todos os lotes com entrada, validade e situação. Clique em um lote para ver os itens que ele contém."
+      description={descricaoDaPagina}
       action={acoes}
     />
     <MetricasDeEstoque lotes={lotes} />
-    <TabelaDeLotes lotes={lotes} contexto={contexto} onVerItens={(loteId) => setAberto({ loteId, aba: 'ITENS' })} />
+    <TabelaDeLotes
+      lotes={lotes}
+      contexto={contexto}
+      onVerItens={(loteId) => setAberto({ loteId, aba: 'ITENS' })}
+    />
 
     {aberto && <LotModal
       lote={loteAberto}
@@ -44,6 +79,8 @@ export function EstoquePage({ lotes, produtos, localizacoes, usuarioId, onChange
       produtos={produtos}
       contexto={contexto}
       usuarioId={usuarioId}
+      podeCriar={podeCriar}
+      podeEditar={podeEditar}
       onClose={() => setAberto(null)}
       onChanged={onChanged}
       onFinishedWithoutLot={() => setAberto(null)}

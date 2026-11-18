@@ -6,6 +6,7 @@ from db.database_config import db
 
 from app.features.estoque.models import Localizacao
 from app.features.fichas_tecnicas.models import FichaTecnica
+from app.utils.enums import StatusSolicitacao
 from app.utils.paginacao import PaginacaoQuery, paginar
 from app.utils.interfaces.repository import RepositorioBase
 
@@ -82,9 +83,9 @@ class ProducaoRepository(RepositorioBase):
             .with_for_update()
         ).scalars())
 
-    def marcar_status(self, solicitacao: SolicitacaoProducao, status: str) -> None:
+    def marcar_status(self, solicitacao: SolicitacaoProducao, status: StatusSolicitacao) -> None:
         solicitacao.status = status
-        if status == "CONCLUIDA":
+        if status == StatusSolicitacao.CONCLUIDA:
             solicitacao.concluido_em = db.func.current_timestamp()
         elif solicitacao.concluido_em is not None:
             solicitacao.concluido_em = None

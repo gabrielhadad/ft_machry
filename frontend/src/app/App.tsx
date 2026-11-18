@@ -5,16 +5,38 @@ import { SheetModal } from '../features/fichas'
 import { useAtualizacaoPeriodica } from '../hooks/useAtualizacaoPeriodica'
 import { LoginPage } from '../pages/Login/LoginPage'
 import { recursosAfetados, useDados, type Mutacao, type Recurso } from '../stores/dados'
-import type { FichaTecnica, Usuario } from '../types'
+import type { FichaTecnica, UsuarioLogado } from '../types'
 import { mensagemDeErro } from '../utils/erros'
-import { escreverNaUrl, podeAcessar, rotaDaView, rotasDoUsuario, viewDaUrl, viewInicial, type ContextoDaPagina, type View } from './router'
+import { podeCriarFicha, podeEditarFicha, podeExcluirFicha } from './regrasDeAcesso'
+import {
+  escreverNaUrl,
+  podeAcessar,
+  rotaDaView,
+  rotasDoUsuario,
+  viewDaUrl,
+  viewInicial,
+  type ContextoDaPagina,
+  type View,
+} from './router'
 import { Shell } from './Shell'
 
 type Toast = { text: string; error?: boolean }
 
+type ModalDeFicha = FichaTecnica | 'new' | null
+
 const recursosDoEditorDeFicha: Recurso[] = ['produtos', 'fases']
 
 const INTERVALO_DE_ATUALIZACAO_MS = 60_000
+
+const avisoSemPermissoes =
+  'Seu usuário ainda não tem permissões. ' +
+  'Peça a um administrador para vinculá-lo a um grupo de acesso.'
+
+function abreEditorDeFicha(usuario: UsuarioLogado, modal: ModalDeFicha) {
+  if (modal === null) return false
+  if (modal === 'new') return podeCriarFicha(usuario)
+  return podeEditarFicha(usuario)
+}
 
 export function App() {
   const branding = useBranding()
@@ -31,21 +53,22 @@ export function App() {
   } = useDados()
   const [erroTela, setErroTela] = useState('')
   const [tentativa, setTentativa] = useState(0)
-  const [sheetModal, setSheetModal] = useState<FichaTecnica | 'new' | null>(null)
+  const [sheetModal, setSheetModal] = useState<ModalDeFicha>(null)
   const [toast, setToast] = useState<Toast | null>(null)
   const [rodadaDeAtualizacao, setRodadaDeAtualizacao] = useState(0)
 
-  const aoEntrar = useCallback((usuario: Usuario) => {
+  const aoEntrar = useCallback((usuario: UsuarioLogado) => {
     const pedida = viewDaUrl()
-    const destino = pedida && podeAcessar(rotaDaView(pedida), usuario) ? pedida : viewInicial(usuario)
+    const destino = pedida && podeAcessar(rotaDaView(pedida), usuario)
+      ? pedida
+      : viewInicial(usuario)
     setView(destino)
     escreverNaUrl(destino, 'substituir')
   }, [])
   const { usuario, iniciar, logout } = useSessao({ aoEntrar, aoEncerrar: limpar })
 
   const rota = rotaDaView(view)
-  const canManageCatalog = usuario?.papel === 'OWNER'
-  const editorDeFichaAberto = sheetModal !== null && canManageCatalog
+  const editorDeFichaAberto = usuario ? abreEditorDeFicha(usuario, sheetModal) : false
   const recursosDaTela = usuario ? rota.recursos(usuario) : []
   const recursosDoModal = editorDeFichaAberto ? recursosDoEditorDeFicha : []
   const recursosNecessarios = [...recursosDaTela, ...recursosDoModal]
@@ -112,7 +135,10 @@ export function App() {
   }
 
   if (usuario === undefined) {
-    return <div className="app-loading"><BrandMark className="brand-mark" /><span>Carregando {branding.nome}…</span></div>
+    return <div className="app-loading">
+      <BrandMark className="brand-mark" />
+      <span>Carregando {branding.nome}…</span>
+    </div>
   }
   if (usuario === null) return <LoginPage onLogin={iniciar} />
 
@@ -135,14 +161,20 @@ export function App() {
     rodadaDeAtualizacao,
   }
 
+  const rotasLiberadas = rotasDoUsuario(usuario)
+
   let page
   if (!podeAcessar(rota, usuario)) {
-    page = <section className="panel">Acesso restrito.</section>
+    page = <section className="panel">
+      {rotasLiberadas.length === 0 ? avisoSemPermissoes : 'Acesso restrito.'}
+    </section>
   } else if (erroTela && faltamDadosDaTela) {
     page = <section className="panel load-error">
       <strong>Não foi possível acessar a API</strong>
       <p>{erroTela}</p>
-      <button className="primary" onClick={() => setTentativa((valor) => valor + 1)}>Tentar novamente</button>
+      <button className="primary" onClick={() => setTentativa((valor) => valor + 1)}>
+        Tentar novamente
+      </button>
     </section>
   } else if (faltamDadosDaTela) {
     page = <section className="panel load-error">Carregando dados da operação…</section>
@@ -152,7 +184,7 @@ export function App() {
 
   return <>
     <Shell
-      rotas={rotasDoUsuario(usuario)}
+      rotas={rotasLiberadas}
       viewAtual={view}
       titulo={rota.titulo}
       menuOpen={menuOpen}
@@ -169,7 +201,8 @@ export function App() {
       ficha={sheetModal === 'new' ? null : sheetModal}
       produtos={dados.produtos}
       catalogoFases={dados.fases}
-      canEdit={canManageCatalog}
+      canEdit={podeEditarFicha(usuario)}
+      canDelete={podeExcluirFicha(usuario)}
       onClose={() => setSheetModal(null)}
       onSaved={() => void aoAlterar('ficha', 'Ficha técnica salva com sucesso.')}
       onDeleted={() => void aoAlterar('ficha', 'Ficha técnica excluída.')}

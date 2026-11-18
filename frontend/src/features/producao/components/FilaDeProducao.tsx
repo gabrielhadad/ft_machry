@@ -9,14 +9,23 @@ interface FilaDeProducaoProps {
   solicitacoes: SolicitacaoProducao[]
   fichas: FichaTecnica[]
   ocupado: boolean
+  podeAtualizar: boolean
   onStatus: (id: number, status: string) => Promise<void>
   onViewSheet: (ficha: FichaTecnica) => void
 }
 
-export function FilaDeProducao({ solicitacoes, fichas, ocupado, onStatus, onViewSheet }: FilaDeProducaoProps) {
+export function FilaDeProducao({
+  solicitacoes,
+  fichas,
+  ocupado,
+  podeAtualizar,
+  onStatus,
+  onViewSheet,
+}: FilaDeProducaoProps) {
   const fichaPorId = new Map(fichas.map((ficha) => [ficha.id, ficha]))
 
   const acaoDa = (item: SolicitacaoProducao) => {
+    if (!podeAtualizar) return '—'
     if (statusQuePodemIniciar.includes(item.status)) {
       return <button className="text-button" disabled={ocupado} onClick={() => void onStatus(item.id, 'EM_PRODUCAO')}>Iniciar</button>
     }

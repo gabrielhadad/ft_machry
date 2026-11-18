@@ -1,5 +1,6 @@
 from flask import Blueprint, g, session
 
+from app.features.acessos.repository import AcessoRepository
 from app.features.usuarios.repository import UsuarioRepository
 from app.features.usuarios.schemas import UsuarioOut
 from app.utils.parsing import entrada
@@ -15,7 +16,9 @@ def get_service() -> AuthService:
 
 
 def _saida(usuario):
-    return UsuarioOut.model_validate(usuario).model_dump()
+    saida = UsuarioOut.model_validate(usuario).model_dump()
+    saida["permissoes"] = AcessoRepository().listar_codigos_do_usuario(usuario.id)
+    return saida
 
 
 @bp.post("/login")

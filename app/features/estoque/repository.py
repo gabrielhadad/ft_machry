@@ -8,7 +8,7 @@ from sqlalchemy import or_, text
 from db.database_config import db
 
 from app.features.usuarios.models import Usuario
-from app.utils.constantes import Constantes
+from app.utils.enums import StatusItem, TipoMovimentacao
 from app.utils.paginacao import PaginacaoQuery, paginar, paginar_sql
 from app.utils.interfaces.repository import RepositorioBase
 
@@ -87,12 +87,12 @@ class EstoqueRepository(RepositorioBase):
 
     def _aplicar_saldo(self, *, tipo, lote_origem: Lote, lote_destino: Optional[Lote],
                         quantidade, quantidade_destino) -> None:
-        if tipo in Constantes.TIPOS_SOMAM_NA_ORIGEM:
+        if tipo in TipoMovimentacao.que_somam_na_origem():
             lote_origem.quantidade += quantidade
-        elif tipo in Constantes.TIPOS_SUBTRAEM_DA_ORIGEM:
+        elif tipo in TipoMovimentacao.que_subtraem_da_origem():
             lote_origem.quantidade -= quantidade
 
-        if tipo in Constantes.TIPOS_COM_DESTINO:
+        if tipo in TipoMovimentacao.com_destino():
             lote_destino.quantidade += quantidade_destino if quantidade_destino is not None else quantidade
 
     def transformacao_cadastrada(self, produto_origem_id: int, produto_destino_id: int) -> bool:
@@ -249,10 +249,10 @@ class EstoqueRepository(RepositorioBase):
         consulta = (
             db.select(ItemLote)
             .where(ItemLote.lote_id == lote_id)
-            .where(ItemLote.status.in_(Constantes.STATUS_ITEM_LIVRES))
+            .where(ItemLote.status.in_(StatusItem.livres()))
             .where(or_(ItemLote.data_validade.is_(None), ItemLote.data_validade >= hoje))
             .order_by(
-                ItemLote.status != "EM_USO",
+                ItemLote.status != StatusItem.EM_USO,
                 ItemLote.data_validade.is_(None),
                 ItemLote.data_validade,
                 ItemLote.lote_origem_id,
@@ -267,7 +267,7 @@ class EstoqueRepository(RepositorioBase):
         consulta = (
             db.select(ItemLote)
             .where(ItemLote.lote_id == lote_id)
-            .where(ItemLote.status.in_(Constantes.STATUS_ITEM_ATIVOS))
+            .where(ItemLote.status.in_(StatusItem.ativos()))
         )
         return list(db.session.execute(consulta).scalars())
 

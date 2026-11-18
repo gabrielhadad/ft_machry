@@ -11,7 +11,7 @@ Sistema de operação para restaurante, com API Flask, frontend React com Vite e
 - Estoque geral de insumos, produtos intermediários e produtos finais, com entradas, saídas e ajustes pela interface.
 - Planejamento e conclusão da produção com quantidade desejada, baixa FEFO dos componentes e entrada automática do produto final.
 - Interface responsiva para produtos e fichas técnicas.
-- Login por sessão com perfis de proprietária, gestor e cozinha.
+- Login por sessão com grupos de acesso e permissões por recurso (visualizar, criar, atualizar e excluir).
 - Swagger em `/docs`.
 
 ## Executar na VM com Docker e SQLite
@@ -70,15 +70,23 @@ O servidor Vite abre em `http://localhost:5173` e encaminha `/api` para o Flask 
 
 ### Acessos iniciais de desenvolvimento
 
-Ao executar `flask --app app init-db`, o sistema cria ou atualiza as contas iniciais:
+Ao executar `flask --app app init-db`, o sistema cria ou atualiza as contas iniciais, cada uma em um grupo de acesso:
 
-| Perfil | Usuário | Senha inicial |
+| Grupo de acesso | Usuário | Senha inicial |
 |---|---|---|
-| Proprietária | `dona` | `Dona@123` |
+| Administrador | `dona` | `Dona@123` |
 | Gestor | `gestor` | `Gestor@123` |
 | Cozinha | `cozinha` | `Cozinha@123` |
 
 Altere as credenciais e `SECRET_KEY` no arquivo `.env` antes de publicar. As senhas são armazenadas no banco somente como hash.
+
+### Grupos de acesso e permissões
+
+Um usuário pode pertencer a vários grupos, e cada grupo reúne permissões no formato `recurso:acao`. Os recursos são `produtos`, `fichas_tecnicas`, `estoque`, `localizacoes`, `producao`, `usuarios` e `grupos_acesso`; as ações são `ler`, `criar`, `atualizar` e `excluir`. Cada rota da API exige uma permissão (GET exige `ler`, POST `criar`, PUT `atualizar`, DELETE `excluir`), e o usuário acumula as permissões de todos os seus grupos.
+
+O `init-db` cria três grupos. O **Administrador** tem todas as permissões e é protegido: não pode ser alterado nem excluído, e precisa manter ao menos um usuário ativo. O **Gestor** opera estoque, localizações e produção e consulta produtos e fichas. A **Cozinha** acompanha a fila de produção, atualiza o andamento e consulta fichas. Os demais grupos são livres: crie, altere e exclua pela tela de grupos ou pela API em `/api/grupos-acesso`.
+
+Em bancos criados antes dos grupos, o `init-db` converte o perfil antigo de cada usuário (`OWNER`, `ADMIN`, `USER`) para o grupo correspondente. No PostgreSQL a coluna `papel` é removida; no SQLite ela permanece sem uso.
 
 Para validar a compilação:
 

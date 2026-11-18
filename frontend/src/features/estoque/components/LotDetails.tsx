@@ -11,10 +11,21 @@ interface LotDetailsProps {
   usuarioId: number
   itens: ItemLote[] | null
   erroItens: string
+  podeCriar: boolean
+  podeEditar: boolean
   onItemChanged: (mensagem: string) => Promise<void>
 }
 
-export function LotDetails({ lote, contexto, usuarioId, itens, erroItens, onItemChanged }: LotDetailsProps) {
+export function LotDetails({
+  lote,
+  contexto,
+  usuarioId,
+  itens,
+  erroItens,
+  podeCriar,
+  podeEditar,
+  onItemChanged,
+}: LotDetailsProps) {
   const produto = contexto.produtosPorId.get(lote.produto_id)
   const unidade = produto?.unidade_medida ?? ''
   const sit = situacaoDo(lote)
@@ -45,7 +56,16 @@ export function LotDetails({ lote, contexto, usuarioId, itens, erroItens, onItem
             <span><i className="consumida" /><strong>{lote.itens_consumidos}</strong> consumidas</span>
           </div>
         </div>
-        <ItemsTable loteId={lote.id} usuarioId={usuarioId} itens={itens} erro={erroItens} unidade={unidade} onItemChanged={onItemChanged} />
+        <ItemsTable
+          loteId={lote.id}
+          usuarioId={usuarioId}
+          itens={itens}
+          erro={erroItens}
+          unidade={unidade}
+          podeCriar={podeCriar}
+          podeEditar={podeEditar}
+          onItemChanged={onItemChanged}
+        />
       </>
       : <>
         <div className="lot-section">
