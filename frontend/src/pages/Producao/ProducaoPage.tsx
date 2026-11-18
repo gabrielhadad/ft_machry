@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PageHeading } from '../../components/ui'
+import { ActiveTimersBadge } from '../../features/fichas/components/ActiveTimersBadge'
 import {
   alterarStatusDaSolicitacao,
   criarSolicitacao,
@@ -81,7 +82,12 @@ export function ProducaoPage({
       eyebrow="COZINHA"
       title="Produção"
       description="Fila de preparos definida pelo gestor para a equipe da cozinha."
-      action={acaoDeImprimir}
+      action={
+        <div className="heading-actions">
+          <ActiveTimersBadge />
+          {acaoDeImprimir}
+        </div>
+      }
     />
     {canPlan && <MetricasDeProducao solicitacoes={solicitacoes} />}
     {canPlan && <PlanejadorDeProducao
