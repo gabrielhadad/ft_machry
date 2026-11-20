@@ -22,3 +22,9 @@ class Usuario(db.Model):
         back_populates="usuarios",
         order_by="GrupoAcesso.nome",
     )
+    pracas = db.relationship(
+        "Praca",
+        secondary="praca_usuario",
+        back_populates="cozinheiros",
+        order_by="Praca.nome",
+    )

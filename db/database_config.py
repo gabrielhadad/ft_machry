@@ -95,6 +95,25 @@ def _migrar_producao() -> None:
     db.session.commit()
 
 
+def _migrar_pracas() -> None:
+    """Adiciona o vínculo opcional em bases já existentes, sem alterar as produções."""
+    colunas = {
+        coluna["name"]
+        for coluna in inspect(db.engine).get_columns("solicitacao_producao")
+    }
+    if "praca_id" not in colunas:
+        db.session.execute(text(
+            "ALTER TABLE solicitacao_producao "
+            "ADD COLUMN praca_id INTEGER REFERENCES praca(id)"
+        ))
+    # CREATE ALL não cria índices novos em tabelas que já existiam.
+    db.session.execute(text(
+        "CREATE INDEX IF NOT EXISTS ix_solicitacao_producao_praca_id "
+        "ON solicitacao_producao (praca_id)"
+    ))
+    db.session.commit()
+
+
 def _sincronizar_permissoes() -> None:
     from app.features.acessos.models import Permissao
     from app.utils.permissoes import catalogo_de_permissoes
@@ -300,6 +319,7 @@ def init_db_command(seed: bool):
         _migrar_produto()
         _migrar_lote()
         _migrar_producao()
+        _migrar_pracas()
         _sincronizar_acessos()
         click.echo("Banco já criado e atualizado")
         return

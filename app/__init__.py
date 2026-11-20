@@ -14,6 +14,7 @@ from app.features import (
     produtos,
     usuarios,
 )
+from app.features.pracas import models as _pracas_models  # Registra as novas tabelas no metadata.
 from app.middleware import registrar_middleware_autenticacao
 from db.database_config import init_app as init_db
 

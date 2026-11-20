@@ -28,6 +28,8 @@ class SolicitacaoProducao(db.Model):
     localizacao_destino_id = db.Column(
         db.Integer, db.ForeignKey("localizacao.id"), nullable=True
     )
+    praca_id = db.Column(db.Integer, db.ForeignKey("praca.id"), nullable=True, index=True)
+    praca = db.relationship("Praca", back_populates="solicitacoes")
     status = db.Column(
         db.Text,
         nullable=False,
