@@ -10,6 +10,7 @@ Sistema de operação para restaurante, com API Flask, frontend React com Vite e
 - Lotes, localizações, movimentações e sugestão de saída por FEFO.
 - Estoque geral de insumos, produtos intermediários e produtos finais, com entradas, saídas e ajustes pela interface.
 - Planejamento e conclusão da produção com quantidade desejada, baixa FEFO dos componentes e entrada automática do produto final.
+- Gerenciamento de praças/ilhas de cozinha, com cozinheiros vinculados, atribuição e filtro de solicitações de produção.
 - Interface responsiva para produtos e fichas técnicas.
 - Login por sessão com grupos de acesso e permissões por recurso (visualizar, criar, atualizar e excluir).
 - Swagger em `/docs`.
@@ -82,7 +83,7 @@ Altere as credenciais e `SECRET_KEY` no arquivo `.env` antes de publicar. As sen
 
 ### Grupos de acesso e permissões
 
-Um usuário pode pertencer a vários grupos, e cada grupo reúne permissões no formato `recurso:acao`. Os recursos são `produtos`, `fichas_tecnicas`, `estoque`, `localizacoes`, `producao`, `usuarios` e `grupos_acesso`; as ações são `ler`, `criar`, `atualizar` e `excluir`. Cada rota da API exige uma permissão (GET exige `ler`, POST `criar`, PUT `atualizar`, DELETE `excluir`), e o usuário acumula as permissões de todos os seus grupos.
+Um usuário pode pertencer a vários grupos, e cada grupo reúne permissões no formato `recurso:acao`. Os recursos são `produtos`, `fichas_tecnicas`, `estoque`, `localizacoes`, `producao`, `pracas`, `usuarios` e `grupos_acesso`; as ações são `ler`, `criar`, `atualizar` e `excluir`. Cada rota da API exige uma permissão (GET exige `ler`, POST `criar`, PUT `atualizar`, DELETE `excluir`), e o usuário acumula as permissões de todos os seus grupos.
 
 O `init-db` cria três grupos. O **Administrador** tem todas as permissões e é protegido: não pode ser alterado nem excluído, e precisa manter ao menos um usuário ativo. O **Gestor** opera estoque, localizações e produção e consulta produtos e fichas. A **Cozinha** acompanha a fila de produção, atualiza o andamento e consulta fichas. Os demais grupos são livres: crie, altere e exclua pela tela de grupos ou pela API em `/api/grupos-acesso`.
 
@@ -262,10 +263,36 @@ Regras aplicadas:
 
 Ao adicionar uma ficha à fila, o gestor informa a quantidade planejada e o local do produto final. Os componentes são proporcionais ao rendimento da ficha. Ao concluir, a API executa uma única transação: valida todo o saldo, consome lotes não vencidos por FEFO, registra `CONSUMO_PRODUCAO`, cria o lote final e registra `PRODUCAO`. Se faltar qualquer componente, nenhuma baixa é gravada e a solicitação permanece em produção.
 
+## Praças (gestão de equipe e atribuição de produção)
+
+A entidade `Praca` representa uma estação operacional e é independente de
+`Localizacao`, que continua responsável pelo armazenamento do estoque.
+Uma praça aceita vários cozinheiros (usuários ativos do grupo Cozinha); um
+cozinheiro pode atuar em diversas praças. Cada solicitação de produção pode
+ser vinculada a uma praça, de forma opcional para manter compatibilidade com
+clientes e registros antigos.
+
+A gestão fica em `/pracas`, com API em `/api/pracas` e listagem de cozinheiros
+em `/api/pracas/cozinheiros`. O planejador e a fila de `/producao` permitem
+atribuição, filtro e consulta de praça. A realocação só é permitida antes de
+iniciar a produção, por `PUT /api/producao/solicitacoes/{id}/praca`
+(permissão `producao:criar`). A desativação lógica preserva os vínculos.
+
+**Bancos existentes:** execute `flask --app app init-db` após backup e teste
+em cópia; ele cria os objetos ausentes. As novas permissões `pracas:*` podem
+exigir atribuição manual aos grupos já cadastrados.
+
+[Documentação completa de Praças, contratos, regras e checklist de validação](docs/PRACAS.md).
+A especificação HTTP está em [OpenAPI](docs/openapi.yaml).
+
 ## Testes
 
 ```bash
 pytest -q
 ```
+
+No frontend, execute `pnpm install --frozen-lockfile`,
+`pnpm exec tsc --noEmit` e `pnpm run build`. O código e a documentação
+não substituem a execução dos testes nem a homologação no ambiente alvo.
 
 Cada teste cria um SQLite temporário. O arquivo `data/app.db` não é alterado.

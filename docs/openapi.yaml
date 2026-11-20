@@ -5,10 +5,12 @@ info:
   description: |
     O acesso é controlado por grupos de acesso: um usuário pertence a N grupos e cada grupo
     reúne N permissões. Uma permissão tem o formato `recurso:acao`, com os recursos
-    `produtos`, `fichas_tecnicas`, `estoque`, `localizacoes`, `producao`, `usuarios` e
-    `grupos_acesso`, e as ações `ler`, `criar`, `atualizar` e `excluir`. Cada rota exige uma
+    `produtos`, `fichas_tecnicas`, `estoque`, `localizacoes`, `producao`, `pracas`,
+    `usuarios` e `grupos_acesso`, e as ações `ler`, `criar`, `atualizar` e `excluir`. Cada rota exige uma
     permissão: GET exige `ler`, POST exige `criar`, PUT exige `atualizar` e DELETE exige
-    `excluir` do recurso correspondente. As rotas de localizações ficam sob `/api/estoque`,
+    `excluir` do recurso correspondente. Exceção: realocar uma produção exige
+    `producao:criar` por representar uma alteração no planejamento.
+    As rotas de localizações ficam sob `/api/estoque`,
     mas usam o recurso `localizacoes`. Sem a permissão a API responde 403.
 
     O `init-db` cria os grupos Administrador (todas as permissões, protegido contra
@@ -692,6 +694,111 @@ paths:
         "400": {$ref: "#/components/responses/Invalido"}
         "404": {$ref: "#/components/responses/NaoEncontrado"}
 
+  /api/pracas:
+    get:
+      summary: Lista praças (permissão pracas:ler)
+      tags: [pracas]
+      description: Inclui praças ativas e inativas, com os cozinheiros associados.
+      parameters:
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/PerPage"}
+      responses:
+        "200":
+          description: Lista paginada de praças
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: "#/components/schemas/Pagina"}
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: {$ref: "#/components/schemas/Praca"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "401": {description: Sessão não autenticada}
+        "403": {description: Permissão pracas:ler ausente}
+    post:
+      summary: Cria praça (permissão pracas:criar)
+      tags: [pracas]
+      description: Exige pelo menos um usuário ativo do grupo Cozinha.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/PracaCriar"}
+      responses:
+        "201":
+          description: Praça criada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Praca"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "403": {description: Permissão pracas:criar ausente}
+        "409": {description: Nome de praça já utilizado}
+
+  /api/pracas/cozinheiros:
+    get:
+      summary: Lista cozinheiros elegíveis (permissão pracas:ler)
+      tags: [pracas]
+      description: Retorna usuários ativos do grupo Cozinha; não exige usuarios:ler.
+      parameters:
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/PerPage"}
+      responses:
+        "200":
+          description: Lista paginada de cozinheiros
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - {$ref: "#/components/schemas/Pagina"}
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: {$ref: "#/components/schemas/CozinheiroResumo"}
+        "403": {description: Permissão pracas:ler ausente}
+
+  /api/pracas/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer, minimum: 1}}
+    get:
+      summary: Consulta uma praça (permissão pracas:ler)
+      tags: [pracas]
+      responses:
+        "200":
+          description: Praça consultada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Praca"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+    put:
+      summary: Atualiza dados, equipe ou situação da praça (permissão pracas:atualizar)
+      tags: [pracas]
+      description: Atualização parcial dos campos enviados. Reativação requer cozinheiros elegíveis.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/PracaAtualizar"}
+      responses:
+        "200":
+          description: Praça atualizada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Praca"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+        "409": {description: Nome de praça já utilizado ou violação de integridade}
+    delete:
+      summary: Desativa praça sem apagar histórico (permissão pracas:excluir)
+      tags: [pracas]
+      description: Exclusão lógica; as solicitações já vinculadas mantêm praca_id.
+      responses:
+        "204": {description: Praça desativada (idempotente)}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+
   /api/producao/solicitacoes:
     get:
       summary: Lista solicitações de produção (mais recentes primeiro)
@@ -699,6 +806,10 @@ paths:
       parameters:
         - {$ref: "#/components/parameters/Page"}
         - {$ref: "#/components/parameters/PerPage"}
+        - name: praca_id
+          in: query
+          description: Filtra por praça; ausente retorna todas as solicitações.
+          schema: {type: integer, minimum: 1}
       responses:
         "200":
           description: Lista de solicitações
@@ -726,6 +837,7 @@ paths:
                 ficha_tecnica_id: {type: integer, minimum: 1}
                 quantidade_planejada: {type: number, exclusiveMinimum: 0, description: Quantidade do produto final; omissão usa o rendimento integral da ficha}
                 localizacao_destino_id: {type: integer, minimum: 1, description: Local do lote produzido; omissão usa o primeiro local compatível}
+                praca_id: {type: integer, minimum: 1, nullable: true, description: Praça ativa com equipe elegível; opcional para solicitações antigas}
       responses:
         "201":
           description: Solicitação criada
@@ -746,6 +858,38 @@ paths:
             application/json:
               schema: {$ref: "#/components/schemas/SolicitacaoDetalhe"}
         "404": {$ref: "#/components/responses/NaoEncontrado"}
+
+  /api/producao/solicitacoes/{id}/praca:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: integer, minimum: 1}}
+    put:
+      summary: Realoca ou desatribui a praça no planejamento (permissão producao:criar)
+      tags: [producao]
+      description: |
+        Permitido apenas em ABERTA ou EM_SEPARACAO. O campo praca_id é obrigatório
+        no corpo e aceita null para remover a atribuição. Praças inativas ou sem
+        cozinheiros elegíveis não recebem novas atribuições. O histórico de uma
+        praça posteriormente desativada permanece visível.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [praca_id]
+              additionalProperties: false
+              properties:
+                praca_id: {type: integer, minimum: 1, nullable: true}
+      responses:
+        "200":
+          description: Solicitação com atribuição atualizada
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SolicitacaoProducao"}
+        "400": {$ref: "#/components/responses/Invalido"}
+        "403": {description: Permissão producao:criar ausente}
+        "404": {$ref: "#/components/responses/NaoEncontrado"}
+        "409": {description: Realocação bloqueada após início ou término da produção}
 
   /api/producao/solicitacoes/{id}/status:
     parameters:
@@ -1070,6 +1214,58 @@ components:
         criterio: {type: string, example: "FEFO: menor validade primeiro (somente lotes não vencidos)"}
         aviso: {type: string, example: "Sugestão de separação: não movimenta o estoque"}
 
+    CozinheiroResumo:
+      type: object
+      required: [id, nome, username]
+      properties:
+        id: {type: integer}
+        nome: {type: string}
+        username: {type: string}
+    Praca:
+      type: object
+      required: [id, nome, descricao, ativo, criado_em, cozinheiros]
+      properties:
+        id: {type: integer}
+        nome: {type: string}
+        descricao: {type: string, nullable: true}
+        ativo: {type: integer, enum: [0, 1]}
+        criado_em: {type: string, description: Data/hora em texto no banco}
+        cozinheiros:
+          type: array
+          items: {$ref: "#/components/schemas/CozinheiroResumo"}
+    PracaCriar:
+      type: object
+      additionalProperties: false
+      required: [nome, cozinheiros]
+      properties:
+        nome: {type: string, minLength: 2, maxLength: 120}
+        descricao: {type: string, nullable: true}
+        cozinheiros:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: {type: integer, minimum: 1}
+    PracaAtualizar:
+      type: object
+      additionalProperties: false
+      description: Enviar ao menos um campo; nome, ativo e cozinheiros não aceitam null.
+      minProperties: 1
+      properties:
+        nome: {type: string, minLength: 2, maxLength: 120}
+        descricao: {type: string, nullable: true}
+        ativo: {type: integer, enum: [0, 1]}
+        cozinheiros:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: {type: integer, minimum: 1}
+    PracaResumo:
+      type: object
+      required: [id, nome, ativo]
+      properties:
+        id: {type: integer}
+        nome: {type: string}
+        ativo: {type: integer, enum: [0, 1]}
     SolicitacaoProducao:
       type: object
       properties:
@@ -1078,6 +1274,11 @@ components:
         usuario_id: {type: integer}
         quantidade_planejada: {type: number}
         localizacao_destino_id: {type: integer, nullable: true}
+        praca_id: {type: integer, nullable: true}
+        praca:
+          allOf:
+            - {$ref: "#/components/schemas/PracaResumo"}
+          nullable: true
         status: {type: string, enum: [ABERTA, EM_SEPARACAO, EM_PRODUCAO, CONCLUIDA, CANCELADA]}
         criado_em: {type: string, example: "2026-10-16 15:46:39"}
         concluido_em: {type: string, nullable: true}

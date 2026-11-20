@@ -236,3 +236,35 @@ def test_conclusao_registra_estoque_sem_perder_vinculo_da_praca(app, seeded_clie
             "WHERE solicitacao_producao_id = :id"
         ), {"id": sp_id}).scalar_one()
         assert contagem == len(componentes) + 1
+
+    # Uma segunda conclusão não pode duplicar a baixa nem o lote produzido.
+    repetida = _alterar_status(client, sp_id, "CONCLUIDA")
+    assert repetida.status_code == 400, repetida.get_json()
+    with app.app_context():
+        segunda_contagem = db.session.execute(text(
+            "SELECT COUNT(*) FROM movimentacao_estoque "
+            "WHERE solicitacao_producao_id = :id"
+        ), {"id": sp_id}).scalar_one()
+        assert segunda_contagem == contagem
+
+
+def test_erro_de_estoque_nao_baixa_itens_nem_apaga_praca(app, seeded_client):
+    """Uma conclusão sem insumos deve fazer rollback e preservar a atribuição."""
+    client = seeded_client
+    praca_id = _criar_praca(app, client)
+    sp_id = _criar_solicitacao(client, praca_id)["id"]
+    assert _alterar_status(client, sp_id, "EM_PRODUCAO").status_code == 200
+
+    falha = _alterar_status(client, sp_id, "CONCLUIDA")
+    assert falha.status_code == 400, falha.get_json()
+    detalhe = client.get(f"/api/producao/solicitacoes/{sp_id}").get_json()
+    assert detalhe["solicitacao"]["status"] == "EM_PRODUCAO"
+    assert detalhe["solicitacao"]["praca_id"] == praca_id
+    assert detalhe["lotes_produzidos"] == []
+
+    with app.app_context():
+        movimentos = db.session.execute(
+            text("SELECT COUNT(*) FROM movimentacao_estoque WHERE solicitacao_producao_id = :id"),
+            {"id": sp_id},
+        ).scalar_one()
+        assert movimentos == 0
