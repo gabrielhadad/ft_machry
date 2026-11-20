@@ -7,6 +7,9 @@ from app import create_app
 def app(tmp_path):
     return create_app({
         "TESTING": True,
+        # Ignora configuracoes de banco do .env para isolar os testes.
+        "DATABASE_URL": None,
+        "DB_CONNECTION": "sqlite",
         "DATABASE_PATH": str(tmp_path / "test.db"),
         "SECRET_KEY": "test-secret",
         "OWNER_INITIAL_PASSWORD": "Teste@123",

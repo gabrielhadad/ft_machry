@@ -44,6 +44,8 @@ def test_praca_associa_multiplos_cozinheiros_e_producao(app, seeded_client):
             nome="Auxiliar", username="auxiliar", senha_hash="hash-teste",
             grupos=list(cozinheiro.grupos),
         )
+        # Persistir antes de consultas que disparam o autoflush do SQLAlchemy.
+        db.session.add(auxiliar)
         ficha_id = db.session.execute(text("SELECT id FROM ficha_tecnica LIMIT 1")).scalar_one()
         praca = Praca(nome="Grelha", descricao="Estação de grelhados")
         praca.cozinheiros = [cozinheiro, auxiliar]
@@ -90,10 +92,30 @@ def test_associacao_nao_aceita_usuario_inexistente(app, client):
 
 
 def test_migracao_preserva_solicitacao_existente(app, seeded_client):
-    """Simula coluna ausente SOMENTE no banco temporário de teste."""
+    """Migra tabela legada no banco temporário, preservando a solicitação."""
     with app.app_context():
         usuario_id = db.session.execute(text("SELECT id FROM usuario LIMIT 1")).scalar_one()
         ficha_id = db.session.execute(text("SELECT id FROM ficha_tecnica LIMIT 1")).scalar_one()
+
+        # O SQLite não permite remover uma coluna referenciada por uma FK.
+        # Reconstruímos a tabela vazia com seu esquema anterior à Fase 1,
+        # somente no banco isolado criado pelo fixture de teste.
+        db.session.execute(text("DROP TABLE solicitacao_producao"))
+        db.session.execute(text("""
+            CREATE TABLE solicitacao_producao (
+                id INTEGER PRIMARY KEY,
+                ficha_tecnica_id INTEGER NOT NULL REFERENCES ficha_tecnica(id),
+                usuario_id INTEGER NOT NULL REFERENCES usuario(id),
+                quantidade_planejada NUMERIC NOT NULL DEFAULT 1,
+                localizacao_destino_id INTEGER REFERENCES localizacao(id),
+                status TEXT NOT NULL DEFAULT 'ABERTA',
+                criado_em VARCHAR NOT NULL DEFAULT (CAST(CURRENT_TIMESTAMP AS TEXT)),
+                concluido_em VARCHAR,
+                CONSTRAINT ck_solicitacao_status CHECK (
+                    status IN ('ABERTA', 'EM_SEPARACAO', 'EM_PRODUCAO', 'CONCLUIDA', 'CANCELADA')
+                )
+            )
+        """))
         db.session.execute(
             text("INSERT INTO solicitacao_producao (ficha_tecnica_id, usuario_id) "
                  "VALUES (:f, :u)"),
@@ -101,9 +123,10 @@ def test_migracao_preserva_solicitacao_existente(app, seeded_client):
         )
         db.session.commit()
         sp_id = db.session.execute(text("SELECT MAX(id) FROM solicitacao_producao")).scalar_one()
-        db.session.execute(text("DROP INDEX ix_solicitacao_producao_praca_id"))
-        db.session.execute(text("ALTER TABLE solicitacao_producao DROP COLUMN praca_id"))
-        db.session.commit()
+        # Inspeciona pela conexão já aberta para não competir por bloqueios no SQLite.
+        assert "praca_id" not in {
+            coluna["name"] for coluna in inspect(db.session.connection()).get_columns("solicitacao_producao")
+        }
         db.session.remove()
 
         resultado = app.test_cli_runner().invoke(args=["init-db"])
@@ -113,8 +136,12 @@ def test_migracao_preserva_solicitacao_existente(app, seeded_client):
             {"id": sp_id},
         ).one()
         assert registro == (sp_id, None)
-        indice = [i["name"] for i in inspect(db.engine).get_indexes("solicitacao_producao")]
+        indice = [
+            i["name"]
+            for i in inspect(db.session.connection()).get_indexes("solicitacao_producao")
+        ]
         assert "ix_solicitacao_producao_praca_id" in indice
+        db.session.remove()
 
         # Rodar novamente não deve falhar nem duplicar informações.
         resultado = app.test_cli_runner().invoke(args=["init-db"])
