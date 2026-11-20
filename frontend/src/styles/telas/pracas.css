@@ -1,0 +1,55 @@
+.praca-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.praca-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.praca-chip {
+  border: 1px solid #cfdbd1;
+  border-radius: 999px;
+  background: #ecf2e9;
+  color: #375b4d;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+button.praca-chip {
+  cursor: pointer;
+}
+
+button.praca-chip:hover {
+  background: #dfeadf;
+}
+
+.praca-selecao {
+  display: grid;
+  gap: 12px;
+}
+
+.praca-selecao small {
+  color: var(--muted);
+}
+
+.praca-status-inativo {
+  color: #976247;
+}
+
+@media(max-width:600px) {
+  .praca-actions { gap: 8px; }
+}
+
+.praca-descricao {
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

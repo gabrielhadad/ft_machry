@@ -5,6 +5,7 @@ import { GruposDeAcessoPage } from '../pages/GruposDeAcesso/GruposDeAcessoPage'
 import { InicioPage } from '../pages/Inicio/InicioPage'
 import { LocalizacoesPage } from '../pages/Localizacoes/LocalizacoesPage'
 import { MovimentacoesPage } from '../pages/Movimentacoes/MovimentacoesPage'
+import { PracasPage } from '../pages/Pracas/PracasPage'
 import { ProducaoPage } from '../pages/Producao/ProducaoPage'
 import { ProdutosPage } from '../pages/Produtos/ProdutosPage'
 import { UsuariosPage } from '../pages/Usuarios/UsuariosPage'
@@ -19,6 +20,7 @@ export type View =
   | 'fichas'
   | 'estoque'
   | 'producao'
+  | 'pracas'
   | 'historico'
   | 'locais'
   | 'usuarios'
@@ -114,19 +116,39 @@ export const rotas: Rota[] = [
     titulo: 'Produção',
     icone: '◉',
     permissoes: ['producao:ler', 'fichas_tecnicas:ler'],
-    recursos: (usuario) => podePlanejarProducao(usuario)
-      ? ['solicitacoes', 'fichas', 'produtos', 'localizacoes']
-      : ['solicitacoes', 'fichas'],
+    recursos: (usuario) => [
+      'solicitacoes', 'fichas',
+      ...(podePlanejarProducao(usuario) ? (['produtos', 'localizacoes'] as Recurso[]) : []),
+      ...(temPermissao(usuario, 'pracas:ler') ? (['pracas'] as Recurso[]) : []),
+    ],
     pagina: ({ usuario, dados, abrirFicha, aoAlterar, avisarErro }) => <ProducaoPage
       solicitacoes={dados.solicitacoes}
       fichas={dados.fichas}
       produtos={dados.produtos}
       localizacoes={dados.localizacoes}
+      pracas={dados.pracas}
+      podeConsultarPracas={temPermissao(usuario, 'pracas:ler')}
       canPlan={podePlanejarProducao(usuario)}
       podeAtualizar={temPermissao(usuario, 'producao:atualizar')}
       onViewSheet={abrirFicha}
       aoAlterar={aoAlterar}
       avisarErro={avisarErro}
+    />,
+  },
+  {
+    view: 'pracas',
+    caminho: '/pracas',
+    titulo: 'Praças',
+    icone: '♧',
+    permissoes: ['pracas:ler'],
+    recursos: () => ['pracas'],
+    pagina: ({ usuario, dados, aoAlterar, rodadaDeAtualizacao }) => <PracasPage
+      pracas={dados.pracas}
+      podeCriar={temPermissao(usuario, 'pracas:criar')}
+      podeAtualizar={temPermissao(usuario, 'pracas:atualizar')}
+      podeExcluir={temPermissao(usuario, 'pracas:excluir')}
+      aoAlterar={aoAlterar}
+      rodadaDeAtualizacao={rodadaDeAtualizacao}
     />,
   },
   {

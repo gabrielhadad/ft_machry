@@ -10,6 +10,8 @@ interface FilaDeProducaoProps {
   fichas: FichaTecnica[]
   ocupado: boolean
   podeAtualizar: boolean
+  podeAtribuir: boolean
+  onAtribuir: (solicitacao: SolicitacaoProducao) => void
   onStatus: (id: number, status: string) => Promise<void>
   onViewSheet: (ficha: FichaTecnica) => void
 }
@@ -19,6 +21,8 @@ export function FilaDeProducao({
   fichas,
   ocupado,
   podeAtualizar,
+  podeAtribuir,
+  onAtribuir,
   onStatus,
   onViewSheet,
 }: FilaDeProducaoProps) {
@@ -39,7 +43,7 @@ export function FilaDeProducao({
     <div className="table-wrap">
       <table>
         <thead>
-          <tr><th>Solicitação</th><th>Produto</th><th>Quantidade</th><th>Status</th><th>Criada em</th><th>Concluída em</th><th>Ação</th></tr>
+          <tr><th>Solicitação</th><th>Produto</th><th>Quantidade</th><th>Praça</th><th>Status</th><th>Criada em</th><th>Concluída em</th><th>Ação</th></tr>
         </thead>
         <tbody>
           {solicitacoes.map((item) => {
@@ -50,10 +54,21 @@ export function FilaDeProducao({
                 ? <button className="text-button sheet-link" onClick={() => onViewSheet(ficha)}>{ficha.produto}</button>
                 : <strong>Ficha #{item.ficha_tecnica_id}</strong>}</td>
               <td>{numero.format(item.quantidade_planejada)} {ficha?.unidade_rendimento ?? ''}</td>
+              <td>{item.praca?.nome ?? (item.praca_id ? `Praça #${item.praca_id}` : 'Sem praça')}</td>
               <td><span className={`badge status-${item.status.toLowerCase()}`}>{item.status.replaceAll('_', ' ')}</span></td>
               <td>{formatarData(item.criado_em)}</td>
               <td>{formatarData(item.concluido_em)}</td>
-              <td>{acaoDa(item)}</td>
+              <td>
+                <div className="production-actions">
+                  {acaoDa(item)}
+                  {podeAtribuir && statusQuePodemIniciar.includes(item.status) && <button
+                    className="text-button"
+                    type="button"
+                    disabled={ocupado}
+                    onClick={() => onAtribuir(item)}
+                  >Alterar praça</button>}
+                </div>
+              </td>
             </tr>
           })}
         </tbody>

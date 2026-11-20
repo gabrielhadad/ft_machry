@@ -4,6 +4,7 @@ export type RecursoPermissao =
   | 'estoque'
   | 'localizacoes'
   | 'producao'
+  | 'pracas'
   | 'usuarios'
   | 'grupos_acesso'
 

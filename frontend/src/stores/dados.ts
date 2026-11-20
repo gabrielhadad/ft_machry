@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { apiListAll } from '../services/api'
-import type { FaseCatalogo, FichaTecnica, Localizacao, Lote, Produto, SolicitacaoProducao } from '../types'
+import type { FaseCatalogo, FichaTecnica, Localizacao, Lote, Praca, Produto, SolicitacaoProducao } from '../types'
 
-export type Recurso = 'produtos' | 'fichas' | 'fases' | 'lotes' | 'localizacoes' | 'solicitacoes'
+export type Recurso = 'produtos' | 'fichas' | 'fases' | 'lotes' | 'localizacoes' | 'solicitacoes' | 'pracas'
 
 export type EstadoDoRecurso = 'vazio' | 'pronto' | 'desatualizado'
 
@@ -13,6 +13,7 @@ export interface Dados {
   lotes: Lote[]
   localizacoes: Localizacao[]
   solicitacoes: SolicitacaoProducao[]
+  pracas: Praca[]
 }
 
 export const dadosVazios: Dados = {
@@ -22,9 +23,10 @@ export const dadosVazios: Dados = {
   lotes: [],
   localizacoes: [],
   solicitacoes: [],
+  pracas: [],
 }
 
-const todosOsRecursos: Recurso[] = ['produtos', 'fichas', 'fases', 'lotes', 'localizacoes', 'solicitacoes']
+const todosOsRecursos: Recurso[] = ['produtos', 'fichas', 'fases', 'lotes', 'localizacoes', 'solicitacoes', 'pracas']
 
 const rotaDoRecurso: Record<Recurso, string> = {
   produtos: '/api/produtos',
@@ -33,9 +35,10 @@ const rotaDoRecurso: Record<Recurso, string> = {
   lotes: '/api/estoque/lotes',
   localizacoes: '/api/estoque/localizacoes',
   solicitacoes: '/api/producao/solicitacoes',
+  pracas: '/api/pracas',
 }
 
-export type Mutacao = 'produto' | 'ficha' | 'estoque' | 'producao' | 'localizacao'
+export type Mutacao = 'produto' | 'ficha' | 'estoque' | 'producao' | 'localizacao' | 'praca'
 
 export const recursosAfetados: Record<Mutacao, Recurso[]> = {
   produto: ['produtos', 'fichas', 'lotes'],
@@ -43,14 +46,15 @@ export const recursosAfetados: Record<Mutacao, Recurso[]> = {
   estoque: ['lotes'],
   producao: ['solicitacoes', 'lotes'],
   localizacao: ['localizacoes', 'lotes'],
+  praca: ['pracas', 'solicitacoes'],
 }
 
 function estadosIniciais(): Record<Recurso, EstadoDoRecurso> {
-  return { produtos: 'vazio', fichas: 'vazio', fases: 'vazio', lotes: 'vazio', localizacoes: 'vazio', solicitacoes: 'vazio' }
+  return { produtos: 'vazio', fichas: 'vazio', fases: 'vazio', lotes: 'vazio', localizacoes: 'vazio', solicitacoes: 'vazio', pracas: 'vazio' }
 }
 
 function versoesZeradas(): Record<Recurso, number> {
-  return { produtos: 0, fichas: 0, fases: 0, lotes: 0, localizacoes: 0, solicitacoes: 0 }
+  return { produtos: 0, fichas: 0, fases: 0, lotes: 0, localizacoes: 0, solicitacoes: 0, pracas: 0 }
 }
 
 export function useDados() {

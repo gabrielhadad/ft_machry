@@ -1,4 +1,5 @@
-export { alterarStatusDaSolicitacao, criarSolicitacao } from './api/producaoApi'
+export { alterarPracaDaSolicitacao, alterarStatusDaSolicitacao, criarSolicitacao } from './api/producaoApi'
 export { FilaDeProducao } from './components/FilaDeProducao'
+export { ModalDeAtribuicao } from './components/ModalDeAtribuicao'
 export { MetricasDeProducao } from './components/MetricasDeProducao'
 export { PlanejadorDeProducao } from './components/PlanejadorDeProducao'
