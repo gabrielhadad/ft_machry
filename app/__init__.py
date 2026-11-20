@@ -11,10 +11,10 @@ from app.features import (
     estoque,
     fichas_tecnicas,
     producao,
+    pracas,
     produtos,
     usuarios,
 )
-from app.features.pracas import models as _pracas_models  # Registra as novas tabelas no metadata.
 from app.middleware import registrar_middleware_autenticacao
 from db.database_config import init_app as init_db
 
@@ -48,6 +48,7 @@ def create_app(config: dict | None = None) -> Flask:
     )
     app.register_blueprint(estoque.bp, url_prefix=f"{prefixo_api}/estoque")
     app.register_blueprint(producao.bp, url_prefix=f"{prefixo_api}/producao")
+    app.register_blueprint(pracas.bp, url_prefix=f"{prefixo_api}/pracas")
 
     @app.get("/health")
     def health():

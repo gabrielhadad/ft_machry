@@ -52,6 +52,7 @@ def test_grupos_padrao(client):
         "fichas_tecnicas:ler",
         "producao:ler",
         "producao:atualizar",
+        "pracas:ler",
     }
     assert "produtos:criar" not in codigos(grupos["Gestor"])
     assert "estoque:criar" in codigos(grupos["Gestor"])

@@ -111,6 +111,10 @@ def _migrar_pracas() -> None:
         "CREATE INDEX IF NOT EXISTS ix_solicitacao_producao_praca_id "
         "ON solicitacao_producao (praca_id)"
     ))
+    db.session.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_praca_nome_normalizado "
+        "ON praca (lower(nome))"
+    ))
     db.session.commit()
 
 

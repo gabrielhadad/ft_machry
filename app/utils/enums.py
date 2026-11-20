@@ -142,6 +142,7 @@ class RecursoPermissao(EnumBase):
     ESTOQUE = "estoque"
     LOCALIZACOES = "localizacoes"
     PRODUCAO = "producao"
+    PRACAS = "pracas"
     USUARIOS = "usuarios"
     GRUPOS_ACESSO = "grupos_acesso"
 
@@ -153,6 +154,7 @@ class RecursoPermissao(EnumBase):
             RecursoPermissao.ESTOQUE: "Estoque",
             RecursoPermissao.LOCALIZACOES: "Localizações",
             RecursoPermissao.PRODUCAO: "Produção",
+            RecursoPermissao.PRACAS: "Praças",
             RecursoPermissao.USUARIOS: "Usuários",
             RecursoPermissao.GRUPOS_ACESSO: "Grupos de acesso",
         }[self]
@@ -202,10 +204,12 @@ class GrupoPadrao(EnumBase):
                 RecursoPermissao.ESTOQUE: AcaoPermissao.sem_exclusao(),
                 RecursoPermissao.LOCALIZACOES: tuple(AcaoPermissao),
                 RecursoPermissao.PRODUCAO: AcaoPermissao.sem_exclusao(),
+                RecursoPermissao.PRACAS: tuple(AcaoPermissao),
             }
         return {
             RecursoPermissao.FICHAS_TECNICAS: (AcaoPermissao.LER,),
             RecursoPermissao.PRODUCAO: (AcaoPermissao.LER, AcaoPermissao.ATUALIZAR),
+            RecursoPermissao.PRACAS: (AcaoPermissao.LER,),
         }
 
 

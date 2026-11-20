@@ -40,3 +40,7 @@ class PracaUsuario(db.Model):
         primary_key=True,
         index=True,
     )
+
+
+# O índice funcional impede nomes equivalentes, mesmo com maiúsculas diferentes.
+db.Index("uq_praca_nome_normalizado", db.func.lower(Praca.__table__.c.nome), unique=True)
