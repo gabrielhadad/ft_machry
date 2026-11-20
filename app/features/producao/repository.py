@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from sqlalchemy import text
+from sqlalchemy.orm import selectinload
 
 from db.database_config import db
 
 from app.features.estoque.models import Localizacao
+from app.features.pracas.models import Praca
 from app.features.fichas_tecnicas.models import FichaTecnica
 from app.utils.enums import StatusSolicitacao
 from app.utils.paginacao import PaginacaoQuery, paginar
@@ -14,9 +16,16 @@ from .models import SolicitacaoProducao, SpComponente, SpFase
 
 
 class ProducaoRepository(RepositorioBase):
-    def listar_solicitacoes(self, paginacao: PaginacaoQuery):
+    def listar_solicitacoes(
+        self, paginacao: PaginacaoQuery, praca_id: int | None = None
+    ):
+        consulta = db.select(SolicitacaoProducao).options(
+            selectinload(SolicitacaoProducao.praca)
+        )
+        if praca_id is not None:
+            consulta = consulta.where(SolicitacaoProducao.praca_id == praca_id)
         return paginar(
-            db.select(SolicitacaoProducao).order_by(
+            consulta.order_by(
                 SolicitacaoProducao.criado_em.desc(), SolicitacaoProducao.id.desc()
             ),
             paginacao,
@@ -26,6 +35,9 @@ class ProducaoRepository(RepositorioBase):
         return db.session.get(
             SolicitacaoProducao, sp_id, with_for_update=para_atualizacao
         )
+
+    def obter_praca(self, praca_id: int, para_atualizacao: bool = False):
+        return db.session.get(Praca, praca_id, with_for_update=para_atualizacao)
 
     def obter_ficha(self, ficha_id: int):
         return db.session.get(FichaTecnica, ficha_id)
@@ -44,12 +56,14 @@ class ProducaoRepository(RepositorioBase):
     def criar_solicitacao(
         self, ficha: FichaTecnica, usuario_id: int, quantidade: float,
         localizacao_id: int,
+        praca_id: int | None = None,
     ) -> SolicitacaoProducao:
         solicitacao = SolicitacaoProducao(
             ficha_tecnica_id=ficha.id,
             usuario_id=usuario_id,
             quantidade_planejada=quantidade,
             localizacao_destino_id=localizacao_id,
+            praca_id=praca_id,
         )
         db.session.add(solicitacao)
         db.session.flush()
@@ -72,7 +86,7 @@ class ProducaoRepository(RepositorioBase):
                 quantidade_prevista=float(componente.quantidade) * fator,
                 sp_fase_id=fases_por_id.get(componente.ficha_tecnica_fase_id),
             ))
-        db.session.commit()
+        # A transação é concluída pelo service junto às validações de praça.
         return solicitacao
 
     def componentes_da_solicitacao(self, sp_id: int) -> list[SpComponente]:

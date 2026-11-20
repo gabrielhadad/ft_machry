@@ -8,8 +8,8 @@ from flask_sqlalchemy.pagination import Pagination
 
 from app.features.estoque.models import ItemLote, Lote
 from app.features.estoque.repository import EstoqueRepository
-from app.utils.enums import StatusItem, StatusSolicitacao, TipoMovimentacao
-from app.utils.errors import RegistroNaoEncontrado
+from app.utils.enums import GrupoPadrao, StatusItem, StatusSolicitacao, TipoMovimentacao
+from app.utils.errors import Conflito, RegistroNaoEncontrado
 from app.utils.paginacao import PaginacaoQuery
 
 from . import models
@@ -27,8 +27,10 @@ class ProducaoService:
     def __init__(self, repository: ProducaoRepository) -> None:
         self.repository = repository
 
-    def listar_solicitacoes(self, paginacao: PaginacaoQuery) -> Pagination:
-        return self.repository.listar_solicitacoes(paginacao)
+    def listar_solicitacoes(
+        self, paginacao: PaginacaoQuery, praca_id: int | None = None
+    ) -> Pagination:
+        return self.repository.listar_solicitacoes(paginacao, praca_id)
 
     def criar_solicitacao(
         self,
@@ -36,39 +38,85 @@ class ProducaoService:
         usuario_id: int,
         quantidade_planejada: float | None = None,
         localizacao_destino_id: int | None = None,
+        praca_id: int | None = None,
     ) -> models.SolicitacaoProducao:
-        ficha = self.repository.obter_ficha(ficha_id)
-        if ficha is None:
-            raise RegistroNaoEncontrado("ficha técnica não encontrada")
-        quantidade = quantidade_planejada or float(ficha.rendimento)
-        localizacao = (
-            self.repository.obter_localizacao(localizacao_destino_id)
-            if localizacao_destino_id is not None
-            else self.repository.primeira_localizacao_compativel(
-                ficha.produto.conservacao
+        with self.repository.transacao():
+            ficha = self.repository.obter_ficha(ficha_id)
+            if ficha is None:
+                raise RegistroNaoEncontrado("ficha técnica não encontrada")
+            quantidade = quantidade_planejada or float(ficha.rendimento)
+            localizacao = (
+                self.repository.obter_localizacao(localizacao_destino_id)
+                if localizacao_destino_id is not None
+                else self.repository.primeira_localizacao_compativel(
+                    ficha.produto.conservacao
+                )
             )
-        )
-        if localizacao is None:
-            raise ValueError("localização de destino não encontrada")
-        if localizacao.tipo != ficha.produto.conservacao:
-            raise ValueError(
-                "localização de destino incompatível com a conservação do produto final"
+            if localizacao is None:
+                raise ValueError("localização de destino não encontrada")
+            if localizacao.tipo != ficha.produto.conservacao:
+                raise ValueError(
+                    "localização de destino incompatível com a conservação do produto final"
+                )
+            if praca_id is not None:
+                self._validar_praca_ativa(praca_id)
+            return self.repository.criar_solicitacao(
+                ficha, usuario_id, quantidade, localizacao.id, praca_id
             )
-        return self.repository.criar_solicitacao(
-            ficha, usuario_id, quantidade, localizacao.id
-        )
+
+    def _validar_praca_ativa(self, praca_id: int) -> None:
+        # O bloqueio evita novas atribuições durante uma desativação concorrente.
+        praca = self.repository.obter_praca(praca_id, para_atualizacao=True)
+        if praca is None:
+            raise ValueError("praça não encontrada")
+        if not praca.ativo:
+            raise ValueError("não é possível atribuir uma praça inativa")
+        if not any(
+            usuario.ativo and any(
+                grupo.nome == GrupoPadrao.COZINHA.value for grupo in usuario.grupos
+            )
+            for usuario in praca.cozinheiros
+        ):
+            raise ValueError("praça não possui cozinheiros ativos do grupo Cozinha")
+
+    def alterar_praca(
+        self, solicitacao_id: int, praca_id: int | None
+    ) -> models.SolicitacaoProducao:
+        with self.repository.transacao():
+            solicitacao = self.repository.obter_solicitacao(
+                solicitacao_id, para_atualizacao=True
+            )
+            if solicitacao is None:
+                raise RegistroNaoEncontrado("solicitação não encontrada")
+            if solicitacao.status not in (
+                StatusSolicitacao.ABERTA,
+                StatusSolicitacao.EM_SEPARACAO,
+            ):
+                raise Conflito("não é possível alterar a praça após o início da produção")
+            if praca_id is not None:
+                self._validar_praca_ativa(praca_id)
+            # Desatribuir é permitido apenas antes do início da produção.
+            solicitacao.praca_id = praca_id
+            return solicitacao
 
     def atualizar_status(
         self, sp_id: int, status: StatusSolicitacao, usuario_id: int
     ) -> models.SolicitacaoProducao:
-        solicitacao = self.repository.obter_solicitacao(sp_id)
-        if solicitacao is None:
-            raise RegistroNaoEncontrado("solicitação não encontrada")
-        if status not in StatusSolicitacao.proximos(solicitacao.status):
-            raise ValueError(f"não é possível alterar de {solicitacao.status} para {status}")
         if status == StatusSolicitacao.CONCLUIDA:
-            return self._concluir(solicitacao.id, usuario_id)
-        return self.repository.atualizar_status(solicitacao, status)
+            return self._concluir(sp_id, usuario_id)
+        # Compartilha o lock da solicitação com a troca de praça.
+        with self.repository.transacao():
+            solicitacao = self.repository.obter_solicitacao(
+                sp_id, para_atualizacao=True
+            )
+            if solicitacao is None:
+                raise RegistroNaoEncontrado("solicitação não encontrada")
+            if status not in StatusSolicitacao.proximos(solicitacao.status):
+                raise ValueError(
+                    f"não é possível alterar de {solicitacao.status} para {status}"
+                )
+            self.repository.marcar_status(solicitacao, status)
+            return solicitacao
 
     def _concluir(
         self, solicitacao_id: int, usuario_id: int

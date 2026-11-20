@@ -6,6 +6,12 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.utils.enums import StatusSolicitacao
+from app.utils.paginacao import PaginacaoQuery
+
+
+class SolicitacaoQuery(PaginacaoQuery):
+    # Filtro opcional, preservando a listagem completa para clientes antigos.
+    praca_id: Optional[int] = Field(default=None, gt=0)
 
 
 class SolicitacaoCreate(BaseModel):
@@ -14,12 +20,28 @@ class SolicitacaoCreate(BaseModel):
     ficha_tecnica_id: int = Field(gt=0)
     quantidade_planejada: Optional[float] = Field(default=None, gt=0, allow_inf_nan=False)
     localizacao_destino_id: Optional[int] = Field(default=None, gt=0)
+    praca_id: Optional[int] = Field(default=None, gt=0)
+
+
+class SolicitacaoPracaUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # Campo obrigatório no PUT; null remove a atribuição antes da execução.
+    praca_id: Optional[int] = Field(gt=0)
 
 
 class SolicitacaoStatusUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     status: StatusSolicitacao
+
+
+class PracaResumoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nome: str
+    ativo: int
 
 
 class SolicitacaoProducaoOut(BaseModel):
@@ -30,6 +52,8 @@ class SolicitacaoProducaoOut(BaseModel):
     usuario_id: int
     quantidade_planejada: float
     localizacao_destino_id: Optional[int] = None
+    praca_id: Optional[int] = None
+    praca: Optional[PracaResumoOut] = None
     status: str
     criado_em: str
     concluido_em: Optional[str] = None
