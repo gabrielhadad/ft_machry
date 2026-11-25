@@ -446,3 +446,20 @@
   font-size: 0.82rem;
   font-weight: 400;
 }
+
+.recipe-filters-panel {
+  margin-bottom: 15px;
+}
+
+.recipe-filters {
+  margin-bottom: 0;
+}
+
+.recipe-filters .recipe-filter-search {
+  flex: 2;
+  min-width: 260px;
+}
+
+.recipe-filters button {
+  white-space: nowrap;
+}
