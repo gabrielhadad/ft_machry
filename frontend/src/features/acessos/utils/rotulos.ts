@@ -8,6 +8,7 @@ export const rotuloDoRecurso: Record<RecursoPermissao, string> = {
   producao: 'Produção',
   usuarios: 'Usuários',
   grupos_acesso: 'Grupos de acesso',
+  configuracoes: 'Configurações',
 }
 
 export const rotuloDaAcao: Record<AcaoPermissao, string> = {

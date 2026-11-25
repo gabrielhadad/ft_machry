@@ -201,6 +201,24 @@
   text-align: right;
 }
 
+.sheet-section table .sheet-money {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sheet-cost-missing {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.sheet-cost-note {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 10px;
+}
+
 .sheet-steps {
   list-style: none;
   padding: 0;
@@ -284,8 +302,8 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .sheet-section table th:nth-child(3),
-  .sheet-section table td:nth-child(3) {
+  .sheet-section table thead th:nth-child(3),
+  .sheet-section table tbody td:nth-child(3) {
     display: none;
   }
 

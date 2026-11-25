@@ -3,7 +3,11 @@ from decimal import Decimal
 from flask_sqlalchemy.pagination import Pagination
 from pydantic import ValidationError
 
-from app.utils.enums import TipoProduto
+from app.features.configuracoes.services import ConfiguracaoService
+from app.features.estoque.fefo import planejar_consumo_fefo
+from app.features.estoque.repository import EstoqueRepository
+from app.utils.dinheiro import ZERO, em_reais, para_decimal
+from app.utils.enums import MetodoCustoMedio, TipoProduto
 from app.utils.errors import Conflito, RegistroNaoEncontrado, mensagem_validacao
 from app.utils.paginacao import PaginacaoQuery
 from app.utils.texto import normalizar_nome
@@ -43,6 +47,51 @@ class FichaTecnicaService:
         if ficha is None:
             raise RegistroNaoEncontrado("ficha técnica não encontrada")
         return ficha
+
+    def custos(self, ficha: FichaTecnica) -> dict:
+        """Custo da ficha por dois critérios, ambos para o rendimento da ficha.
+
+        - Médio: custo unitário pelo método escolhido nas configurações.
+        - FEFO: quanto custaria consumir agora, pelos mesmos lotes que a
+          produção usaria ao concluir. Muda conforme o estoque muda.
+        """
+        produto_ids = {componente.produto_id for componente in ficha.componentes}
+        metodo = ConfiguracaoService().obter().metodo_custo_medio
+        if metodo == MetodoCustoMedio.PONDERADO_SALDO:
+            medios = self.repository.custos_ponderados_pelo_saldo(produto_ids)
+        else:
+            medios = self.repository.custos_ponderados_moveis(produto_ids)
+
+        estoque = EstoqueRepository()
+        componentes = {}
+        for componente in ficha.componentes:
+            quantidade = para_decimal(componente.quantidade)
+            unitario = medios.get(componente.produto_id)
+            usos, falta = planejar_consumo_fefo(
+                estoque, componente.produto_id, float(componente.quantidade), bloquear=False
+            )
+            com_custo = [uso for uso in usos if uso.lote.custo_unitario is not None]
+            fefo = sum(
+                (para_decimal(uso.quantidade) * para_decimal(uso.lote.custo_unitario) for uso in com_custo),
+                ZERO,
+            )
+            componentes[componente.id] = {
+                "custo_unitario": unitario,
+                "custo": em_reais(quantidade * unitario) if unitario is not None else None,
+                "custo_fefo": em_reais(fefo) if com_custo else None,
+                "custo_fefo_completo": falta == 0 and len(com_custo) == len(usos),
+                "falta_estoque": falta,
+            }
+
+        medios_ok = [item["custo"] for item in componentes.values() if item["custo"] is not None]
+        fefo_ok = [item["custo_fefo"] for item in componentes.values() if item["custo_fefo"] is not None]
+        return {
+            "componentes": componentes,
+            "custo_total": sum(medios_ok, ZERO) if medios_ok else None,
+            "custo_completo": len(medios_ok) == len(componentes),
+            "custo_total_fefo": sum(fefo_ok, ZERO) if fefo_ok else None,
+            "custo_fefo_completo": all(item["custo_fefo_completo"] for item in componentes.values()),
+        }
 
     def listar_fases(self, paginacao: PaginacaoQuery) -> Pagination:
         return self.repository.fases_catalogo(paginacao)

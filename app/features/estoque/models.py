@@ -43,7 +43,7 @@ class Lote(db.Model):
     quantidade = db.Column(db.Numeric(asdecimal=False), nullable=False, default=0, server_default="0")
     data_producao = db.Column(db.String)
     data_validade = db.Column(db.String)
-    custo_unitario = db.Column(db.Numeric(asdecimal=False))
+    custo_unitario = db.Column(db.Numeric(18, 6))
     fornecedor = db.Column(db.Text)
     nota_fiscal = db.Column(db.Text)
     criado_em = db.Column(
@@ -144,6 +144,9 @@ class MovimentacaoEstoque(db.Model):
         db.Integer, db.ForeignKey("solicitacao_producao.id")
     )
     sp_componente_id = db.Column(db.Integer, db.ForeignKey("sp_componente.id"))
+    # Custo unitário do lote de origem no momento da movimentação. Guardado
+    # para que editar o custo do lote depois não reescreva o passado.
+    custo_unitario = db.Column(db.Numeric(18, 6))
     observacao = db.Column(db.Text)
     criado_em = db.Column(
         db.String,

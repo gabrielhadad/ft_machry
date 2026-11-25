@@ -75,6 +75,7 @@ class EstoqueRepository(RepositorioBase):
             motivo=motivo,
             usuario_id=usuario_id,
             observacao=observacao,
+            custo_unitario=lote_origem.custo_unitario,
         )
         db.session.add(mov)
         self._aplicar_saldo(
@@ -243,7 +244,7 @@ class EstoqueRepository(RepositorioBase):
             .order_by(ItemLote.id).with_for_update()
         ).scalars())
 
-    def itens_fefo(self, lote_id: int) -> list[ItemLote]:
+    def itens_fefo(self, lote_id: int, bloquear: bool = True) -> list[ItemLote]:
         """Itens que podem ser usados, na ordem em que devem sair do estoque."""
         hoje = date.today().isoformat()
         consulta = (
@@ -258,8 +259,9 @@ class EstoqueRepository(RepositorioBase):
                 ItemLote.lote_origem_id,
                 ItemLote.sequencia,
             )
-            .with_for_update()
         )
+        if bloquear:
+            consulta = consulta.with_for_update()
         return list(db.session.execute(consulta).scalars())
 
     def itens_ativos(self, lote_id: int) -> list[ItemLote]:

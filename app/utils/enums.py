@@ -144,6 +144,7 @@ class RecursoPermissao(EnumBase):
     PRODUCAO = "producao"
     USUARIOS = "usuarios"
     GRUPOS_ACESSO = "grupos_acesso"
+    CONFIGURACOES = "configuracoes"
 
     @property
     def rotulo(self) -> str:
@@ -155,10 +156,13 @@ class RecursoPermissao(EnumBase):
             RecursoPermissao.PRODUCAO: "Produção",
             RecursoPermissao.USUARIOS: "Usuários",
             RecursoPermissao.GRUPOS_ACESSO: "Grupos de acesso",
+            RecursoPermissao.CONFIGURACOES: "Configurações",
         }[self]
 
     @property
     def acoes(self) -> tuple[AcaoPermissao, ...]:
+        if self is RecursoPermissao.CONFIGURACOES:
+            return (AcaoPermissao.LER, AcaoPermissao.ATUALIZAR)
         sem_exclusao = {
             RecursoPermissao.ESTOQUE,
             RecursoPermissao.PRODUCAO,
@@ -166,6 +170,13 @@ class RecursoPermissao(EnumBase):
         if self in sem_exclusao:
             return AcaoPermissao.sem_exclusao()
         return tuple(AcaoPermissao)
+
+
+class MetodoCustoMedio(EnumBase):
+    """Como o custo unitário de um produto é calculado a partir do estoque."""
+
+    PONDERADO_SALDO = "PONDERADO_SALDO"
+    PONDERADO_MOVEL = "PONDERADO_MOVEL"
 
 
 class GrupoPadrao(EnumBase):

@@ -40,6 +40,10 @@ class SolicitacaoProducao(db.Model):
         server_default=db.text("(CAST(CURRENT_TIMESTAMP AS TEXT))"),
     )
     concluido_em = db.Column(db.String)
+    # Custo apurado na conclusão, com o custo dos lotes naquele momento.
+    custo_total_realizado = db.Column(db.Numeric(18, 6))
+    custo_unitario_realizado = db.Column(db.Numeric(18, 6))
+    custo_realizado_completo = db.Column(db.Integer)
 
 
 class SpFase(db.Model):

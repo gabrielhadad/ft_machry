@@ -202,3 +202,9 @@
   font-weight: 600;
   color: #15803d;
 }
+.custo-por-unidade {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}

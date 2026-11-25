@@ -19,6 +19,11 @@ export interface FichaComponente {
   quantidade: number
   ficha_tecnica_fase_id: number | null
   fase_ordem: number | null
+  custo_unitario?: number | null
+  custo?: number | null
+  custo_fefo?: number | null
+  custo_fefo_completo?: boolean
+  falta_estoque?: number
 }
 
 export interface FichaTecnica {
@@ -30,4 +35,8 @@ export interface FichaTecnica {
   observacao: string | null
   fases: FichaFase[]
   componentes: FichaComponente[]
+  custo_total?: number | null
+  custo_completo?: boolean
+  custo_total_fefo?: number | null
+  custo_fefo_completo?: boolean
 }

@@ -6,6 +6,7 @@ export type RecursoPermissao =
   | 'producao'
   | 'usuarios'
   | 'grupos_acesso'
+  | 'configuracoes'
 
 export type AcaoPermissao = 'ler' | 'criar' | 'atualizar' | 'excluir'
 

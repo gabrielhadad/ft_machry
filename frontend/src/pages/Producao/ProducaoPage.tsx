@@ -102,6 +102,7 @@ export function ProducaoPage({
       fichas={fichas}
       ocupado={ocupado}
       podeAtualizar={podeAtualizar}
+      mostrarCusto={canPlan}
       onStatus={alterarStatus}
       onViewSheet={onViewSheet}
     />

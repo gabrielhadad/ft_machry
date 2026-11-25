@@ -347,3 +347,52 @@ def test_conclusao_cria_lote_do_produto_final(app, client):
     ).get_json()
     assert detalhe['lotes_produzidos'][0]['lote_id'] == lotes[0]['id']
     assert detalhe['lotes_produzidos'][0]['quantidade'] == 10
+
+
+
+def test_conclusao_grava_custo_real_da_epoca(app, client):
+    dados = _preparar_fluxo_completo(app, client)
+    lote_a = _criar_lote_com_saldo(
+        client, dados['ingrediente_a'], dados['local_id'], 2, '2099-01-10'
+    )
+    lote_b = _criar_lote_com_saldo(
+        client, dados['ingrediente_b'], dados['local_id'], 3, '2099-01-10'
+    )
+    assert client.put(f'/api/estoque/lotes/{lote_a}', json={'custo_unitario': 1.5}).status_code == 200
+    assert client.put(f'/api/estoque/lotes/{lote_b}', json={'custo_unitario': 0.7}).status_code == 200
+    solicitacao_id = _criar_e_iniciar(client, dados['ficha_id'])
+
+    concluida = _concluir(client, solicitacao_id)
+    assert concluida.status_code == 200, concluida.get_json()
+    corpo = concluida.get_json()
+    # 2 * 1,50 + 3 * 0,70 = 5,10 para 10 unidades
+    assert corpo['custo_total_realizado'] == 5.1
+    assert corpo['custo_unitario_realizado'] == 0.51
+    assert corpo['custo_realizado_completo'] is True
+
+    # Mudar o custo dos lotes depois não reescreve o custo da produção.
+    assert client.put(f'/api/estoque/lotes/{lote_a}', json={'custo_unitario': 9}).status_code == 200
+    detalhe = client.get(f'/api/producao/solicitacoes/{solicitacao_id}').get_json()
+    assert detalhe['solicitacao']['custo_total_realizado'] == 5.1
+    custos = {c['produto_id']: c['custo_realizado'] for c in detalhe['componentes']}
+    assert custos[dados['ingrediente_a']] == 3.0
+
+    lote_final = detalhe['lotes_produzidos'][0]['lote_id']
+    assert client.get(f'/api/estoque/lotes/{lote_final}').get_json()['custo_unitario'] == 0.51
+
+
+def test_conclusao_sem_custo_em_algum_lote_marca_incompleto(app, client):
+    dados = _preparar_fluxo_completo(app, client)
+    lote_a = _criar_lote_com_saldo(
+        client, dados['ingrediente_a'], dados['local_id'], 2, '2099-01-10'
+    )
+    _criar_lote_com_saldo(
+        client, dados['ingrediente_b'], dados['local_id'], 3, '2099-01-10'
+    )
+    assert client.put(f'/api/estoque/lotes/{lote_a}', json={'custo_unitario': 1.5}).status_code == 200
+    solicitacao_id = _criar_e_iniciar(client, dados['ficha_id'])
+
+    corpo = _concluir(client, solicitacao_id).get_json()
+    assert corpo['custo_total_realizado'] == 3.0
+    assert corpo['custo_unitario_realizado'] is None
+    assert corpo['custo_realizado_completo'] is False

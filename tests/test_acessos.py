@@ -123,6 +123,8 @@ def test_grupo_gestor(app, client):
     assert gestor.get("/api/estoque/localizacoes").status_code == 200
     assert gestor.get("/api/usuarios").status_code == 403
     assert gestor.get("/api/grupos-acesso").status_code == 403
+    assert gestor.get("/api/configuracoes").status_code == 403
+    assert gestor.put("/api/configuracoes", json={"metodo_custo_medio": "PONDERADO_SALDO"}).status_code == 403
 
 
 def test_grupo_cozinha(app, client):

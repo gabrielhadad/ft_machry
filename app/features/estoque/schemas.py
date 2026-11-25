@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -85,7 +86,9 @@ class LoteCreate(BaseModel):
     localizacao_id: int = Field(gt=0, strict=True)
     data_producao: Optional[date] = None
     data_validade: Optional[date] = None
-    custo_unitario: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False, strict=True)
+    custo_unitario: Optional[Decimal] = Field(
+        default=None, ge=0, max_digits=18, decimal_places=6, allow_inf_nan=False
+    )
     fornecedor: Optional[str] = Field(default=None, max_length=150)
     nota_fiscal: Optional[str] = Field(default=None, max_length=60)
     itens: list[GrupoItensCreate] = Field(default_factory=list, max_length=50)
@@ -109,7 +112,9 @@ class LoteUpdate(BaseModel):
 
     data_producao: Optional[date] = None
     data_validade: Optional[date] = None
-    custo_unitario: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False, strict=True)
+    custo_unitario: Optional[Decimal] = Field(
+        default=None, ge=0, max_digits=18, decimal_places=6, allow_inf_nan=False
+    )
     fornecedor: Optional[str] = Field(default=None, max_length=150)
     nota_fiscal: Optional[str] = Field(default=None, max_length=60)
     localizacao_id: Optional[int] = Field(default=None, gt=0, strict=True)

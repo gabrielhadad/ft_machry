@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Modal } from '../../../components/ui'
 import type { FaseCatalogo, FichaTecnica, Produto } from '../../../types'
 import { mensagemDeErro } from '../../../utils/erros'
-import { excluirFicha } from '../api/fichasApi'
+import { buscarFicha, excluirFicha } from '../api/fichasApi'
 import { SheetDocument } from './SheetDocument'
 import { SheetEditor } from './SheetEditor'
 
@@ -29,6 +29,18 @@ export function SheetModal({
 }: SheetModalProps) {
   const [editing, setEditing] = useState(ficha === null)
   const [saving, setSaving] = useState(false)
+  const [fichaAtual, setFichaAtual] = useState(ficha)
+
+  // Busca a ficha ao abrir para que o custo reflita o estoque de agora.
+  useEffect(() => {
+    setFichaAtual(ficha)
+    if (!ficha) return
+    let ativo = true
+    buscarFicha(ficha.id)
+      .then((atualizada) => { if (ativo) setFichaAtual(atualizada) })
+      .catch(() => undefined)
+    return () => { ativo = false }
+  }, [ficha])
 
   async function remove() {
     if (!ficha || !window.confirm(`Excluir a ficha de “${ficha.produto}”?`)) return
@@ -114,6 +126,6 @@ export function SheetModal({
         setSaving={setSaving}
         onSaved={onSaved}
       />
-      : ficha && <SheetDocument ficha={ficha} />}
+      : fichaAtual && <SheetDocument ficha={fichaAtual} />}
   </Modal>
 }

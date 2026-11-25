@@ -6,6 +6,7 @@ import { InicioPage } from '../pages/Inicio/InicioPage'
 import { LocalizacoesPage } from '../pages/Localizacoes/LocalizacoesPage'
 import { MovimentacoesPage } from '../pages/Movimentacoes/MovimentacoesPage'
 import { ProducaoPage } from '../pages/Producao/ProducaoPage'
+import { ConfiguracoesPage } from '../pages/Configuracoes/ConfiguracoesPage'
 import { ProdutosPage } from '../pages/Produtos/ProdutosPage'
 import { UsuariosPage } from '../pages/Usuarios/UsuariosPage'
 import type { Dados, Mutacao, Recurso } from '../stores/dados'
@@ -23,6 +24,7 @@ export type View =
   | 'locais'
   | 'usuarios'
   | 'grupos'
+  | 'configuracoes'
 
 export interface ContextoDaPagina {
   usuario: UsuarioLogado
@@ -179,6 +181,18 @@ export const rotas: Rota[] = [
     pagina: ({ usuario, rodadaDeAtualizacao }) => <GruposDeAcessoPage
       usuarioLogado={usuario}
       rodadaDeAtualizacao={rodadaDeAtualizacao}
+    />,
+  },
+  {
+    view: 'configuracoes',
+    caminho: '/configuracoes',
+    titulo: 'Configurações',
+    icone: '⚙',
+    permissoes: ['configuracoes:ler'],
+    recursos: () => [],
+    pagina: ({ usuario, aoAlterar }) => <ConfiguracoesPage
+      podeAtualizar={temPermissao(usuario, 'configuracoes:atualizar')}
+      aoSalvar={(mensagem) => void aoAlterar('configuracao', mensagem)}
     />,
   },
 ]

@@ -1,26 +1,20 @@
 """Regras de negócio de produção, orquestrando o repository."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
 from flask_sqlalchemy.pagination import Pagination
 
+from app.features.estoque.fefo import UsoPlanejado, planejar_consumo_fefo
 from app.features.estoque.models import ItemLote, Lote
 from app.features.estoque.repository import EstoqueRepository
+from app.utils.dinheiro import ZERO, custo_unitario, para_decimal
 from app.utils.enums import StatusItem, StatusSolicitacao, TipoMovimentacao
 from app.utils.errors import RegistroNaoEncontrado
 from app.utils.paginacao import PaginacaoQuery
 
 from . import models
 from .repository import ProducaoRepository
-
-
-@dataclass
-class UsoPlanejado:
-    lote: Lote
-    quantidade: float
-    itens: list[tuple[ItemLote, float]] | None
 
 
 class ProducaoService:
@@ -94,8 +88,9 @@ class ProducaoService:
                 (componente, self._planejar_consumo(estoque, componente))
                 for componente in componentes
             ]
-            custo_total = 0.0
+            custo_total = ZERO
             custo_completo = True
+            algum_custo = False
             for componente, usos in planos:
                 for uso in usos:
                     movimento = estoque.inserir_movimentacao(
@@ -113,10 +108,11 @@ class ProducaoService:
                     if uso.itens is not None:
                         self._baixar_itens(estoque, movimento.id, uso.itens)
                         self._recalcular_lote_com_itens(estoque, uso.lote)
-                    if uso.lote.custo_unitario is None:
+                    if movimento.custo_unitario is None:
                         custo_completo = False
                     else:
-                        custo_total += uso.quantidade * float(uso.lote.custo_unitario)
+                        algum_custo = True
+                        custo_total += para_decimal(uso.quantidade) * para_decimal(movimento.custo_unitario)
 
             ficha = self.repository.obter_ficha(solicitacao.ficha_tecnica_id)
             produto_final = ficha.produto
@@ -131,14 +127,19 @@ class ProducaoService:
                 else None
             )
             quantidade_final = float(solicitacao.quantidade_planejada)
+            custo_por_unidade = (
+                custo_unitario(custo_total / para_decimal(quantidade_final))
+                if custo_completo else None
+            )
+            solicitacao.custo_total_realizado = custo_unitario(custo_total) if algum_custo else None
+            solicitacao.custo_unitario_realizado = custo_por_unidade
+            solicitacao.custo_realizado_completo = int(custo_completo)
             lote_final = estoque.inserir_lote(
                 produto_id=ficha.produto_id,
                 localizacao_id=solicitacao.localizacao_destino_id,
                 data_producao=hoje.isoformat(),
                 data_validade=validade,
-                custo_unitario=(
-                    custo_total / quantidade_final if custo_completo else None
-                ),
+                custo_unitario=custo_por_unidade,
             )
             producao = estoque.inserir_movimentacao(
                 tipo=TipoMovimentacao.PRODUCAO,
@@ -154,31 +155,10 @@ class ProducaoService:
             self.repository.marcar_status(solicitacao, StatusSolicitacao.CONCLUIDA)
             return solicitacao
 
-    def _planejar_consumo(self, estoque: EstoqueRepository, componente):
-        restante = float(componente.quantidade_prevista)
-        usos: list[UsoPlanejado] = []
-        for lote_row in estoque.lotes_fefo_disponiveis(componente.produto_id):
-            lote = estoque.obter_lote(lote_row["id"], para_atualizacao=True)
-            if estoque.lote_tem_itens(lote.id):
-                itens = estoque.itens_fefo(lote.id)
-                disponivel = sum(float(item.saldo) for item in itens)
-                usar = min(restante, disponivel)
-                usos_itens: list[tuple[ItemLote, float]] = []
-                falta_no_lote = usar
-                for item in itens:
-                    if falta_no_lote <= 0:
-                        break
-                    quantidade = min(float(item.saldo), falta_no_lote)
-                    usos_itens.append((item, quantidade))
-                    falta_no_lote = round(falta_no_lote - quantidade, 6)
-            else:
-                usar = min(restante, float(lote.quantidade))
-                usos_itens = None
-            if usar > 0:
-                usos.append(UsoPlanejado(lote, usar, usos_itens))
-                restante = round(restante - usar, 6)
-            if restante <= 0:
-                break
+    def _planejar_consumo(self, estoque: EstoqueRepository, componente) -> list[UsoPlanejado]:
+        usos, restante = planejar_consumo_fefo(
+            estoque, componente.produto_id, float(componente.quantidade_prevista), bloquear=True
+        )
         if restante > 0:
             produto = estoque.obter_produto(componente.produto_id)
             raise ValueError(

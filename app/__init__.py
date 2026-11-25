@@ -8,6 +8,7 @@ from app.features import (
     acessos,
     auth,
     branding,
+    configuracoes,
     estoque,
     fichas_tecnicas,
     producao,
@@ -41,6 +42,7 @@ def create_app(config: dict | None = None) -> Flask:
     app.register_blueprint(usuarios.bp, url_prefix=f"{prefixo_api}/usuarios")
     app.register_blueprint(acessos.grupos_bp, url_prefix=f"{prefixo_api}/grupos-acesso")
     app.register_blueprint(acessos.permissoes_bp, url_prefix=f"{prefixo_api}/permissoes")
+    app.register_blueprint(configuracoes.bp, url_prefix=f"{prefixo_api}/configuracoes")
     app.register_blueprint(produtos.bp, url_prefix=f"{prefixo_api}/produtos")
     app.register_blueprint(
         fichas_tecnicas.bp, url_prefix=f"{prefixo_api}/fichas-tecnicas"

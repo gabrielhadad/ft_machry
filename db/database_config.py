@@ -72,6 +72,23 @@ def _migrar_lote() -> None:
     db.session.commit()
 
 
+def _migrar_movimentacao() -> None:
+    colunas = {
+        coluna["name"]
+        for coluna in inspect(db.engine).get_columns("movimentacao_estoque")
+    }
+    if "custo_unitario" not in colunas:
+        db.session.execute(text(
+            "ALTER TABLE movimentacao_estoque ADD COLUMN custo_unitario NUMERIC(18, 6)"
+        ))
+        # O custo da época não foi guardado; o melhor disponível é o atual do lote.
+        db.session.execute(text(
+            "UPDATE movimentacao_estoque SET custo_unitario = "
+            "(SELECT lote.custo_unitario FROM lote WHERE lote.id = movimentacao_estoque.lote_id)"
+        ))
+    db.session.commit()
+
+
 def _migrar_producao() -> None:
     colunas = {
         coluna["name"]
@@ -91,6 +108,32 @@ def _migrar_producao() -> None:
         db.session.execute(text(
             "ALTER TABLE solicitacao_producao "
             "ADD COLUMN localizacao_destino_id INTEGER REFERENCES localizacao(id)"
+        ))
+    if "custo_total_realizado" not in colunas:
+        for coluna, tipo in (
+            ("custo_total_realizado", "NUMERIC(18, 6)"),
+            ("custo_unitario_realizado", "NUMERIC(18, 6)"),
+            ("custo_realizado_completo", "INTEGER"),
+        ):
+            db.session.execute(text(
+                f"ALTER TABLE solicitacao_producao ADD COLUMN {coluna} {tipo}"
+            ))
+        consumo = (
+            "FROM movimentacao_estoque m WHERE m.solicitacao_producao_id = "
+            "solicitacao_producao.id AND m.tipo = 'CONSUMO_PRODUCAO'"
+        )
+        db.session.execute(text(
+            "UPDATE solicitacao_producao SET "
+            f"custo_total_realizado = (SELECT SUM(m.quantidade * m.custo_unitario) {consumo}), "
+            "custo_realizado_completo = CASE WHEN EXISTS "
+            f"(SELECT 1 {consumo} AND m.custo_unitario IS NULL) THEN 0 ELSE 1 END "
+            "WHERE status = 'CONCLUIDA'"
+        ))
+        db.session.execute(text(
+            "UPDATE solicitacao_producao SET "
+            "custo_unitario_realizado = custo_total_realizado / quantidade_planejada "
+            "WHERE status = 'CONCLUIDA' AND custo_realizado_completo = 1 "
+            "AND custo_total_realizado IS NOT NULL"
         ))
     db.session.commit()
 
@@ -267,7 +310,7 @@ VIEWS = {
                sf.ordem AS fase_ordem, fp.nome AS fase,
                c.quantidade_prevista,
                COALESCE(SUM(m.quantidade), 0) AS quantidade_realizada,
-               SUM(m.quantidade * l.custo_unitario) AS custo_realizado
+               SUM(m.quantidade * COALESCE(m.custo_unitario, l.custo_unitario)) AS custo_realizado
           FROM sp_componente c
           JOIN produto p ON p.id = c.produto_id
           LEFT JOIN sp_fase sf ON sf.id = c.sp_fase_id
@@ -287,6 +330,7 @@ VIEWS = {
 
 def _criar_views() -> None:
     for nome, consulta in VIEWS.items():
+        db.session.execute(text(f"DROP VIEW IF EXISTS {nome}"))
         db.session.execute(text(f"CREATE VIEW {nome} AS {consulta}"))
     db.session.commit()
 
@@ -299,7 +343,10 @@ def init_db_command(seed: bool):
         _migrar_autenticacao()
         _migrar_produto()
         _migrar_lote()
+        _migrar_movimentacao()
         _migrar_producao()
+        # Recria as views para que mudanças nelas cheguem a bancos já existentes.
+        _criar_views()
         _sincronizar_acessos()
         click.echo("Banco já criado e atualizado")
         return

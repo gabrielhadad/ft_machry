@@ -527,6 +527,8 @@ class EstoqueService:
                 raise ValueError("validade anterior à produção")
             if "localizacao_id" in campos:
                 self._validar_nova_localizacao(produto, campos["localizacao_id"])
+            if "custo_unitario" in campos:
+                campos["custo_unitario"] = dados.custo_unitario
             self.repository.atualizar_lote(lote_id, campos)
             return self.repository.obter_lote(lote_id)
 

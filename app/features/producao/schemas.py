@@ -33,6 +33,9 @@ class SolicitacaoProducaoOut(BaseModel):
     status: str
     criado_em: str
     concluido_em: Optional[str] = None
+    custo_total_realizado: Optional[float] = None
+    custo_unitario_realizado: Optional[float] = None
+    custo_realizado_completo: Optional[bool] = None
 
 
 class ComponenteSolicitacaoOut(BaseModel):

@@ -35,14 +35,17 @@ const rotaDoRecurso: Record<Recurso, string> = {
   solicitacoes: '/api/producao/solicitacoes',
 }
 
-export type Mutacao = 'produto' | 'ficha' | 'estoque' | 'producao' | 'localizacao'
+export type Mutacao = 'produto' | 'ficha' | 'estoque' | 'producao' | 'localizacao' | 'configuracao'
 
 export const recursosAfetados: Record<Mutacao, Recurso[]> = {
   produto: ['produtos', 'fichas', 'lotes'],
   ficha: ['fichas', 'fases'],
-  estoque: ['lotes'],
-  producao: ['solicitacoes', 'lotes'],
+  // O custo das fichas vem dos lotes, então movimentar o estoque muda as fichas.
+  estoque: ['lotes', 'fichas'],
+  producao: ['solicitacoes', 'lotes', 'fichas'],
   localizacao: ['localizacoes', 'lotes'],
+  // O método de custo muda o custo mostrado nas fichas.
+  configuracao: ['fichas'],
 }
 
 function estadosIniciais(): Record<Recurso, EstadoDoRecurso> {

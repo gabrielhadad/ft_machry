@@ -1,4 +1,5 @@
 import { api } from '../../../services/api'
+import type { FichaTecnica } from '../../../types'
 
 export interface DadosDaFicha {
   produto_id: number
@@ -12,6 +13,10 @@ export interface ResultadoDaImportacaoDeFichas {
   total: number
   fases_criadas: string[]
   ignoradas: string[]
+}
+
+export function buscarFicha(id: number) {
+  return api<FichaTecnica>(`/api/fichas-tecnicas/${id}`)
 }
 
 export function criarFicha(dados: DadosDaFicha) {

@@ -1,5 +1,8 @@
+from decimal import Decimal
+
 from flask import Blueprint
 
+from app.utils.dinheiro import para_json
 from app.utils.enums import AcaoPermissao, RecursoPermissao
 from app.utils.paginacao import PaginacaoQuery, resposta_paginada
 from app.utils.parsing import consulta, entrada
@@ -16,8 +19,28 @@ def get_service() -> FichaTecnicaService:
     return FichaTecnicaService(FichaTecnicaRepository())
 
 
-def _serializar(ficha):
-    return {
+def _valor(valor):
+    return para_json(valor) if isinstance(valor, Decimal) else valor
+
+
+def _serializar(ficha, com_custos: bool = True):
+    """Os custos só vão no detalhe: na listagem custariam uma simulação por ficha."""
+    custos = get_service().custos(ficha) if com_custos else None
+    componentes = []
+    for componente in ficha.componentes:
+        item = {
+            "id": componente.id,
+            "produto_id": componente.produto_id,
+            "produto": componente.produto.nome,
+            "unidade_medida": componente.produto.unidade_medida,
+            "quantidade": float(componente.quantidade),
+            "ficha_tecnica_fase_id": componente.ficha_tecnica_fase_id,
+            "fase_ordem": componente.fase.ordem if componente.fase else None,
+        }
+        if custos:
+            item.update({chave: _valor(valor) for chave, valor in custos["componentes"][componente.id].items()})
+        componentes.append(item)
+    resultado = {
         "id": ficha.id,
         "produto_id": ficha.produto_id,
         "produto": ficha.produto.nome,
@@ -34,19 +57,17 @@ def _serializar(ficha):
             }
             for fase in ficha.fases
         ],
-        "componentes": [
-            {
-                "id": componente.id,
-                "produto_id": componente.produto_id,
-                "produto": componente.produto.nome,
-                "unidade_medida": componente.produto.unidade_medida,
-                "quantidade": float(componente.quantidade),
-                "ficha_tecnica_fase_id": componente.ficha_tecnica_fase_id,
-                "fase_ordem": componente.fase.ordem if componente.fase else None,
-            }
-            for componente in ficha.componentes
-        ],
+        "componentes": componentes,
     }
+    if custos:
+        resultado.update({
+            chave: _valor(valor) for chave, valor in custos.items() if chave != "componentes"
+        })
+    return resultado
+
+
+def _serializar_resumo(ficha):
+    return _serializar(ficha, com_custos=False)
 
 
 @bp.get("/fases")
@@ -60,7 +81,7 @@ def listar_fases():
 @bp.get("")
 @exigir_permissao(RecursoPermissao.FICHAS_TECNICAS, AcaoPermissao.LER)
 def listar():
-    return resposta_paginada(get_service().listar(consulta(PaginacaoQuery)), _serializar)
+    return resposta_paginada(get_service().listar(consulta(PaginacaoQuery)), _serializar_resumo)
 
 
 @bp.get("/<int:ficha_id>")
@@ -80,7 +101,7 @@ def criar():
 def criar_lote():
     fichas, fases_criadas, ignoradas = get_service().criar_lote(entrada(FichaLoteInput))
     return {
-        "items": [_serializar(ficha) for ficha in fichas],
+        "items": [_serializar_resumo(ficha) for ficha in fichas],
         "total": len(fichas),
         "fases_criadas": fases_criadas,
         "ignoradas": ignoradas,
